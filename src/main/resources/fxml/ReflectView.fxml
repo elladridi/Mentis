@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import java.lang.String?>
+<?import javafx.collections.FXCollections?>
+
+<VBox alignment="CENTER" spacing="20.0" prefWidth="500.0" prefHeight="650.0"
+      style="-fx-background-color: #f4f7f6; -fx-background-radius: 15;"
+      xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="controllers.ReflectController">
+
+    <padding><Insets top="30" right="30" bottom="30" left="30"/></padding>
+
+    <Label text="DAILY REFLECTION" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2d3e50;"/>
+
+    <VBox spacing="10">
+        <Label text="1. How would you rate your sleep quality?" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="qSleep" promptText="Select an option..." prefWidth="400">
+            <items>
+                <FXCollections fx:factory="observableArrayList">
+                    <String fx:value="Excellent - I feel fully rested"/>
+                    <String fx:value="Good - I slept well"/>
+                    <String fx:value="Average - Could be better"/>
+                    <String fx:value="Poor - I feel exhausted"/>
+                </FXCollections>
+            </items>
+        </ComboBox>
+
+        <Label text="2. What is your current stress level?" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="qStress" promptText="Select an option..." prefWidth="400">
+            <items>
+                <FXCollections fx:factory="observableArrayList">
+                    <String fx:value="Low - I am calm"/>
+                    <String fx:value="Moderate - Manageable"/>
+                    <String fx:value="High - I feel overwhelmed"/>
+                </FXCollections>
+            </items>
+        </ComboBox>
+
+        <Label text="3. How is your social energy today?" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="qSocial" promptText="Select an option..." prefWidth="400">
+            <items>
+                <FXCollections fx:factory="observableArrayList">
+                    <String fx:value="High - Want to talk to everyone"/>
+                    <String fx:value="Neutral - Just fine"/>
+                    <String fx:value="Low - I need alone time"/>
+                </FXCollections>
+            </items>
+        </ComboBox>
+    </VBox>
+
+    <Button text="ANALYZE MY MOOD" onAction="#handleAnalysis"
+            style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20;"/>
+
+    <Separator/>
+
+    <VBox spacing="10" alignment="CENTER">
+        <Label fx:id="summaryTitle" text="Your Reflection Summary" visible="false" style="-fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+        <Label fx:id="resultLabel" wrapText="true" textAlignment="CENTER" style="-fx-font-style: italic;"/>
+    </VBox>
+</VBox>
