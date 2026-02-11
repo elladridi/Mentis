@@ -1,361 +1,418 @@
 package ui;
 
-import javax.swing.*;
-import javax.swing.table.*;
-import java.awt.*;
-import controller.QuestionController;
 import controller.AssessmentController;
-import models.Question;
+import controller.QuestionController;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import models.Assessment;
+import models.Question;
+
 import java.sql.SQLException;
 import java.util.List;
 
-public class QuestionPanel extends JPanel {
-    private MentisLoginFrame parentFrame;
+public class QuestionPanel extends VBox {
+
+    private MentisLoginFrame parentApp;  // FIXED: Changed from MentisLoginFrame to MentisLoginFrame
     private QuestionController questionController;
     private AssessmentController assessmentController;
-    private JTable questionTable;
-    private DefaultTableModel tableModel;
+    private TableView<QuestionModel> questionTable;
+    private ObservableList<QuestionModel> questionData;
     private List<Assessment> assessments;
-    private List<Question> questions;
     private int currentAssessmentId = -1;
 
-    // Track if data has been loaded
-    private boolean dataLoaded = false;
+    // UI Components that need to be updated
+    private Label assessmentTitleLabel;
+    private Label assessmentTypeLabel;
+    private Label assessmentNameLabel;
 
-    public QuestionPanel(MentisLoginFrame parentFrame, QuestionController questionController,
+    // Color constants
+    private static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
+    private static final Color CARD_WHITE = Color.WHITE;
+    private static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
+    private static final Color BUTTON_LIGHT_GREEN = Color.rgb(160, 200, 180);
+    private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
+    private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
+    private static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
+
+    public QuestionPanel(MentisLoginFrame parentApp, QuestionController questionController,  // FIXED: Parameter type
                          AssessmentController assessmentController) {
-        this.parentFrame = parentFrame;
+        this.parentApp = parentApp;
         this.questionController = questionController;
         this.assessmentController = assessmentController;
-        setLayout(new BorderLayout());
-        setBackground(parentFrame.BACKGROUND_LIGHT);
-        setBorder(BorderFactory.createEmptyBorder(40, 50, 40, 50));
+
+        setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        setPadding(new Insets(40, 50, 40, 50));
+        setSpacing(30);
 
         createHeader();
         createTable();
-        // Don't refresh data in constructor
     }
 
     private void createHeader() {
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(parentFrame.BACKGROUND_LIGHT);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 30, 0));
+        VBox headerContainer = new VBox(20);
+        headerContainer.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
 
         // Top right - CANCEL button
-        JPanel topRight = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        topRight.setBackground(parentFrame.BACKGROUND_LIGHT);
+        HBox topRight = new HBox();
+        topRight.setAlignment(Pos.CENTER_RIGHT);
+        topRight.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
 
-        JButton cancelButton = new JButton("CANCEL");
-        cancelButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        cancelButton.setBackground(parentFrame.BUTTON_LIGHT_GREEN);
-        cancelButton.setForeground(parentFrame.TEXT_DARK);
-        cancelButton.setBorder(BorderFactory.createEmptyBorder(12, 40, 12, 40));
-        cancelButton.setFocusPainted(false);
-        cancelButton.setOpaque(true);
-        cancelButton.setBorderPainted(false);
-        cancelButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        cancelButton.addMouseListener(new java.awt.event.MouseAdapter() {
-                                        public void mouseClicked(java.awt.event.MouseEvent evt) {
-                                            parentFrame.showPanel("ASSESSMENTS");
-                                        }
-                                    });
-        cancelButton.addActionListener(e -> parentFrame.showPanel("ASSESSMENTS"));
-
-        topRight.add(cancelButton);
-        headerPanel.add(topRight, BorderLayout.NORTH);
+        Button cancelButton = createCancelButton();
+        topRight.getChildren().add(cancelButton);
 
         // Title section
-        JPanel titlePanel = new JPanel(new BorderLayout());
-        titlePanel.setBackground(parentFrame.BACKGROUND_LIGHT);
-        titlePanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
+        HBox titlePanel = new HBox();
+        titlePanel.setAlignment(Pos.CENTER_LEFT);
+        titlePanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        titlePanel.setPadding(new Insets(20, 0, 0, 0));
 
-        JPanel titleLeft = new JPanel(new GridBagLayout());
-        titleLeft.setBackground(parentFrame.BACKGROUND_LIGHT);
+        // Left side titles
+        VBox titleLeft = new VBox(5);
+        titleLeft.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.insets = new Insets(0, 0, 5, 0);
+        Label mainTitle = new Label("Manage questions for Assessment");
+        mainTitle.setFont(Font.font("Segoe UI", FontWeight.BOLD, 32));
+        mainTitle.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
 
-        JLabel titleLabel = new JLabel("Manage questions for Assessment");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 32));
-        titleLabel.setForeground(parentFrame.ACCENT_DARK_GREEN);
-        titleLeft.add(titleLabel, gbc);
+        assessmentNameLabel = new Label("All Assessments");
+        assessmentNameLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 28));
+        assessmentNameLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
 
-        gbc.gridy++;
-        gbc.insets = new Insets(0, 0, 0, 0);
-        JLabel assessmentTitle = new JLabel("All Assessments");
-        assessmentTitle.setFont(new Font("Segoe UI", Font.BOLD, 28));
-        assessmentTitle.setForeground(parentFrame.TEXT_DARK);
-        titleLeft.add(assessmentTitle, gbc);
+        assessmentTypeLabel = new Label("Viewing all questions");
+        assessmentTypeLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 16));
+        assessmentTypeLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
 
-        gbc.gridy++;
-        gbc.insets = new Insets(5, 0, 0, 0);
-        JLabel assessmentType = new JLabel("Viewing all questions");
-        assessmentType.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        assessmentType.setForeground(parentFrame.TEXT_LIGHT);
-        titleLeft.add(assessmentType, gbc);
+        titleLeft.getChildren().addAll(mainTitle, assessmentNameLabel, assessmentTypeLabel);
 
-        titlePanel.add(titleLeft, BorderLayout.WEST);
+        // Spacer
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
         // ADD button
-        JButton addButton = new JButton("ADD");
-        addButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        addButton.setBackground(parentFrame.BUTTON_LIGHT_GREEN);
-        addButton.setForeground(parentFrame.TEXT_DARK);
-        addButton.setBorder(BorderFactory.createEmptyBorder(12, 40, 12, 40));
-        addButton.setFocusPainted(false);
-        addButton.setOpaque(true);
-        addButton.setBorderPainted(false);
-        addButton.addActionListener(e -> showAddQuestionDialog());
+        Button addButton = createAddButton();
+        addButton.setOnAction(e -> showAddQuestionDialog());
 
-        titlePanel.add(addButton, BorderLayout.EAST);
+        titlePanel.getChildren().addAll(titleLeft, spacer, addButton);
 
-        headerPanel.add(titlePanel, BorderLayout.CENTER);
-        add(headerPanel, BorderLayout.NORTH);
+        headerContainer.getChildren().addAll(topRight, titlePanel);
+        getChildren().add(headerContainer);
+    }
+
+    private Button createCancelButton() {
+        Button button = new Button("CANCEL");
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        button.setTextFill(Color.web(toHex(TEXT_DARK)));
+        button.setStyle(
+                "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 12 40;" +
+                        "-fx-cursor: hand;"
+        );
+
+        // Hover effect
+        button.setOnMouseEntered(e ->
+                button.setStyle(
+                        "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN.darker()) + ";" +
+                                "-fx-background-radius: 5;" +
+                                "-fx-padding: 12 40;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+        button.setOnMouseExited(e ->
+                button.setStyle(
+                        "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
+                                "-fx-background-radius: 5;" +
+                                "-fx-padding: 12 40;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+
+        // FIXED: Changed from showPanel to showAssessmentPanel
+        button.setOnAction(e -> parentApp.showAssessmentPanel());
+        return button;
+    }
+
+    private Button createAddButton() {
+        Button button = new Button("ADD");
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        button.setTextFill(Color.web(toHex(TEXT_DARK)));
+        button.setStyle(
+                "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 12 40;" +
+                        "-fx-cursor: hand;"
+        );
+
+        // Hover effect
+        button.setOnMouseEntered(e ->
+                button.setStyle(
+                        "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN.darker()) + ";" +
+                                "-fx-background-radius: 5;" +
+                                "-fx-padding: 12 40;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+        button.setOnMouseExited(e ->
+                button.setStyle(
+                        "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
+                                "-fx-background-radius: 5;" +
+                                "-fx-padding: 12 40;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+
+        return button;
     }
 
     private void createTable() {
-        String[] columns = {"Question", "Scale", "Assessment", "Type", "Edit", "Delete"};
-        tableModel = new DefaultTableModel(columns, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return column == 4 || column == 5; // Only Edit and Delete columns are editable
-            }
+        questionTable = new TableView<>();
+        questionTable.setStyle("-fx-background-color: white; -fx-border-color: #" + toHex(BORDER_LIGHT) + ";");
+        // FIXED: setRowHeight doesn't exist in JavaFX TableView
+        questionTable.setFixedCellSize(70);  // Use setFixedCellSize instead
+        questionTable.setPlaceholder(new Label("No questions available. Click ADD to create one."));
 
+        // Create columns
+        TableColumn<QuestionModel, String> questionCol = new TableColumn<>("Question");
+        questionCol.setCellValueFactory(new PropertyValueFactory<>("questionText"));
+        questionCol.setPrefWidth(300);
+        questionCol.setCellFactory(column -> new TableCell<QuestionModel, String>() {
             @Override
-            public Class<?> getColumnClass(int column) {
-                return String.class;
-            }
-        };
-
-        questionTable = new JTable(tableModel) {
-            @Override
-            public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
-                Component c = super.prepareRenderer(renderer, row, column);
-
-                if (!isRowSelected(row)) {
-                    c.setBackground(parentFrame.CARD_WHITE);
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    String displayText = item.length() > 80 ? item.substring(0, 77) + "..." : item;
+                    setText(displayText);
+                    setWrapText(true);
                 }
-
-                c.setForeground(parentFrame.TEXT_DARK);
-
-                return c;
             }
-        };
+        });
 
-        questionTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        questionTable.setRowHeight(70);
-        questionTable.setBackground(parentFrame.CARD_WHITE);
-        questionTable.setGridColor(parentFrame.BORDER_LIGHT);
-        questionTable.setShowGrid(true);
-        questionTable.setIntercellSpacing(new Dimension(1, 1));
-        questionTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
-        questionTable.getTableHeader().setBackground(parentFrame.CARD_WHITE);
-        questionTable.getTableHeader().setForeground(parentFrame.TEXT_DARK);
-        questionTable.getTableHeader().setReorderingAllowed(false);
-        questionTable.getTableHeader().setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, parentFrame.BORDER_LIGHT));
+        TableColumn<QuestionModel, String> scaleCol = new TableColumn<>("Scale");
+        scaleCol.setCellValueFactory(new PropertyValueFactory<>("scale"));
+        scaleCol.setPrefWidth(150);
+        scaleCol.setStyle("-fx-alignment: CENTER;");
 
-        // Column widths
-        questionTable.getColumnModel().getColumn(0).setPreferredWidth(300); // Question
-        questionTable.getColumnModel().getColumn(1).setPreferredWidth(150); // Scale
-        questionTable.getColumnModel().getColumn(2).setPreferredWidth(200); // Assessment
-        questionTable.getColumnModel().getColumn(3).setPreferredWidth(150); // Type
-        questionTable.getColumnModel().getColumn(4).setPreferredWidth(80);  // Edit
-        questionTable.getColumnModel().getColumn(5).setPreferredWidth(80);  // Delete
+        TableColumn<QuestionModel, String> assessmentCol = new TableColumn<>("Assessment");
+        assessmentCol.setCellValueFactory(new PropertyValueFactory<>("assessmentName"));
+        assessmentCol.setPrefWidth(200);
+        assessmentCol.setStyle("-fx-alignment: CENTER-LEFT;");
 
-        // Button renderers
-        questionTable.getColumnModel().getColumn(4).setCellRenderer(new EditButtonRenderer());
-        questionTable.getColumnModel().getColumn(4).setCellEditor(new EditButtonEditor(new JCheckBox()));
-        questionTable.getColumnModel().getColumn(5).setCellRenderer(new DeleteButtonRenderer());
-        questionTable.getColumnModel().getColumn(5).setCellEditor(new DeleteButtonEditor(new JCheckBox()));
+        TableColumn<QuestionModel, String> typeCol = new TableColumn<>("Type");
+        typeCol.setCellValueFactory(new PropertyValueFactory<>("assessmentType"));
+        typeCol.setPrefWidth(150);
+        typeCol.setStyle("-fx-alignment: CENTER-LEFT;");
 
-        JScrollPane scrollPane = new JScrollPane(questionTable);
-        scrollPane.setBorder(BorderFactory.createLineBorder(parentFrame.BORDER_LIGHT));
-        scrollPane.getViewport().setBackground(parentFrame.CARD_WHITE);
+        TableColumn<QuestionModel, Void> editCol = new TableColumn<>("Edit");
+        editCol.setPrefWidth(80);
+        editCol.setCellFactory(col -> new ActionButtonCell("Edit", true));
 
-        add(scrollPane, BorderLayout.CENTER);
+        TableColumn<QuestionModel, Void> deleteCol = new TableColumn<>("Delete");
+        deleteCol.setPrefWidth(80);
+        deleteCol.setCellFactory(col -> new ActionButtonCell("Delete", false));
+
+        questionTable.getColumns().addAll(questionCol, scaleCol, assessmentCol, typeCol, editCol, deleteCol);
+
+        // Style table header
+        questionTable.getColumns().forEach(col -> {
+            col.setStyle(
+                    "-fx-background-color: white;" +
+                            "-fx-text-fill: #" + toHex(ACCENT_DARK_GREEN) + ";" +
+                            "-fx-font-size: 14px;" +
+                            "-fx-font-weight: bold;"
+            );
+        });
+
+        VBox.setVgrow(questionTable, Priority.ALWAYS);
+        getChildren().add(questionTable);
     }
 
-    class EditButtonRenderer extends JButton implements TableCellRenderer {
-        public EditButtonRenderer() {
-            setOpaque(true);
+    // Action Button Cell
+    class ActionButtonCell extends TableCell<QuestionModel, Void> {
+        private final Button button;
+        private final boolean isEdit;
+
+        public ActionButtonCell(String text, boolean isEdit) {
+            this.isEdit = isEdit;
+            this.button = new Button(text);
+            button.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+            button.setTextFill(Color.web(toHex(TEXT_DARK)));
+            button.setStyle(
+                    "-fx-background-color: #" + toHex(CARD_WHITE) + ";" +
+                            "-fx-background-radius: 5;" +
+                            "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
+                            "-fx-border-radius: 5;" +
+                            "-fx-padding: 8 15;" +
+                            "-fx-cursor: hand;"
+            );
+
+            button.setOnAction(e -> {
+                QuestionModel question = getTableView().getItems().get(getIndex());
+                if (isEdit) {
+                    showEditQuestionDialog(question);
+                } else {
+                    showDeleteQuestionDialog(question);
+                }
+            });
         }
 
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                                                       boolean isSelected, boolean hasFocus, int row, int column) {
-            setText("Edit");
-            setFont(new Font("Segoe UI", Font.PLAIN, 13));
-            setBackground(parentFrame.CARD_WHITE);
-            setForeground(parentFrame.TEXT_DARK);
-            setFocusPainted(false);
-            setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
-            return this;
-        }
-    }
-
-    class EditButtonEditor extends DefaultCellEditor {
-        private JButton button;
-        private int clickedRow;
-
-        public EditButtonEditor(JCheckBox checkBox) {
-            super(checkBox);
-            button = new JButton();
-            button.setOpaque(true);
-            button.addActionListener(e -> fireEditingStopped());
-        }
-
-        public Component getTableCellEditorComponent(JTable table, Object value,
-                                                     boolean isSelected, int row, int column) {
-            clickedRow = row;
-            button.setText("Edit");
-            button.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-            button.setBackground(parentFrame.CARD_WHITE);
-            button.setForeground(parentFrame.TEXT_DARK);
-            button.setFocusPainted(false);
-            button.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
-            return button;
-        }
-
-        public Object getCellEditorValue() {
-            if (dataLoaded && questions != null && clickedRow < questions.size()) {
-                showEditQuestionDialog(clickedRow);
-            }
-            return "Edit";
-        }
-    }
-
-    class DeleteButtonRenderer extends JButton implements TableCellRenderer {
-        public DeleteButtonRenderer() {
-            setOpaque(true);
-        }
-
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                                                       boolean isSelected, boolean hasFocus, int row, int column) {
-            setText("Delete");
-            setFont(new Font("Segoe UI", Font.PLAIN, 13));
-            setBackground(parentFrame.CARD_WHITE);
-            setForeground(parentFrame.TEXT_DARK);
-            setFocusPainted(false);
-            setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
-            return this;
-        }
-    }
-
-    class DeleteButtonEditor extends DefaultCellEditor {
-        private JButton button;
-        private int clickedRow;
-
-        public DeleteButtonEditor(JCheckBox checkBox) {
-            super(checkBox);
-            button = new JButton();
-            button.setOpaque(true);
-            button.addActionListener(e -> fireEditingStopped());
-        }
-
-        public Component getTableCellEditorComponent(JTable table, Object value,
-                                                     boolean isSelected, int row, int column) {
-            clickedRow = row;
-            button.setText("Delete");
-            button.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-            button.setBackground(parentFrame.CARD_WHITE);
-            button.setForeground(parentFrame.TEXT_DARK);
-            button.setFocusPainted(false);
-            button.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
-            return button;
-        }
-
-        public Object getCellEditorValue() {
-            if (dataLoaded && questions != null && clickedRow < questions.size()) {
-                showDeleteQuestionDialog(clickedRow);
-            }
-            return "Delete";
-        }
-    }
-
-
-    private void showDeleteQuestionDialog(int row) {
-        if (questions == null || row >= questions.size()) {
-            return;
-        }
-
-        Question question = questions.get(row);
-        int confirm = JOptionPane.showConfirmDialog(parentFrame,
-                "Are you sure you want to delete this question?\n\n" +
-                        question.getText(),
-                "Confirm Delete",
-                JOptionPane.YES_NO_OPTION);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                questionController.deleteQuestion(question.getQuestionId());
-                JOptionPane.showMessageDialog(parentFrame,
-                        "Question deleted successfully!",
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
-                refreshData();
-            } catch (SQLException e) {
-                JOptionPane.showMessageDialog(parentFrame,
-                        "Error deleting question: " + e.getMessage(),
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
+        @Override
+        protected void updateItem(Void item, boolean empty) {
+            super.updateItem(item, empty);
+            if (empty) {
+                setGraphic(null);
+            } else {
+                setGraphic(button);
             }
         }
+    }
+
+    // Question Model for TableView
+    public static class QuestionModel {
+        private final SimpleIntegerProperty questionId;
+        private final SimpleIntegerProperty assessmentId;
+        private final SimpleStringProperty questionText;
+        private final SimpleStringProperty scale;
+        private final SimpleStringProperty assessmentName;
+        private final SimpleStringProperty assessmentType;
+
+        public QuestionModel(int questionId, int assessmentId, String questionText,
+                             String scale, String assessmentName, String assessmentType) {
+            this.questionId = new SimpleIntegerProperty(questionId);
+            this.assessmentId = new SimpleIntegerProperty(assessmentId);
+            this.questionText = new SimpleStringProperty(questionText);
+            this.scale = new SimpleStringProperty(scale);
+            this.assessmentName = new SimpleStringProperty(assessmentName);
+            this.assessmentType = new SimpleStringProperty(assessmentType);
+        }
+
+        public int getQuestionId() { return questionId.get(); }
+        public int getAssessmentId() { return assessmentId.get(); }
+        public String getQuestionText() { return questionText.get(); }
+        public String getScale() { return scale.get(); }
+        public String getAssessmentName() { return assessmentName.get(); }
+        public String getAssessmentType() { return assessmentType.get(); }
+
+        public void setQuestionId(int id) { this.questionId.set(id); }
+        public void setAssessmentId(int id) { this.assessmentId.set(id); }
+        public void setQuestionText(String text) { this.questionText.set(text); }
+        public void setScale(String scale) { this.scale.set(scale); }
+        public void setAssessmentName(String name) { this.assessmentName.set(name); }
+        public void setAssessmentType(String type) { this.assessmentType.set(type); }
+
+        // Property getters for TableView
+        public SimpleIntegerProperty questionIdProperty() { return questionId; }
+        public SimpleIntegerProperty assessmentIdProperty() { return assessmentId; }
+        public SimpleStringProperty questionTextProperty() { return questionText; }
+        public SimpleStringProperty scaleProperty() { return scale; }
+        public SimpleStringProperty assessmentNameProperty() { return assessmentName; }
+        public SimpleStringProperty assessmentTypeProperty() { return assessmentType; }
+    }
+
+    // SimpleIntegerProperty wrapper
+    public static class SimpleIntegerProperty extends javafx.beans.property.SimpleIntegerProperty {
+        public SimpleIntegerProperty(int value) { super(value); }
+    }
+
+    // SimpleStringProperty wrapper
+    public static class SimpleStringProperty extends javafx.beans.property.SimpleStringProperty {
+        public SimpleStringProperty(String value) { super(value); }
+    }
+
+    private void showDeleteQuestionDialog(QuestionModel questionModel) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirm Delete");
+        confirm.setHeaderText(null);
+        confirm.setContentText("Are you sure you want to delete this question?\n\n" +
+                questionModel.getQuestionText());
+
+        // FIXED: Removed initOwner since getScene() doesn't exist in MentisLoginFrame
+        // confirm.initOwner(parentApp.getScene().getWindow());
+
+        confirm.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                try {
+                    Question question = new Question();
+                    question.setQuestionId(questionModel.getQuestionId());
+                    questionController.deleteQuestion(question.getQuestionId());
+
+                    showAlert("Success", "Question deleted successfully!", Alert.AlertType.INFORMATION);
+                    refreshData();
+                } catch (SQLException e) {
+                    showAlert("Error", "Error deleting question: " + e.getMessage(), Alert.AlertType.ERROR);
+                }
+            }
+        });
     }
 
     private void showAddQuestionDialog() {
-        new QuestionFormDialog(parentFrame, questionController, assessmentController,
+        new QuestionFormDialog(parentApp, questionController, assessmentController,
                 null, currentAssessmentId, false);
     }
 
-    private void showEditQuestionDialog(int row) {
-        if (questions == null || row >= questions.size()) {
-            return;
-        }
+    private void showEditQuestionDialog(QuestionModel questionModel) {
+        try {
+            List<Question> questions = questionController.getAllQuestions();
+            Question questionToEdit = null;
+            for (Question q : questions) {
+                if (q.getQuestionId() == questionModel.getQuestionId()) {
+                    questionToEdit = q;
+                    break;
+                }
+            }
 
-        Question question = questions.get(row);
-        new QuestionFormDialog(parentFrame, questionController, assessmentController,
-                question, question.getAssessmentId(), true);
+            if (questionToEdit != null) {
+                new QuestionFormDialog(parentApp, questionController, assessmentController,
+                        questionToEdit, questionToEdit.getAssessmentId(), true);
+            }
+        } catch (SQLException e) {
+            showAlert("Error", "Error loading question: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
     }
 
     public void refreshData() {
-        // Clear existing data
-        tableModel.setRowCount(0);
-        dataLoaded = false;
+        questionData = FXCollections.observableArrayList();
 
         try {
-            // Load assessments and questions
             assessments = assessmentController.getAllAssessments();
 
-            // Load questions based on currentAssessmentId
+            List<Question> questions;
             if (currentAssessmentId > 0) {
-                // Load questions only for the specific assessment
                 questions = questionController.getQuestionsByAssessment(currentAssessmentId);
+
+                for (Assessment assessment : assessments) {
+                    if (assessment.getAssessmentId() == currentAssessmentId) {
+                        assessmentNameLabel.setText(assessment.getTitle());
+                        assessmentTypeLabel.setText(assessment.getType() + " Assessment");
+                        break;
+                    }
+                }
             } else {
-                // Load all questions
                 questions = questionController.getAllQuestions();
+                assessmentNameLabel.setText("All Assessments");
+                assessmentTypeLabel.setText("Viewing all questions");
             }
 
             if (questions == null || questions.isEmpty()) {
-                String message = currentAssessmentId > 0 ?
-                        "No questions available for this assessment" :
-                        "No questions available";
-
-                tableModel.addRow(new Object[]{
-                        message,
-                        "",
-                        "Click ADD to create one",
-                        "",
-                        "",
-                        ""
-                });
+                questionTable.setPlaceholder(new Label(
+                        currentAssessmentId > 0 ?
+                                "No questions available for this assessment. Click ADD to create one." :
+                                "No questions available. Click ADD to create one."
+                ));
+                questionTable.setItems(FXCollections.observableArrayList());
                 return;
             }
 
             for (Question question : questions) {
-                // Find assessment name
                 String assessmentName = "Unknown";
                 String assessmentType = "";
                 if (assessments != null) {
@@ -368,54 +425,53 @@ public class QuestionPanel extends JPanel {
                     }
                 }
 
-                // Truncate question text if too long
-                String questionText = question.getText();
-                if (questionText.length() > 80) {
-                    questionText = questionText.substring(0, 77) + "...";
-                }
-
-                tableModel.addRow(new Object[]{
-                        questionText,
+                QuestionModel model = new QuestionModel(
+                        question.getQuestionId(),
+                        question.getAssessmentId(),
+                        question.getText(),
                         question.getScale(),
                         assessmentName,
-                        assessmentType,
-                        "Edit",
-                        "Delete"
-                });
+                        assessmentType
+                );
+                questionData.add(model);
             }
 
-            dataLoaded = true;
+            questionTable.setItems(questionData);
 
         } catch (SQLException e) {
-            tableModel.addRow(new Object[]{
-                    "Database Error",
-                    e.getMessage(),
-                    "Please check connection",
-                    "",
-                    "",
-                    ""
-            });
-            System.err.println("Database error: " + e.getMessage());
-            JOptionPane.showMessageDialog(this,
-                    "Cannot connect to database.\n" +
-                            "Error: " + e.getMessage(),
-                    "Database Error",
-                    JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+            questionTable.setPlaceholder(new Label("Database Error: " + e.getMessage()));
+            showAlert("Database Error",
+                    "Cannot connect to database.\nError: " + e.getMessage(),
+                    Alert.AlertType.ERROR);
         } catch (Exception e) {
-            tableModel.addRow(new Object[]{
-                    "Error loading data",
-                    e.getMessage(),
-                    "",
-                    "",
-                    "",
-                    ""
-            });
-            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace();
+            questionTable.setPlaceholder(new Label("Error loading data: " + e.getMessage()));
         }
     }
 
     public void setCurrentAssessmentId(int assessmentId) {
         this.currentAssessmentId = assessmentId;
         refreshData();
+    }
+
+    private void showAlert(String title, String content, Alert.AlertType type) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+
+        // FIXED: Removed initOwner since getScene() doesn't exist in MentisLoginFrame
+        // alert.initOwner(parentApp.getScene().getWindow());
+
+        alert.showAndWait();
+    }
+
+    // ================= UTILITY =================
+    private String toHex(Color color) {
+        return String.format("%02x%02x%02x",
+                (int)(color.getRed() * 255),
+                (int)(color.getGreen() * 255),
+                (int)(color.getBlue() * 255));
     }
 }

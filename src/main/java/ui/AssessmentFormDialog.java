@@ -1,426 +1,465 @@
 package ui;
 
-import javax.swing.*;
-import javax.swing.border.*;
-import java.awt.*;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
-import java.awt.dnd.*;
+import controller.AssessmentController;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.stage.FileChooser;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import models.Assessment;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import controller.AssessmentController;
-import models.Assessment;
 import java.sql.SQLException;
 
-public class AssessmentFormDialog extends JDialog {
-    private MentisLoginFrame parentFrame;
+public class AssessmentFormDialog extends Stage {
+
+    private MentisLoginFrame parentApp;
     private AssessmentController controller;
     private Assessment assessment;
 
-    private JTextField titleField;
-    private JComboBox<String> typeCombo;
-    private JTextArea descriptionArea;
-    private JComboBox<String> statusCombo;
-    private JLabel imagePreviewLabel;
+    private TextField titleField;
+    private ComboBox<String> typeCombo;
+    private TextArea descriptionArea;
+    private ComboBox<String> statusCombo;
+    private ImageView imagePreview;
     private File selectedImageFile;
     private String imagePathToSave;
-    private JLabel uploadStatusLabel;
+    private Label uploadStatusLabel;
 
-    public AssessmentFormDialog(MentisLoginFrame parentFrame, AssessmentController controller,
+    // Color constants
+    private static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
+    private static final Color CARD_WHITE = Color.WHITE;
+    private static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
+    private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
+    private static final Color BUTTON_LIGHT_GREEN = Color.rgb(160, 200, 180);
+    private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
+    private static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
+    private static final Color PLACEHOLDER_BG = Color.rgb(240, 240, 240);
+    private static final Color PLACEHOLDER_BORDER = Color.rgb(200, 200, 200);
+
+    public AssessmentFormDialog(MentisLoginFrame parentApp, AssessmentController controller,
                                 Assessment assessment, boolean isEdit) {
-        super(parentFrame, isEdit ? "Edit Assessment" : "Add Assessment", true);
-        this.parentFrame = parentFrame;
+        this.parentApp = parentApp;
         this.controller = controller;
         this.assessment = assessment;
 
-        setSize(800, 700); // Increased size for image upload
-        setLocationRelativeTo(parentFrame);
-        setLayout(new BorderLayout());
-        getContentPane().setBackground(parentFrame.BACKGROUND_LIGHT);
+        initModality(Modality.APPLICATION_MODAL);
+        initStyle(StageStyle.UTILITY);
+        setTitle(isEdit ? "Edit Assessment" : "Add Assessment");
 
-        createForm();
+        // Main layout
+        BorderPane root = new BorderPane();
+        root.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+
+        // Header
+        root.setTop(createHeader(isEdit));
+
+        // Form
+        root.setCenter(createForm());
+
+        // Buttons
+        root.setBottom(createButtonPanel(isEdit));
+
+        Scene scene = new Scene(root, 800, 700);
+        setScene(scene);
+        setResizable(false);
+
         if (isEdit && assessment != null) {
             loadAssessmentData();
         }
 
-        setVisible(true);
+        showAndWait();
     }
 
-    private void createForm() {
-        // Header
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(parentFrame.BACKGROUND_LIGHT);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+    private HBox createHeader(boolean isEdit) {
+        HBox header = new HBox();
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(20, 30, 20, 30));
+        header.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
 
-        JLabel titleLabel = new JLabel(assessment == null ? "Add New Assessment" : "Edit Assessment");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        titleLabel.setForeground(parentFrame.ACCENT_DARK_GREEN);
-        headerPanel.add(titleLabel, BorderLayout.WEST);
+        Label titleLabel = new Label(isEdit ? "Edit Assessment" : "Add New Assessment");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
+        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
 
-        add(headerPanel, BorderLayout.NORTH);
+        header.getChildren().add(titleLabel);
+        return header;
+    }
 
-        // Main form panel with scroll
-        JPanel mainFormPanel = new JPanel(new BorderLayout());
-        mainFormPanel.setBackground(parentFrame.BACKGROUND_LIGHT);
+    private ScrollPane createForm() {
+        GridPane formPanel = new GridPane();
+        formPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        formPanel.setPadding(new Insets(20, 30, 20, 30));
+        formPanel.setHgap(15);
+        formPanel.setVgap(15);
+        formPanel.setAlignment(Pos.TOP_CENTER);
 
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(parentFrame.BACKGROUND_LIGHT);
-        formPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+        // Column constraints
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setMinWidth(100);
+        col1.setHalignment(javafx.geometry.HPos.RIGHT);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.insets = new Insets(10, 10, 10, 10);
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setHgrow(Priority.ALWAYS);
+        col2.setFillWidth(true);
+
+        formPanel.getColumnConstraints().addAll(col1, col2);
+
+        int row = 0;
 
         // Title
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        formPanel.add(new JLabel("Title:"), gbc);
+        Label titleLabel = new Label("Title:");
+        titleLabel.setFont(Font.font("Segoe UI", 14));
+        titleLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
 
-        gbc.gridx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-        titleField = new JTextField(30);
-        titleField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        titleField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(parentFrame.BORDER_LIGHT, 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
-        formPanel.add(titleField, gbc);
+        titleField = new TextField();
+        titleField.setFont(Font.font("Segoe UI", 14));
+        titleField.setStyle(
+                "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
+                        "-fx-border-radius: 5;" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 8 12;"
+        );
+        titleField.setPrefHeight(40);
+
+        formPanel.add(titleLabel, 0, row);
+        formPanel.add(titleField, 1, row++);
 
         // Type
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.fill = GridBagConstraints.NONE;
-        gbc.weightx = 0;
-        formPanel.add(new JLabel("Type:"), gbc);
+        Label typeLabel = new Label("Type:");
+        typeLabel.setFont(Font.font("Segoe UI", 14));
+        typeLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
 
-        gbc.gridx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
+        // Type ComboBox - FIXED
         String[] types = {"Depression", "Anxiety", "Stress", "Wellness", "General", "Custom"};
-        typeCombo = new JComboBox<>(types);
-        typeCombo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        typeCombo.setBackground(parentFrame.CARD_WHITE);
-        formPanel.add(typeCombo, gbc);
+        typeCombo = new ComboBox<>();
+        typeCombo.getItems().addAll(types);
+        typeCombo.setValue(types[0]);
+        typeCombo.setPrefHeight(40);
+        typeCombo.setMaxWidth(Double.MAX_VALUE);
+        typeCombo.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
+                        "-fx-border-radius: 5;" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-font-family: 'Segoe UI';" +
+                        "-fx-font-size: 14px;"
+        );
+
+// Status ComboBox - FIXED
+
+        formPanel.add(typeLabel, 0, row);
+        formPanel.add(typeCombo, 1, row++);
 
         // Status
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.fill = GridBagConstraints.NONE;
-        gbc.weightx = 0;
-        formPanel.add(new JLabel("Status:"), gbc);
-
-        gbc.gridx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
+        Label statusLabel = new Label("Status:");
+        statusLabel.setFont(Font.font("Segoe UI", 14));
+        statusLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
         String[] statuses = {"Active", "Inactive", "Draft"};
-        statusCombo = new JComboBox<>(statuses);
-        statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        statusCombo.setBackground(parentFrame.CARD_WHITE);
-        formPanel.add(statusCombo, gbc);
+        statusCombo = new ComboBox<>();
+        statusCombo.getItems().addAll(statuses);
+        statusCombo.setValue(statuses[0]);
+        statusCombo.setPrefHeight(40);
+        statusCombo.setMaxWidth(Double.MAX_VALUE);
+        statusCombo.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
+                        "-fx-border-radius: 5;" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-font-family: 'Segoe UI';" +
+                        "-fx-font-size: 14px;"
+        );
+
+
+        formPanel.add(statusLabel, 0, row);
+        formPanel.add(statusCombo, 1, row++);
 
         // Description
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        gbc.fill = GridBagConstraints.NONE;
-        gbc.weightx = 0;
-        JLabel descLabel = new JLabel("Description:");
-        descLabel.setVerticalAlignment(SwingConstants.TOP);
-        formPanel.add(descLabel, gbc);
+        Label descLabel = new Label("Description:");
+        descLabel.setFont(Font.font("Segoe UI", 14));
+        descLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        descLabel.setAlignment(Pos.TOP_RIGHT);
 
-        gbc.gridx = 1;
-        gbc.gridheight = 2;
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.weightx = 1.0;
-        gbc.weighty = 0.5;
-        descriptionArea = new JTextArea(4, 30);
-        descriptionArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        descriptionArea.setLineWrap(true);
-        descriptionArea.setWrapStyleWord(true);
-        JScrollPane scrollPane = new JScrollPane(descriptionArea);
-        scrollPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(parentFrame.BORDER_LIGHT, 1),
-                BorderFactory.createEmptyBorder(5, 5, 5, 5)
-        ));
-        formPanel.add(scrollPane, gbc);
+        descriptionArea = new TextArea();
+        descriptionArea.setFont(Font.font("Segoe UI", 14));
+        descriptionArea.setWrapText(true);
+        descriptionArea.setPrefRowCount(4);
+        descriptionArea.setStyle(
+                "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
+                        "-fx-border-radius: 5;" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 8;"
+        );
+
+        formPanel.add(descLabel, 0, row);
+        formPanel.add(descriptionArea, 1, row++);
 
         // Image Upload Section
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        gbc.gridheight = 1;
-        gbc.fill = GridBagConstraints.NONE;
-        gbc.weighty = 0;
-        formPanel.add(new JLabel("Image:"), gbc);
+        Label imageLabel = new Label("Image:");
+        imageLabel.setFont(Font.font("Segoe UI", 14));
+        imageLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
 
-        gbc.gridx = 1;
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.weighty = 0.5;
+        VBox imageUploadPanel = createImageUploadPanel();
+        formPanel.add(imageLabel, 0, row);
+        formPanel.add(imageUploadPanel, 1, row++);
 
-        // Image upload panel
-        JPanel imageUploadPanel = createImageUploadPanel();
-        formPanel.add(imageUploadPanel, gbc);
+        // Wrap in ScrollPane
+        ScrollPane scrollPane = new ScrollPane(formPanel);
+        scrollPane.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        scrollPane.setBorder(null);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
 
-        JScrollPane formScrollPane = new JScrollPane(formPanel);
-        formScrollPane.setBorder(null);
-        formScrollPane.getViewport().setBackground(parentFrame.BACKGROUND_LIGHT);
-        mainFormPanel.add(formScrollPane, BorderLayout.CENTER);
-
-        add(mainFormPanel, BorderLayout.CENTER);
-
-        // Buttons panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 20));
-        buttonPanel.setBackground(parentFrame.BACKGROUND_LIGHT);
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 30, 20, 30));
-
-        JButton cancelButton = new JButton("Cancel");
-        styleButton(cancelButton, parentFrame.BUTTON_LIGHT_GREEN);
-        cancelButton.addActionListener(e -> dispose());
-
-        JButton saveButton = new JButton(assessment == null ? "Add Assessment" : "Save Changes");
-        styleButton(saveButton, parentFrame.ACCENT_DARK_GREEN);
-        saveButton.setForeground(Color.WHITE);
-        saveButton.addActionListener(e -> saveAssessment());
-
-        buttonPanel.add(cancelButton);
-        buttonPanel.add(saveButton);
-
-        add(buttonPanel, BorderLayout.SOUTH);
+        return scrollPane;
     }
 
-    private JPanel createImageUploadPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(parentFrame.CARD_WHITE);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(parentFrame.BORDER_LIGHT, 1),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        ));
+    private VBox createImageUploadPanel() {
+        VBox panel = new VBox(10);
+        panel.setStyle("-fx-background-color: white; -fx-border-color: #" + toHex(BORDER_LIGHT) +
+                "; -fx-border-radius: 5; -fx-background-radius: 5;");
+        panel.setPadding(new Insets(15));
+        panel.setAlignment(Pos.CENTER);
 
         // Preview area
-        imagePreviewLabel = new JLabel("", SwingConstants.CENTER);
-        imagePreviewLabel.setPreferredSize(new Dimension(300, 200));
-        imagePreviewLabel.setBackground(new Color(240, 240, 240));
-        imagePreviewLabel.setOpaque(true);
-        imagePreviewLabel.setBorder(BorderFactory.createLineBorder(parentFrame.BORDER_LIGHT, 1));
+        VBox previewContainer = new VBox(10);
+        previewContainer.setAlignment(Pos.CENTER);
+
+        imagePreview = new ImageView();
+        imagePreview.setFitWidth(300);
+        imagePreview.setFitHeight(200);
+        imagePreview.setPreserveRatio(true);
+        imagePreview.setStyle("-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);");
 
         // Set default placeholder
-        ImageIcon placeholder = createPlaceholderIcon(300, 200, "No Image Selected");
-        imagePreviewLabel.setIcon(placeholder);
-        imagePreviewLabel.setHorizontalTextPosition(SwingConstants.CENTER);
-        imagePreviewLabel.setVerticalTextPosition(SwingConstants.CENTER);
+        setPlaceholderImage();
 
-        // Upload status label
-        uploadStatusLabel = new JLabel("Drag & drop image here or click to browse", SwingConstants.CENTER);
-        uploadStatusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        uploadStatusLabel.setForeground(parentFrame.TEXT_LIGHT);
+        uploadStatusLabel = new Label("Drag & drop image here or click to browse");
+        uploadStatusLabel.setFont(Font.font("Segoe UI", 12));
+        uploadStatusLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
 
-        JPanel previewPanel = new JPanel(new BorderLayout());
-        previewPanel.setBackground(parentFrame.CARD_WHITE);
-        previewPanel.add(imagePreviewLabel, BorderLayout.CENTER);
-        previewPanel.add(uploadStatusLabel, BorderLayout.SOUTH);
+        // Make preview clickable
+        imagePreview.setPickOnBounds(true);
+        imagePreview.setOnMouseClicked(e -> browseForImage());
+        imagePreview.setCursor(javafx.scene.Cursor.HAND);
 
-        // Setup drag & drop
-        setupDragAndDrop(imagePreviewLabel);
+        // Setup drag and drop
+        setupDragAndDrop(imagePreview);
 
-        // Click to browse
-        imagePreviewLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        imagePreviewLabel.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                browseForImage();
-            }
-        });
+        previewContainer.getChildren().addAll(imagePreview, uploadStatusLabel);
 
         // Control buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
-        buttonPanel.setBackground(parentFrame.CARD_WHITE);
+        HBox buttonPanel = new HBox(10);
+        buttonPanel.setAlignment(Pos.CENTER);
+        buttonPanel.setPadding(new Insets(5, 0, 0, 0));
 
-        JButton browseButton = new JButton("Browse...");
-        styleSmallButton(browseButton);
-        browseButton.addActionListener(e -> browseForImage());
+        Button browseButton = createSmallButton("Browse...");
+        browseButton.setOnAction(e -> browseForImage());
 
-        JButton clearButton = new JButton("Clear Image");
-        styleSmallButton(clearButton);
-        clearButton.addActionListener(e -> clearImage());
+        Button clearButton = createSmallButton("Clear Image");
+        clearButton.setOnAction(e -> clearImage());
 
-        buttonPanel.add(browseButton);
-        buttonPanel.add(clearButton);
+        buttonPanel.getChildren().addAll(browseButton, clearButton);
 
-        panel.add(previewPanel, BorderLayout.CENTER);
-        panel.add(buttonPanel, BorderLayout.SOUTH);
-
+        panel.getChildren().addAll(previewContainer, buttonPanel);
         return panel;
     }
 
-    private void setupDragAndDrop(JLabel dropTarget) {
-        new DropTarget(dropTarget, new DropTargetAdapter() {
-            @Override
-            public void drop(DropTargetDropEvent dtde) {
-                try {
-                    dtde.acceptDrop(DnDConstants.ACTION_COPY);
-                    Transferable transferable = dtde.getTransferable();
-
-                    if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-                        java.util.List<File> fileList = (java.util.List<File>)
-                                transferable.getTransferData(DataFlavor.javaFileListFlavor);
-
-                        if (!fileList.isEmpty()) {
-                            File file = fileList.get(0);
-                            handleImageFile(file);
-                        }
-                    }
-                    dtde.dropComplete(true);
-                } catch (Exception e) {
-                    dtde.dropComplete(false);
-                    JOptionPane.showMessageDialog(AssessmentFormDialog.this,
-                            "Error processing dropped file: " + e.getMessage(),
-                            "Upload Error",
-                            JOptionPane.ERROR_MESSAGE);
-                }
+    private void setupDragAndDrop(ImageView target) {
+        target.setOnDragOver(event -> {
+            if (event.getDragboard().hasFiles()) {
+                event.acceptTransferModes(javafx.scene.input.TransferMode.COPY);
             }
+            event.consume();
+        });
+
+        target.setOnDragDropped(event -> {
+            javafx.scene.input.Dragboard db = event.getDragboard();
+            boolean success = false;
+
+            if (db.hasFiles()) {
+                File file = db.getFiles().get(0);
+                success = handleImageFile(file);
+            }
+
+            event.setDropCompleted(success);
+            event.consume();
         });
     }
 
     private void browseForImage() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Select Assessment Image");
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Select Assessment Image");
 
-        // Set file filter for images
-        fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                if (f.isDirectory()) return true;
-                String name = f.getName().toLowerCase();
-                return name.endsWith(".jpg") || name.endsWith(".jpeg") ||
-                        name.endsWith(".png") || name.endsWith(".gif") ||
-                        name.endsWith(".bmp");
-            }
+        // Add filters for image files
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Image Files",
+                        "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
 
-            @Override
-            public String getDescription() {
-                return "Image files (*.jpg, *.jpeg, *.png, *.gif, *.bmp)";
-            }
-        });
-
-        int result = fileChooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File selectedFile = fileChooser.getSelectedFile();
+        File selectedFile = fileChooser.showOpenDialog(this);
+        if (selectedFile != null) {
             handleImageFile(selectedFile);
         }
     }
 
-    private void handleImageFile(File imageFile) {
+    private boolean handleImageFile(File imageFile) {
         try {
             // Check file size (limit to 5MB)
             long fileSize = imageFile.length();
             if (fileSize > 5 * 1024 * 1024) {
-                JOptionPane.showMessageDialog(this,
-                        "Image file is too large. Maximum size is 5MB.",
-                        "File Too Large",
-                        JOptionPane.WARNING_MESSAGE);
-                return;
+                showAlert("Image file is too large. Maximum size is 5MB.", Alert.AlertType.WARNING);
+                return false;
             }
 
             // Validate it's an image
-            BufferedImage img = ImageIO.read(imageFile);
-            if (img == null) {
+            Image image = new Image(new FileInputStream(imageFile));
+            if (image.isError()) {
                 throw new IOException("Not a valid image file");
             }
 
-            // Resize image for preview
-            ImageIcon icon = resizeImageIcon(new ImageIcon(img), 300, 200);
-            imagePreviewLabel.setIcon(icon);
-            imagePreviewLabel.setText("");
+            // Set preview
+            ImageView tempView = new ImageView(image);
+            tempView.setFitWidth(300);
+            tempView.setFitHeight(200);
+            tempView.setPreserveRatio(true);
+            imagePreview.setImage(tempView.getImage());
 
             // Update status
             uploadStatusLabel.setText(imageFile.getName() + " (" +
                     String.format("%.1f", fileSize / 1024.0) + " KB)");
-            uploadStatusLabel.setForeground(parentFrame.ACCENT_DARK_GREEN);
+            uploadStatusLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
 
             selectedImageFile = imageFile;
+            return true;
 
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this,
-                    "Invalid image file: " + e.getMessage(),
-                    "Invalid File",
-                    JOptionPane.ERROR_MESSAGE);
+            showAlert("Invalid image file: " + e.getMessage(), Alert.AlertType.ERROR);
+            return false;
         }
     }
 
-    private ImageIcon resizeImageIcon(ImageIcon icon, int width, int height) {
-        Image img = icon.getImage();
-        Image resizedImage = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
-        return new ImageIcon(resizedImage);
-    }
-
     private void clearImage() {
-        ImageIcon placeholder = createPlaceholderIcon(300, 200, "No Image Selected");
-        imagePreviewLabel.setIcon(placeholder);
+        setPlaceholderImage();
         uploadStatusLabel.setText("Drag & drop image here or click to browse");
-        uploadStatusLabel.setForeground(parentFrame.TEXT_LIGHT);
+        uploadStatusLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
         selectedImageFile = null;
         imagePathToSave = null;
     }
 
-    private ImageIcon createPlaceholderIcon(int width, int height, String text) {
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = image.createGraphics();
+    private void setPlaceholderImage() {
+        // Create placeholder image programmatically
+        javafx.scene.canvas.Canvas canvas = new javafx.scene.canvas.Canvas(300, 200);
+        javafx.scene.canvas.GraphicsContext gc = canvas.getGraphicsContext2D();
 
         // Fill background
-        g2d.setColor(new Color(240, 240, 240));
-        g2d.fillRect(0, 0, width, height);
+        gc.setFill(PLACEHOLDER_BG);
+        gc.fillRect(0, 0, 300, 200);
 
         // Draw border
-        g2d.setColor(new Color(200, 200, 200));
-        g2d.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1.0f, new float[]{5, 5}, 0));
-        g2d.drawRect(10, 10, width - 20, height - 20);
+        gc.setStroke(PLACEHOLDER_BORDER);
+        gc.setLineDashes(5);
+        gc.strokeRect(10, 10, 280, 180);
 
         // Draw camera icon
-        g2d.setColor(new Color(150, 150, 150));
-        g2d.setStroke(new BasicStroke(2));
-        g2d.drawOval(width/2 - 30, height/2 - 40, 60, 60);
-        g2d.fillOval(width/2 - 20, height/2 - 30, 40, 40);
-        g2d.setColor(new Color(240, 240, 240));
-        g2d.fillOval(width/2 - 10, height/2 - 20, 20, 20);
+        gc.setFill(Color.rgb(150, 150, 150));
+        gc.fillOval(120, 60, 60, 60);
+        gc.setFill(PLACEHOLDER_BG);
+        gc.fillOval(130, 70, 40, 40);
+        gc.setFill(Color.rgb(150, 150, 150));
+        gc.fillOval(140, 80, 20, 20);
 
         // Draw text
-        g2d.setColor(new Color(100, 100, 100));
-        g2d.setFont(new Font("Arial", Font.PLAIN, 12));
-        FontMetrics fm = g2d.getFontMetrics();
-        int textWidth = fm.stringWidth(text);
-        g2d.drawString(text, (width - textWidth) / 2, height - 20);
+        gc.setFill(Color.rgb(100, 100, 100));
+        gc.setFont(Font.font("Arial", 12));
+        gc.fillText("No Image Selected", 100, 170);
 
-        g2d.dispose();
-        return new ImageIcon(image);
+        imagePreview.setImage(canvas.snapshot(null, null));
+        imagePreview.setStyle("-fx-effect: none;");
     }
 
-    private void styleSmallButton(JButton button) {
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        button.setBackground(parentFrame.BUTTON_LIGHT_GREEN);
-        button.setForeground(parentFrame.TEXT_DARK);
-        button.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
-        button.setFocusPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    private Button createSmallButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
+        button.setTextFill(Color.web(toHex(TEXT_DARK)));
+        button.setStyle(
+                "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 8 20;" +
+                        "-fx-cursor: hand;"
+        );
+        return button;
     }
 
-    private void styleButton(JButton button, Color bgColor) {
-        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        button.setBackground(bgColor);
-        button.setForeground(bgColor == parentFrame.ACCENT_DARK_GREEN ? Color.WHITE : parentFrame.TEXT_DARK);
-        button.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30));
-        button.setFocusPainted(false);
-        button.setOpaque(true);
-        button.setBorderPainted(false);
+    private HBox createButtonPanel(boolean isEdit) {
+        HBox buttonPanel = new HBox(15);
+        buttonPanel.setAlignment(Pos.CENTER_RIGHT);
+        buttonPanel.setPadding(new Insets(20, 30, 20, 30));
+        buttonPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+
+        Button cancelButton = createButton("Cancel", BUTTON_LIGHT_GREEN);
+        cancelButton.setOnAction(e -> close());
+
+        Button saveButton = createButton(isEdit ? "Save Changes" : "Add Assessment", ACCENT_DARK_GREEN);
+        saveButton.setTextFill(Color.WHITE);
+        saveButton.setOnAction(e -> saveAssessment());
+
+        buttonPanel.getChildren().addAll(cancelButton, saveButton);
+        return buttonPanel;
+    }
+
+    private Button createButton(String text, Color bgColor) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        button.setTextFill(bgColor == ACCENT_DARK_GREEN ? Color.WHITE : Color.web(toHex(TEXT_DARK)));
+        button.setStyle(
+                "-fx-background-color: #" + toHex(bgColor) + ";" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 12 30;" +
+                        "-fx-cursor: hand;"
+        );
+
+        // Hover effect
+        button.setOnMouseEntered(e ->
+                button.setStyle(
+                        "-fx-background-color: #" + toHex(bgColor.darker()) + ";" +
+                                "-fx-background-radius: 5;" +
+                                "-fx-padding: 12 30;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+        button.setOnMouseExited(e ->
+                button.setStyle(
+                        "-fx-background-color: #" + toHex(bgColor) + ";" +
+                                "-fx-background-radius: 5;" +
+                                "-fx-padding: 12 30;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+
+        return button;
     }
 
     private void loadAssessmentData() {
         if (assessment != null) {
             titleField.setText(assessment.getTitle());
-            typeCombo.setSelectedItem(assessment.getType());
+            typeCombo.setValue(assessment.getType());
             descriptionArea.setText(assessment.getDescription());
-            statusCombo.setSelectedItem(assessment.getStatus());
+            statusCombo.setValue(assessment.getStatus());
 
             // Load image if exists
             if (assessment.getImagePath() != null && !assessment.getImagePath().isEmpty()) {
@@ -445,7 +484,7 @@ public class AssessmentFormDialog extends JDialog {
             // Create images directory if it doesn't exist
             File imagesDir = new File("assessment_images");
             if (!imagesDir.exists()) {
-                imagesDir.mkdir();
+                imagesDir.mkdirs();
             }
 
             // Generate unique filename
@@ -465,15 +504,11 @@ public class AssessmentFormDialog extends JDialog {
             Files.copy(selectedImageFile.toPath(), destination.toPath(),
                     StandardCopyOption.REPLACE_EXISTING);
 
-            // Return relative path (better for portability)
+            // Return relative path
             return "assessment_images/" + newFileName;
 
-
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this,
-                    "Error saving image: " + e.getMessage(),
-                    "Image Save Error",
-                    JOptionPane.ERROR_MESSAGE);
+            showAlert("Error saving image: " + e.getMessage(), Alert.AlertType.ERROR);
             return null;
         }
     }
@@ -481,10 +516,7 @@ public class AssessmentFormDialog extends JDialog {
     private void saveAssessment() {
         // Validate inputs
         if (titleField.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Please enter a title for the assessment.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE);
+            showAlert("Please enter a title for the assessment.", Alert.AlertType.WARNING);
             return;
         }
 
@@ -499,24 +531,21 @@ public class AssessmentFormDialog extends JDialog {
                 // Create new assessment
                 Assessment newAssessment = new Assessment();
                 newAssessment.setTitle(titleField.getText().trim());
-                newAssessment.setType((String) typeCombo.getSelectedItem());
+                newAssessment.setType(typeCombo.getValue());
                 newAssessment.setDescription(descriptionArea.getText().trim());
-                newAssessment.setStatus((String) statusCombo.getSelectedItem());
+                newAssessment.setStatus(statusCombo.getValue());
                 newAssessment.setImagePath(savedImagePath);
 
                 controller.createAssessment(newAssessment);
 
-                JOptionPane.showMessageDialog(this,
-                        "Assessment created successfully!",
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
+                showAlert("Assessment created successfully!", Alert.AlertType.INFORMATION);
 
             } else {
                 // Update existing assessment
                 assessment.setTitle(titleField.getText().trim());
-                assessment.setType((String) typeCombo.getSelectedItem());
+                assessment.setType(typeCombo.getValue());
                 assessment.setDescription(descriptionArea.getText().trim());
-                assessment.setStatus((String) statusCombo.getSelectedItem());
+                assessment.setStatus(statusCombo.getValue());
 
                 // Only update image path if a new image was selected
                 if (savedImagePath != null) {
@@ -525,25 +554,37 @@ public class AssessmentFormDialog extends JDialog {
 
                 controller.updateAssessment(assessment);
 
-                JOptionPane.showMessageDialog(this,
-                        "Assessment updated successfully!",
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
+                showAlert("Assessment updated successfully!", Alert.AlertType.INFORMATION);
             }
 
-            dispose();
-            parentFrame.showPanel("ASSESSMENTS"); // Refresh the assessments panel
+            close();
+            // Refresh the assessments panel
+            if (parentApp != null) {
+                parentApp.showAssessmentPanel();
+            }
 
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this,
-                    "Error saving assessment: " + e.getMessage(),
-                    "Database Error",
-                    JOptionPane.ERROR_MESSAGE);
+            showAlert("Error saving assessment: " + e.getMessage(), Alert.AlertType.ERROR);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                    "Error: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+            showAlert("Error: " + e.getMessage(), Alert.AlertType.ERROR);
         }
+    }
+
+    private void showAlert(String message, Alert.AlertType type) {
+        Alert alert = new Alert(type);
+        alert.setTitle(type == Alert.AlertType.ERROR ? "Error" :
+                type == Alert.AlertType.WARNING ? "Warning" : "Success");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.initOwner(this);
+        alert.showAndWait();
+    }
+
+    // ================= UTILITY =================
+    private String toHex(Color color) {
+        return String.format("%02x%02x%02x",
+                (int)(color.getRed() * 255),
+                (int)(color.getGreen() * 255),
+                (int)(color.getBlue() * 255));
     }
 }

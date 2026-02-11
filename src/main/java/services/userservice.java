@@ -8,6 +8,16 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class userservice {
+    private static void closeResources(Connection conn, Statement stmt, ResultSet rs) {
+        try {
+            if (rs != null) rs.close();
+            if (stmt != null) stmt.close();
+            if (conn != null) conn.close();
+        } catch (SQLException e) {
+            System.err.println("❌ Error closing resources: " + e.getMessage());
+        }
+    }
+
 
     /* ===================== REGISTER ===================== */
     public static boolean registeruser(user user) {
@@ -201,4 +211,73 @@ public class userservice {
         return date != null &&
                 date.matches("^\\d{4}-\\d{2}-\\d{2}$");
     }
+    // Add these methods to your userservice.java class
+
+    /**
+     * Get user by email
+     * @param email User's email
+     * @return user object if found, null otherwise
+     */
+    public static user getuserByEmail(String email) {
+        String sql = "SELECT * FROM user WHERE email = ?";
+
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConnection.getConnection();
+            stmt = conn.prepareStatement(sql);
+            stmt.setString(1, email);
+
+            rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return new user(
+                        rs.getInt("id"),
+                        rs.getString("firstname"),
+                        rs.getString("lastname"),
+                        rs.getString("phone"),
+                        rs.getString("dateofbirth"),
+                        rs.getString("type"),
+                        rs.getString("email"),
+                        rs.getString("password")
+                );
+            }
+
+            return null;
+
+        } catch (SQLException e) {
+            System.err.println("Error getting user by email: " + e.getMessage());
+            return null;
+        } finally {
+            closeResources(conn, stmt, rs);
+        }
+    }
+
+    public static boolean updateUserPassword(String email, String newPassword) {
+
+        String sql = "UPDATE user SET password=? WHERE email=?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, hashPassword(newPassword));
+            stmt.setString(2, email);
+
+            int rows = stmt.executeUpdate();
+
+            if (rows > 0) {
+                System.out.println("✅ Password updated for: " + email);
+                return true;
+            }
+
+            return false;
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error updating password: " + e.getMessage());
+            return false;
+        }
+    }
+
 }

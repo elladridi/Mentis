@@ -1,133 +1,213 @@
 package ui;
 
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import models.user;
 import services.userservice;
 
-import javax.swing.*;
-import java.awt.*;
-import java.net.URL;
+/**
+ * JavaFX Login Panel for Mentis
+ */
+public class MentisLoginPanel extends StackPane {
 
-public class MentisLoginPanel extends JPanel {
+    private TextField emailField;
+    private PasswordField passwordField;
+    private Button loginButton;
+    private Hyperlink forgotPasswordLink;
+    private Hyperlink backLink;
+    private MentisLoginFrame parentApp;
 
-    private RoundedTextField emailField;
-    private RoundedPasswordField passwordField;
-    private RoundedButton loginButton;
-    private JLabel backLabel;
-    private MentisLoginFrame parentFrame;
-
-    public MentisLoginPanel(MentisLoginFrame parentFrame) {
-        this.parentFrame = parentFrame;
-        setLayout(new BorderLayout());
-        setBackground(new Color(216, 228, 222));
+    public MentisLoginPanel(MentisLoginFrame parentApp) {
+        this.parentApp = parentApp;
         initComponents();
+        applyStyles();
     }
 
     private void initComponents() {
-        // Main container panel
-        JPanel mainContainer = new JPanel(new GridBagLayout());
-        mainContainer.setBackground(new Color(216, 228, 222));
-        mainContainer.setOpaque(false);
+        // Set background color
+        setStyle("-fx-background-color: #D8E4DE;"); // Light sage green
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.weightx = 1.0;
-        gbc.weighty = 1.0;
-        gbc.insets = new Insets(100, 50, 100, 50);
-        gbc.fill = GridBagConstraints.BOTH;
+        // Main container with centering
+        VBox mainContainer = new VBox(30);
+        mainContainer.setAlignment(Pos.CENTER);
+        mainContainer.setPadding(new Insets(100, 50, 100, 50));
 
         // ===== Login Card =====
-        JPanel card = new JPanel(new GridBagLayout()) {
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 40, 40);
-            }
-        };
-        card.setOpaque(false);
-        card.setPreferredSize(new Dimension(450, 550)); // Bigger card
-
-        GridBagConstraints cardGbc = new GridBagConstraints();
-        cardGbc.gridx = 0;
-        cardGbc.gridy = 0;
-        cardGbc.weightx = 1.0;
-        cardGbc.weighty = 0;
-        cardGbc.fill = GridBagConstraints.HORIZONTAL;
-        cardGbc.insets = new Insets(30, 30, 10, 30);
+        VBox card = new VBox(20);
+        card.setAlignment(Pos.CENTER);
+        card.setMaxWidth(450);
+        card.setMaxHeight(600);
+        card.setPadding(new Insets(40, 40, 40, 40));
+        card.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 20;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 2);"
+        );
 
         // ===== Logo =====
         try {
-            URL logoURL = getClass().getResource("/resources/logo.png");
-            if (logoURL != null) {
-                Image img = new ImageIcon(logoURL).getImage().getScaledInstance(120, 120, Image.SCALE_SMOOTH);
-                JLabel logo = new JLabel(new ImageIcon(img));
-                logo.setHorizontalAlignment(SwingConstants.CENTER);
-                cardGbc.gridy++;
-                cardGbc.insets = new Insets(30, 30, 20, 30);
-                card.add(logo, cardGbc);
-            }
-        } catch (Exception ignored) {}
+            Image logo = new Image(getClass().getResourceAsStream("/resources/logo.png"));
+            ImageView logoView = new ImageView(logo);
+            logoView.setFitWidth(120);
+            logoView.setFitHeight(120);
+            logoView.setPreserveRatio(true);
+            card.getChildren().add(logoView);
+        } catch (Exception e) {
+            System.out.println("Logo not found: " + e.getMessage());
+        }
 
         // ===== Title =====
-        JLabel title = new JLabel("Welcome Back");
-        title.setFont(new Font("Arial", Font.BOLD, 32)); // Bigger font
-        title.setForeground(new Color(88, 139, 113));
-        title.setHorizontalAlignment(SwingConstants.CENTER);
-        cardGbc.gridy++;
-        cardGbc.insets = new Insets(0, 30, 30, 30);
-        card.add(title, cardGbc);
+        Label title = new Label("Welcome Back");
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 32));
+        title.setTextFill(Color.web("#588B71")); // Sage green
+        card.getChildren().add(title);
 
-        // ===== Email =====
-        emailField = new RoundedTextField("Email");
-        emailField.setFont(new Font("Arial", Font.PLAIN, 16)); // Bigger font
-        emailField.setPreferredSize(new Dimension(350, 50)); // Bigger field
-        cardGbc.gridy++;
-        cardGbc.insets = new Insets(0, 30, 20, 30);
-        card.add(emailField, cardGbc);
+        // ===== Email Field =====
+        emailField = new TextField();
+        emailField.setPromptText("Email");
+        emailField.setPrefHeight(50);
+        emailField.setMaxWidth(350);
+        emailField.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 12;" +
+                        "-fx-border-color: #E0E0E0;" +
+                        "-fx-border-radius: 12;" +
+                        "-fx-border-width: 1;" +
+                        "-fx-padding: 15 20;" +
+                        "-fx-font-size: 16px;"
+        );
+        emailField.setOnMouseEntered(e ->
+                emailField.setStyle(emailField.getStyle() + "-fx-border-color: #588B71;")
+        );
+        emailField.setOnMouseExited(e ->
+                emailField.setStyle(emailField.getStyle().replace("-fx-border-color: #588B71;", "-fx-border-color: #E0E0E0;"))
+        );
+        card.getChildren().add(emailField);
 
-        // ===== Password =====
-        passwordField = new RoundedPasswordField("Password");
-        passwordField.setFont(new Font("Arial", Font.PLAIN, 16)); // Bigger font
-        passwordField.setPreferredSize(new Dimension(350, 50)); // Bigger field
-        cardGbc.gridy++;
-        card.add(passwordField, cardGbc);
+        // ===== Password Field =====
+        passwordField = new PasswordField();
+        passwordField.setPromptText("Password");
+        passwordField.setPrefHeight(50);
+        passwordField.setMaxWidth(350);
+        passwordField.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 12;" +
+                        "-fx-border-color: #E0E0E0;" +
+                        "-fx-border-radius: 12;" +
+                        "-fx-border-width: 1;" +
+                        "-fx-padding: 15 20;" +
+                        "-fx-font-size: 16px;"
+        );
+        passwordField.setOnMouseEntered(e ->
+                passwordField.setStyle(passwordField.getStyle() + "-fx-border-color: #588B71;")
+        );
+        passwordField.setOnMouseExited(e ->
+                passwordField.setStyle(passwordField.getStyle().replace("-fx-border-color: #588B71;", "-fx-border-color: #E0E0E0;"))
+        );
 
         // ENTER key triggers login
-        passwordField.addActionListener(e -> handleLogin());
+        passwordField.setOnAction(e -> handleLogin());
+        card.getChildren().add(passwordField);
+
+        // ===== Forgot Password Link =====
+        forgotPasswordLink = new Hyperlink("Forgot Password?");
+        forgotPasswordLink.setFont(Font.font("Arial", 14));
+        forgotPasswordLink.setTextFill(Color.web("#588B71"));
+        forgotPasswordLink.setUnderline(true);
+        forgotPasswordLink.setOnAction(e -> showForgotPasswordDialog());
+        forgotPasswordLink.setStyle("-fx-cursor: hand;");
+        card.getChildren().add(forgotPasswordLink);
 
         // ===== Login Button =====
-        loginButton = new RoundedButton("Login");
-        loginButton.setFont(new Font("Arial", Font.BOLD, 18)); // Bigger font
-        loginButton.setPreferredSize(new Dimension(350, 55)); // Bigger button
-        cardGbc.gridy++;
-        cardGbc.insets = new Insets(30, 30, 20, 30);
-        card.add(loginButton, cardGbc);
-        loginButton.addActionListener(e -> handleLogin());
+        loginButton = new Button("Login");
+        loginButton.setPrefHeight(55);
+        loginButton.setMaxWidth(350);
+        loginButton.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        loginButton.setTextFill(Color.WHITE);
+        loginButton.setStyle(
+                "-fx-background-color: #588B71;" +
+                        "-fx-background-radius: 15;" +
+                        "-fx-cursor: hand;"
+        );
 
-        // ===== Back link =====
-        backLabel = new JLabel("← Back to Welcome");
-        backLabel.setFont(new Font("Arial", Font.PLAIN, 16)); // Bigger font
-        backLabel.setForeground(new Color(88, 139, 113));
-        backLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        backLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        cardGbc.gridy++;
-        cardGbc.insets = new Insets(10, 30, 30, 30);
-        card.add(backLabel, cardGbc);
-        backLabel.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                parentFrame.showWelcomePanel();
-            }
-        });
+        // Button hover effect
+        loginButton.setOnMouseEntered(e ->
+                loginButton.setStyle(
+                        "-fx-background-color: #629F89;" +
+                                "-fx-background-radius: 15;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+        loginButton.setOnMouseExited(e ->
+                loginButton.setStyle(
+                        "-fx-background-color: #588B71;" +
+                                "-fx-background-radius: 15;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+        loginButton.setOnAction(e -> handleLogin());
+        card.getChildren().add(loginButton);
 
-        mainContainer.add(card, gbc);
-        add(mainContainer, BorderLayout.CENTER);
+        // ===== Face ID Login Button =====
+        Button faceLoginButton = new Button("👤 Login with Face ID");
+        faceLoginButton.setPrefHeight(50);
+        faceLoginButton.setMaxWidth(350);
+        faceLoginButton.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        faceLoginButton.setTextFill(Color.WHITE);
+        faceLoginButton.setStyle(
+                "-fx-background-color: #6B9C89;" +
+                        "-fx-background-radius: 15;" +
+                        "-fx-cursor: hand;"
+        );
+        faceLoginButton.setOnMouseEntered(e ->
+                faceLoginButton.setStyle(
+                        "-fx-background-color: #7AAF99;" +
+                                "-fx-background-radius: 15;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+        faceLoginButton.setOnMouseExited(e ->
+                faceLoginButton.setStyle(
+                        "-fx-background-color: #6B9C89;" +
+                                "-fx-background-radius: 15;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+
+
+        // ===== Back Link =====
+        backLink = new Hyperlink("← Back to Welcome");
+        backLink.setFont(Font.font("Arial", 16));
+        backLink.setTextFill(Color.web("#588B71"));
+        backLink.setOnAction(e -> parentApp.showWelcomePanel());
+        backLink.setStyle("-fx-cursor: hand;");
+        card.getChildren().add(backLink);
+
+        mainContainer.getChildren().add(card);
+        getChildren().add(mainContainer);
+    }
+
+    private void applyStyles() {
+        // Apply custom CSS if needed
+        try {
+            String css = getClass().getResource("/styles/mentis-login.css").toExternalForm();
+            getStylesheets().add(css);
+        } catch (Exception e) {
+            System.out.println("CSS file not found, using inline styles");
+        }
     }
 
     // ================= LOGIN LOGIC =================
     private void handleLogin() {
-        String email = emailField.getTextValue();
-        String password = passwordField.getPasswordValue();
+        String email = emailField.getText().trim();
+        String password = passwordField.getText();
 
         if (email.isEmpty() || password.isEmpty()) {
             showError("Please enter email and password.");
@@ -136,143 +216,54 @@ public class MentisLoginPanel extends JPanel {
 
         setLoading(true);
 
-        SwingUtilities.invokeLater(() -> {
+        // Run in background thread
+        new Thread(() -> {
             user loggedUser = userservice.loginuser(email, password);
 
-            setLoading(false);
+            // Update UI on JavaFX Application Thread
+            javafx.application.Platform.runLater(() -> {
+                setLoading(false);
 
-            if (loggedUser != null) {
-                // Use parentFrame's login method with user information
-                parentFrame.login(
-                        loggedUser.getType(), // user type
-                        loggedUser.getId(),   // user ID
-                        loggedUser.getFirstName() + " " + loggedUser.getLastName() // user name
-                );
-
-            } else {
-                showError("Invalid email or password.");
-            }
-        });
+                if (loggedUser != null) {
+                    parentApp.login(
+                            loggedUser.getType(),
+                            loggedUser.getId(),
+                            loggedUser.getFirstName() + " " + loggedUser.getLastName()
+                    );
+                } else {
+                    showError("Invalid email or password.");
+                }
+            });
+        }).start();
     }
 
+    // ================= FORGOT PASSWORD =================
+    private void showForgotPasswordDialog() {
+        ForgotPasswordDialog dialog = new ForgotPasswordDialog();
+        dialog.show();
+    }
+
+
+
     private void setLoading(boolean loading) {
-        loginButton.setEnabled(!loading);
-        setCursor(loading ? Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR)
-                : Cursor.getDefaultCursor());
+        loginButton.setDisable(loading);
+        emailField.setDisable(loading);
+        passwordField.setDisable(loading);
+
+        if (loading) {
+            loginButton.setText("Logging in...");
+            setCursor(javafx.scene.Cursor.WAIT);
+        } else {
+            loginButton.setText("Login");
+            setCursor(javafx.scene.Cursor.DEFAULT);
+        }
     }
 
     private void showError(String message) {
-        JOptionPane.showMessageDialog(this, message, "Login Error", JOptionPane.ERROR_MESSAGE);
-    }
-
-    // ================= CUSTOM COMPONENTS =================
-    class RoundedButton extends JButton {
-        RoundedButton(String text) {
-            super(text);
-            setFont(new Font("Arial", Font.BOLD, 18));
-            setForeground(Color.WHITE);
-            setContentAreaFilled(false);
-            setFocusPainted(false);
-            setBorderPainted(false);
-            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        }
-
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g;
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(isEnabled() ? new Color(88, 139, 113) : Color.GRAY);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
-            super.paintComponent(g);
-        }
-    }
-
-    class RoundedTextField extends JTextField {
-        private final String placeholder;
-
-        RoundedTextField(String placeholder) {
-            this.placeholder = placeholder;
-            setText(placeholder);
-            setForeground(Color.GRAY);
-            setFont(new Font("Arial", Font.PLAIN, 16));
-            setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
-            setOpaque(false);
-
-            addFocusListener(new java.awt.event.FocusAdapter() {
-                public void focusGained(java.awt.event.FocusEvent e) {
-                    if (getText().equals(placeholder)) {
-                        setText("");
-                        setForeground(Color.BLACK);
-                    }
-                }
-
-                public void focusLost(java.awt.event.FocusEvent e) {
-                    if (getText().isEmpty()) {
-                        setText(placeholder);
-                        setForeground(Color.GRAY);
-                    }
-                }
-            });
-        }
-
-        String getTextValue() {
-            return getText().equals(placeholder) ? "" : getText();
-        }
-
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g;
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(Color.WHITE);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
-            super.paintComponent(g);
-        }
-    }
-
-    class RoundedPasswordField extends JPasswordField {
-        private final String placeholder;
-
-        RoundedPasswordField(String placeholder) {
-            this.placeholder = placeholder;
-            setEchoChar((char) 0);
-            setText(placeholder);
-            setForeground(Color.GRAY);
-            setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
-            setOpaque(false);
-
-            addFocusListener(new java.awt.event.FocusAdapter() {
-                public void focusGained(java.awt.event.FocusEvent e) {
-                    if (String.valueOf(getPassword()).equals(placeholder)) {
-                        setText("");
-                        setEchoChar('•');
-                        setForeground(Color.BLACK);
-                    }
-                }
-
-                public void focusLost(java.awt.event.FocusEvent e) {
-                    if (getPassword().length == 0) {
-                        setEchoChar((char) 0);
-                        setText(placeholder);
-                        setForeground(Color.GRAY);
-                    }
-                }
-            });
-        }
-
-        String getPasswordValue() {
-            String pass = String.valueOf(getPassword());
-            return pass.equals(placeholder) ? "" : pass;
-        }
-
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g;
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(Color.WHITE);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
-            super.paintComponent(g);
-        }
-    }
-
-    @Override
-    public Dimension getPreferredSize() {
-        return new Dimension(1400, 800); // Match frame size
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Login Error");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }

@@ -3,145 +3,128 @@ package ui;
 import controller.AssessmentController;
 import controller.AssessmentResultController;
 import controller.QuestionController;
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.stage.Stage;
 
-import javax.swing.*;
-import java.awt.*;
+import java.util.Optional;
 
-public class MentisLoginFrame extends JFrame {
+public class MentisLoginFrame extends Application {
 
-    public static final Color BACKGROUND_LIGHT = new Color(240, 248, 245);
-    public static final Color CARD_WHITE = new Color(255, 255, 255);
-    public static final Color ACCENT_GREEN = new Color(90, 150, 120);
-    public static final Color ACCENT_DARK_GREEN = new Color(60, 120, 90);
-    public static final Color TEXT_DARK = new Color(40, 70, 50);
-    public static final Color TEXT_LIGHT = new Color(100, 130, 110);
-    public static final Color BORDER_LIGHT = new Color(200, 220, 210);
-    public static final Color BUTTON_LIGHT_GREEN = new Color(160, 200, 180);
-    public static final Color SIDEBAR_BG = new Color(245, 250, 248);
-    public static final Color BACKGROUND_BEIGE = new Color(243, 243, 243);
-    public static final Color HIGHLIGHT_GREEN = new Color(100, 180, 140);
-    public static final Color WARNING_RED = new Color(197, 134, 134);
-    public static final Color INFO_BLUE = new Color(132, 160, 205);
-    public static final Color DISABLED_GRAY = new Color(200, 200, 200);
-    public static final Color ACCENT_LIGHT_GREEN = new Color(120, 180, 150);
-    public static final Color TEXT_GRAY = new Color(120, 120, 120);
-    public static final Color HOVER_GREEN = new Color(140, 190, 160);
-    public static final Color ERROR_RED = new Color(200, 119, 119);
-    public static final Color WARNING_ORANGE = new Color(255, 152, 0);
-    public static final Color SUCCESS_GREEN = new Color(153, 205, 156);
+    // JavaFX Color constants
+    public static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
+    public static final Color CARD_WHITE = Color.rgb(255, 255, 255);
+    public static final Color ACCENT_GREEN = Color.rgb(90, 150, 120);
+    public static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
+    public static final Color TEXT_DARK = Color.rgb(40, 70, 50);
+    public static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
+    public static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
+    public static final Color BUTTON_LIGHT_GREEN = Color.rgb(160, 200, 180);
+    public static final Color SIDEBAR_BG = Color.rgb(245, 250, 248);
+    public static final Color HOVER_GREEN = Color.rgb(140, 190, 160);
+    public static final Color ERROR_RED = Color.rgb(200, 119, 119);
+    public static final Color SUCCESS_GREEN = Color.rgb(153, 205, 156);
+    public static final Color WARNING_ORANGE = Color.rgb(255, 152, 0);
 
-    private CardLayout cardLayout;
-    private JPanel mainPanel;
-    private JPanel sidebarPanel;
+    private StackPane root;
+    private BorderPane mainContainer;
+    private VBox sidebar;
+    private StackPane contentArea;
 
-    // User information
-    private String userType = ""; // "admin", "patient", "psychologist", or empty for not logged in
-    private int userId = 0;
-    private String userName = "";
-
-    // Panels
-    private AdminDashboardPanel adminDashboardPanel;
-    private MentisWelcomePanel welcomePanel;
-    private MentisLoginPanel loginPanel;
-    private Mentissignuppanel signUpPanel;
-    private PsychologistTablePanel psychologistTablePanel;
-    private PatientTablePanel patientTablePanel;
-    private AssessmentPanel assessmentPanel;
-    private QuestionPanel questionPanel;
-    private TakeAssessmentPanel takeAssessmentPanel;
-    private ResultsPanel resultsPanel;
-    private JPanel patientDashboardPanel;
-    private JPanel psychologistDashboardPanel;
+    // Navigation
+    private String currentUserType = "";
+    private int currentUserId = 0;
+    private String currentUserName = "";
 
     // Controllers
     private AssessmentController assessmentController;
     private QuestionController questionController;
     private AssessmentResultController resultController;
 
-    public MentisLoginFrame() {
-        setTitle("Mentis - Mental Health Companion");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1400, 800);
-        setLocationRelativeTo(null);
+    // Panels (will be created as needed)
+    private MentisWelcomePanel welcomePanel;
+    private MentisLoginPanel loginPanel;
+    private Mentissignuppanel signupPanel;
+    private AdminDashboardPanel adminDashboardPanel;
+    private PsychologistTablePanel psychologistTablePanel;
+    private PatientTablePanel patientTablePanel;
+    private AssessmentPanel assessmentPanel;
+    private QuestionPanel questionPanel;
+    private TakeAssessmentPanel takeAssessmentPanel;
+    private ResultsPanel resultsPanel;
+    private Label userInfoLabel;
 
-        // Initialize controllers FIRST
+    @Override
+    public void start(Stage primaryStage) {
+        // Initialize controllers
         initializeControllers();
 
-        // Create main container with BorderLayout
-        JPanel container = new JPanel(new BorderLayout());
+        // Create root layout
+        root = new StackPane();
+        root.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+
+        // Main container with BorderPane
+        mainContainer = new BorderPane();
 
         // Create sidebar (initially hidden)
-        sidebarPanel = createSidebar();
-        sidebarPanel.setVisible(false);
+        sidebar = createSidebar();
+        sidebar.setVisible(false);
 
-        // Create main content area with CardLayout
-        cardLayout = new CardLayout();
-        mainPanel = new JPanel(cardLayout);
+        // Create content area with StackPane for panel switching
+        contentArea = new StackPane();
+        contentArea.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
 
-        // Create all panels
-        welcomePanel = new MentisWelcomePanel(this);
-        loginPanel = new MentisLoginPanel(this);
-        signUpPanel = new Mentissignuppanel(this);
-        adminDashboardPanel = new AdminDashboardPanel(this);
-        psychologistTablePanel = new PsychologistTablePanel(this);
-        patientTablePanel = new PatientTablePanel(this);
+        // Initialize panels
+        initializePanels();
 
-        // Create placeholder panels for patient and psychologist dashboards
-        patientDashboardPanel = createPlaceholderPanel("Patient Dashboard");
-        psychologistDashboardPanel = createPlaceholderPanel("Psychologist Dashboard");
+        // Add panels to content area
+        contentArea.getChildren().addAll(
+                welcomePanel,
+                loginPanel,
+                signupPanel,
+                adminDashboardPanel,
+                psychologistTablePanel,
+                patientTablePanel
+        );
 
-        // Initialize other panels (will be created when needed)
-        assessmentPanel = null;
-        questionPanel = null;
-        takeAssessmentPanel = null;
-        resultsPanel = null;
+        // Hide all panels initially
+        hideAllPanels();
 
-        // Add panels to CardLayout
-        mainPanel.add(welcomePanel, "WELCOME");
-        mainPanel.add(loginPanel, "LOGIN");
-        mainPanel.add(signUpPanel, "SIGNUP");
-        mainPanel.add(adminDashboardPanel, "ADMIN_DASHBOARD");
-        mainPanel.add(psychologistTablePanel, "PSYCHOLOGIST_TABLE");
-        mainPanel.add(patientTablePanel, "PATIENT_TABLE");
-        mainPanel.add(patientDashboardPanel, "PATIENT_DASHBOARD");
-        mainPanel.add(psychologistDashboardPanel, "PSYCHOLOGIST_DASHBOARD");
+        // Show welcome panel
+        showWelcomePanel();
 
         // Layout
-        container.add(sidebarPanel, BorderLayout.WEST);
-        container.add(mainPanel, BorderLayout.CENTER);
+        mainContainer.setLeft(sidebar);
+        mainContainer.setCenter(contentArea);
 
-        add(container);
+        root.getChildren().add(mainContainer);
 
-        // Show welcome panel first
-        showWelcomePanel();
-    }
+        // Create scene
+        Scene scene = new Scene(root, 1400, 800);
 
-    private JPanel createPlaceholderPanel(String title) {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(BACKGROUND_LIGHT);
-
-        JLabel titleLabel = new JLabel(title, SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 36));
-        titleLabel.setForeground(ACCENT_DARK_GREEN);
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(50, 0, 0, 0));
-
-        panel.add(titleLabel, BorderLayout.CENTER);
-        return panel;
+        // Setup stage
+        primaryStage.setTitle("Mentis - Mental Health Companion");
+        primaryStage.setScene(scene);
+        primaryStage.show();
     }
 
     private void initializeControllers() {
         try {
             System.out.println("Initializing controllers...");
-
-            // Initialize AssessmentController
             assessmentController = new AssessmentController();
-            System.out.println("AssessmentController initialized");
-
-            // Initialize other controllers
             questionController = new QuestionController();
             resultController = new AssessmentResultController();
             System.out.println("All controllers initialized successfully");
-
         } catch (Exception e) {
             System.err.println("Error initializing controllers: " + e.getMessage());
             e.printStackTrace();
@@ -153,16 +136,412 @@ public class MentisLoginFrame extends JFrame {
 
             System.out.println("Using mock controllers for testing");
 
-            JOptionPane.showMessageDialog(this,
-                    "Database connection failed. Using test mode.\n" +
-                            "You can test navigation but data won't be saved.\n" +
-                            "Error: " + e.getMessage(),
+            showAlert(Alert.AlertType.WARNING,
                     "Warning - Test Mode",
-                    JOptionPane.WARNING_MESSAGE);
+                    "Database connection failed. Using test mode.\nYou can test navigation but data won't be saved.\nError: " + e.getMessage());
         }
     }
 
-    // Create mock controllers
+    private void initializePanels() {
+        welcomePanel = new MentisWelcomePanel(this);
+        loginPanel = new MentisLoginPanel(this);
+        signupPanel = new Mentissignuppanel(this);
+        adminDashboardPanel = new AdminDashboardPanel(this);
+        psychologistTablePanel = new PsychologistTablePanel(this);
+        patientTablePanel = new PatientTablePanel(this);
+
+        // Other panels will be created on demand
+        assessmentPanel = null;
+        questionPanel = null;
+        takeAssessmentPanel = null;
+        resultsPanel = null;
+    }
+
+    private void hideAllPanels() {
+        welcomePanel.setVisible(false);
+        loginPanel.setVisible(false);
+        signupPanel.setVisible(false);
+        adminDashboardPanel.setVisible(false);
+        psychologistTablePanel.setVisible(false);
+        patientTablePanel.setVisible(false);
+
+        if (assessmentPanel != null) assessmentPanel.setVisible(false);
+        if (questionPanel != null) questionPanel.setVisible(false);
+        if (takeAssessmentPanel != null) takeAssessmentPanel.setVisible(false);
+        if (resultsPanel != null) resultsPanel.setVisible(false);
+    }
+
+    // ================= SIDEBAR CREATION =================
+    private VBox createSidebar() {
+        VBox sidebar = new VBox(10);
+        sidebar.setPrefWidth(220);
+        sidebar.setStyle("-fx-background-color: #" + toHex(SIDEBAR_BG) + ";");
+        sidebar.setPadding(new Insets(20, 15, 20, 15));
+        sidebar.setSpacing(10);
+
+        // Header with logo
+        HBox header = createSidebarHeader();
+        sidebar.getChildren().add(header);
+
+        // User info label
+        userInfoLabel = new Label("Not logged in");
+        userInfoLabel.setFont(Font.font("Segoe UI", 14));
+        userInfoLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
+        userInfoLabel.setAlignment(Pos.CENTER);
+        userInfoLabel.setMaxWidth(Double.MAX_VALUE);
+        sidebar.getChildren().add(userInfoLabel);
+
+        // Separator
+        Separator separator = new Separator();
+        separator.setStyle("-fx-background-color: #" + toHex(BORDER_LIGHT) + ";");
+        separator.setMaxWidth(180);
+        sidebar.getChildren().add(separator);
+
+        return sidebar;
+    }
+
+    private HBox createSidebarHeader() {
+        HBox header = new HBox(10);
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(0, 0, 20, 0));
+
+        // Logo
+        ImageView logoView = createLogoImageView();
+        if (logoView != null) {
+            logoView.setFitWidth(50);
+            logoView.setFitHeight(50);
+            header.getChildren().add(logoView);
+        } else {
+            // Fallback emoji
+            Label emojiLogo = new Label("🧠");
+            emojiLogo.setFont(Font.font("Segoe UI", 32));
+            emojiLogo.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+            header.getChildren().add(emojiLogo);
+        }
+
+        // App name
+        Label appName = new Label("Mentis");
+        appName.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
+        appName.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        header.getChildren().add(appName);
+
+        return header;
+    }
+
+    private ImageView createLogoImageView() {
+        try {
+            String[] possiblePaths = {
+                    "/resources/logo.png",
+                    "/images/logo.png",
+                    "/logo.png"
+            };
+
+            for (String path : possiblePaths) {
+                java.net.URL imageUrl = getClass().getResource(path);
+                if (imageUrl != null) {
+                    Image image = new Image(imageUrl.toExternalForm());
+                    System.out.println("Found logo at: " + imageUrl);
+                    return new ImageView(image);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading logo: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private void updateSidebarMenu() {
+        // Clear existing menu items (keep header, user info, and first separator)
+        sidebar.getChildren().removeIf(node ->
+                node instanceof Button || (node instanceof Separator && sidebar.getChildren().indexOf(node) > 2)
+        );
+
+        // Add menu items based on user type
+        addSidebarMenuItems();
+
+        // Add logout button at bottom
+        if (!currentUserType.isEmpty()) {
+            VBox spacer = new VBox();
+            VBox.setVgrow(spacer, Priority.ALWAYS);
+            sidebar.getChildren().add(spacer);
+
+            Button logoutBtn = createSidebarButton("Logout");
+            logoutBtn.setOnAction(e -> logout());
+            sidebar.getChildren().add(logoutBtn);
+        }
+    }
+
+    // ================= FIXED: User-specific sidebar menu items =================
+    private void addSidebarMenuItems() {
+        if ("admin".equals(currentUserType)) {
+            // Admin menu items with proper navigation targets
+            addSidebarButton("Dashboard", "ADMIN_DASHBOARD");
+            addSidebarButton("Sessions", "ADMIN_DASHBOARD");
+            addSidebarButton("Assessments", "ASSESSMENT");
+            addSidebarButton("Mood Tracking", "ADMIN_DASHBOARD");
+            addSidebarButton("Content", "ADMIN_DASHBOARD");
+            addSidebarButton("Event", "ADMIN_DASHBOARD");
+
+        } else if ("psychologist".equals(currentUserType)) {
+            // Psychologist menu items - all go to RESULTS panel
+            addSidebarButton("Dashboard", "RESULTS");
+            addSidebarButton("Sessions", "RESULTS");
+            addSidebarButton("Assessments", "RESULTS");
+            addSidebarButton("Mood Tracking", "RESULTS");
+            addSidebarButton("Content", "RESULTS");
+            addSidebarButton("Event", "RESULTS");
+
+        } else if ("patient".equals(currentUserType)) {
+            // Patient menu items - all go to TAKE_ASSESSMENT panel
+            addSidebarButton("Dashboard", "TAKE_ASSESSMENT");
+            addSidebarButton("Session", "TAKE_ASSESSMENT");
+            addSidebarButton("Assessment", "TAKE_ASSESSMENT");
+            addSidebarButton("Mood Tracking", "TAKE_ASSESSMENT");
+            addSidebarButton("Content", "TAKE_ASSESSMENT");
+            addSidebarButton("Event", "TAKE_ASSESSMENT");
+        }
+    }
+
+    private void addSidebarButton(String text, String targetPanel) {
+        Button button = createSidebarButton(text);
+        button.setOnAction(e -> handleSidebarNavigation(text, targetPanel));
+        sidebar.getChildren().add(button);
+    }
+
+    private Button createSidebarButton(String text) {
+        Button button = new Button(text);
+        button.setMaxWidth(Double.MAX_VALUE);
+        button.setPrefHeight(45);
+        button.setFont(Font.font("Segoe UI", 16));
+        button.setTextFill(Color.web(toHex(TEXT_DARK)));
+        button.setStyle(
+                "-fx-background-color: #" + toHex(SIDEBAR_BG) + ";" +
+                        "-fx-background-radius: 0;" +
+                        "-fx-border-width: 0;" +
+                        "-fx-alignment: CENTER_LEFT;" +
+                        "-fx-padding: 10 20 10 20;"
+        );
+
+        // Hover effect
+        button.setOnMouseEntered(e ->
+                button.setStyle("-fx-background-color: #" + toHex(HOVER_GREEN) + "; -fx-background-radius: 0; -fx-alignment: CENTER_LEFT; -fx-padding: 10 20 10 20;"));
+        button.setOnMouseExited(e ->
+                button.setStyle("-fx-background-color: #" + toHex(SIDEBAR_BG) + "; -fx-background-radius: 0; -fx-alignment: CENTER_LEFT; -fx-padding: 10 20 10 20;"));
+
+        return button;
+    }
+
+    // ================= FIXED: Navigation handler with target panel =================
+    private void handleSidebarNavigation(String menuText, String targetPanel) {
+        switch (targetPanel) {
+            case "ADMIN_DASHBOARD":
+                showAdminDashboard();
+                break;
+            case "ASSESSMENT":
+                showAssessmentPanel();
+                break;
+            case "RESULTS":
+                showResultsPanel();
+                break;
+            case "TAKE_ASSESSMENT":
+                showTakeAssessmentPanel();
+                break;
+            case "LOGOUT":
+                logout();
+                break;
+            default:
+                showComingSoon(menuText);
+                break;
+        }
+    }
+
+    // ================= NAVIGATION METHODS =================
+    public void showWelcomePanel() {
+        hideAllPanels();
+        welcomePanel.setVisible(true);
+        sidebar.setVisible(false);
+    }
+
+    public void showLoginPanel() {
+        hideAllPanels();
+        loginPanel.setVisible(true);
+        sidebar.setVisible(false);
+    }
+
+    public void showSignUpPanel() {
+        hideAllPanels();
+        signupPanel.setVisible(true);
+        sidebar.setVisible(false);
+    }
+
+    public void showAdminDashboard() {
+        hideAllPanels();
+        adminDashboardPanel.setVisible(true);
+        sidebar.setVisible(true);
+        adminDashboardPanel.refreshData();
+    }
+
+    public void showPsychologistTablePanel() {
+        hideAllPanels();
+        psychologistTablePanel.setVisible(true);
+        sidebar.setVisible(true);
+        psychologistTablePanel.refreshTable();
+    }
+
+    public void showPatientTablePanel() {
+        hideAllPanels();
+        patientTablePanel.setVisible(true);
+        sidebar.setVisible(true);
+        patientTablePanel.refreshTable();
+    }
+
+    public void showAssessmentPanel() {
+        if (assessmentPanel == null) {
+            assessmentPanel = new AssessmentPanel(this, assessmentController);
+            contentArea.getChildren().add(assessmentPanel);
+        }
+
+        hideAllPanels();
+        assessmentPanel.setVisible(true);
+        sidebar.setVisible(true);
+        assessmentPanel.refreshData();
+    }
+
+    public void showQuestionPanel() {
+        if (questionPanel == null) {
+            questionPanel = new QuestionPanel(this, questionController, assessmentController);
+            contentArea.getChildren().add(questionPanel);
+        }
+
+        hideAllPanels();
+        questionPanel.setVisible(true);
+        sidebar.setVisible(true);
+        questionPanel.refreshData();
+    }
+
+    public void showTakeAssessmentPanel() {
+        if (takeAssessmentPanel == null) {
+            takeAssessmentPanel = new TakeAssessmentPanel(this, assessmentController, resultController);
+            contentArea.getChildren().add(takeAssessmentPanel);
+        }
+
+        takeAssessmentPanel.setUserId(currentUserId);
+        hideAllPanels();
+        takeAssessmentPanel.setVisible(true);
+        sidebar.setVisible(true);
+        takeAssessmentPanel.refreshData();
+    }
+
+    public void showResultsPanel() {
+        if (resultsPanel == null) {
+            resultsPanel = new ResultsPanel(this, resultController);
+            contentArea.getChildren().add(resultsPanel);
+        }
+
+        resultsPanel.setUserId(currentUserId);
+        hideAllPanels();
+        resultsPanel.setVisible(true);
+        sidebar.setVisible(true);
+        resultsPanel.refreshData();
+    }
+
+    public void showQuestionPanelWithAssessment(int assessmentId) {
+        showQuestionPanel();
+        if (questionPanel != null) {
+            questionPanel.setCurrentAssessmentId(assessmentId);
+        }
+    }
+
+    private void showComingSoon(String feature) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Coming Soon");
+        alert.setHeaderText(null);
+        alert.setContentText(feature + " feature coming soon!");
+        alert.showAndWait();
+    }
+
+    // ================= LOGIN/LOGOUT SYSTEM =================
+    public void login(String userType, int userId, String userName) {
+        this.currentUserType = userType.toLowerCase();
+        this.currentUserId = userId;
+        this.currentUserName = userName;
+
+        System.out.println("User logged in: " + userName + " (" + this.currentUserType + ") ID: " + userId);
+
+        // Update sidebar
+        userInfoLabel.setText(userName + " (" + userType + ")");
+        sidebar.setVisible(true);
+        updateSidebarMenu();
+
+        // Navigate to appropriate panel
+        switch (this.currentUserType) {
+            case "admin":
+                showAdminDashboard();
+                break;
+            case "patient":
+                showTakeAssessmentPanel();
+                break;
+            case "psychologist":
+                showResultsPanel();
+                break;
+            default:
+                showWelcomePanel();
+        }
+    }
+
+    public void logout() {
+        System.out.println("User logging out: " + currentUserName);
+
+        currentUserType = "";
+        currentUserId = 0;
+        currentUserName = "";
+
+        userInfoLabel.setText("Not logged in");
+        sidebar.setVisible(false);
+        updateSidebarMenu();
+        showWelcomePanel();
+    }
+
+    // ================= DIALOG METHODS =================
+    public void showAddPsychologistDialog(PsychologistTablePanel panel) {
+        AddPsychologistDialog dialog = new AddPsychologistDialog(panel);
+        dialog.showAndWait();
+    }
+
+    public void showUpdatePsychologistDialog(PsychologistTablePanel panel, int id,
+                                             String firstName, String lastName,
+                                             String phone, String dob, String email) {
+        UpdatePsychologistDialog dialog = new UpdatePsychologistDialog(
+                panel, id, firstName, lastName, phone, dob, email);
+        dialog.showAndWait();
+    }
+
+    public void showUpdatePatientDialog(PatientTablePanel panel, int id,
+                                        String firstName, String lastName,
+                                        String phone, String dob, String email) {
+        UpdatePatientDialog dialog = new UpdatePatientDialog(
+                panel, id, firstName, lastName, phone, dob, email);
+        dialog.showAndWait();
+    }
+
+    public void showAlert(Alert.AlertType type, String title, String content) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+
+    // ================= UTILITY METHODS =================
+    private String toHex(Color color) {
+        return String.format("%02x%02x%02x",
+                (int)(color.getRed() * 255),
+                (int)(color.getGreen() * 255),
+                (int)(color.getBlue() * 255));
+    }
+
+    // ================= MOCK CONTROLLERS =================
     private AssessmentController createMockAssessmentController() {
         return new AssessmentController() {
             @Override
@@ -170,28 +549,23 @@ public class MentisLoginFrame extends JFrame {
                 System.out.println("Mock: getAllAssessments() called");
                 return new java.util.ArrayList<>();
             }
-
             @Override
             public java.util.List<models.Assessment> getActiveAssessments() throws java.sql.SQLException {
                 System.out.println("Mock: getActiveAssessments() called");
                 return new java.util.ArrayList<>();
             }
-
             @Override
             public void createAssessment(models.Assessment assessment) throws java.sql.SQLException {
                 System.out.println("Mock: createAssessment() called");
             }
-
             @Override
             public void updateAssessment(models.Assessment assessment) throws java.sql.SQLException {
                 System.out.println("Mock: updateAssessment() called");
             }
-
             @Override
             public void deleteAssessment(int assessmentId) throws java.sql.SQLException {
                 System.out.println("Mock: deleteAssessment() called for ID: " + assessmentId);
             }
-
             @Override
             public boolean updateAssessmentStatus(int assessmentId, String status) throws java.sql.SQLException {
                 System.out.println("Mock: updateAssessmentStatus() called - ID: " + assessmentId + ", Status: " + status);
@@ -207,7 +581,6 @@ public class MentisLoginFrame extends JFrame {
                 System.out.println("Mock: getAllQuestions() called");
                 return new java.util.ArrayList<>();
             }
-
             @Override
             public java.util.List<models.Question> getQuestionsByAssessment(int assessmentId) throws java.sql.SQLException {
                 System.out.println("Mock: getQuestionsByAssessment() called for ID: " + assessmentId);
@@ -226,620 +599,16 @@ public class MentisLoginFrame extends JFrame {
         };
     }
 
-    // ================= SIDEBAR CREATION =================
-    private JPanel createSidebar() {
-        JPanel sidebar = new JPanel();
-        sidebar.setPreferredSize(new Dimension(220, 800));
-        sidebar.setBackground(SIDEBAR_BG);
-        sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
-
-        addSidebarHeader(sidebar);
-        // Menu items will be added when user logs in
-
-        return sidebar;
-    }
-
-    private void addSidebarHeader(JPanel sidebar) {
-        sidebar.add(Box.createVerticalStrut(30));
-
-        // Create a panel for the logo and text - CHANGED TO HORIZONTAL
-        JPanel logoPanel = new JPanel();
-        logoPanel.setLayout(new BoxLayout(logoPanel, BoxLayout.X_AXIS)); // Changed from Y_AXIS to X_AXIS
-        logoPanel.setBackground(SIDEBAR_BG);
-        logoPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        logoPanel.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 15)); // Add some padding
-
-        // Try to load the actual logo image
-        JLabel logoImageLabel = createLogoImageLabel();
-
-        // If no image loaded, use emoji as fallback
-        if (logoImageLabel == null) {
-            JLabel emojiLogo = new JLabel("🧠");
-            emojiLogo.setFont(new Font("Segoe UI", Font.PLAIN, 32)); // Smaller size for side-by-side
-            emojiLogo.setForeground(ACCENT_DARK_GREEN);
-            emojiLogo.setAlignmentY(Component.CENTER_ALIGNMENT);
-            logoPanel.add(emojiLogo);
-            logoPanel.add(Box.createHorizontalStrut(10)); // Add spacing between logo and text
-        } else {
-            logoImageLabel.setAlignmentY(Component.CENTER_ALIGNMENT);
-            logoPanel.add(logoImageLabel);
-            logoPanel.add(Box.createHorizontalStrut(15)); // Add spacing between logo and text
-        }
-
-        // Add app name
-        JLabel appName = new JLabel("Mentis");
-        appName.setFont(new Font("Segoe UI", Font.BOLD, 24)); // Slightly smaller font
-        appName.setForeground(ACCENT_DARK_GREEN);
-        appName.setAlignmentY(Component.CENTER_ALIGNMENT);
-        logoPanel.add(appName);
-
-        // Center the logo panel horizontally in the sidebar
-        JPanel centeredLogoPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        centeredLogoPanel.setBackground(SIDEBAR_BG);
-        centeredLogoPanel.add(logoPanel);
-
-        sidebar.add(centeredLogoPanel);
-        sidebar.add(Box.createVerticalStrut(40));
-
-        // User info display
-        JLabel userInfoLabel = new JLabel("Not logged in");
-        userInfoLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        userInfoLabel.setForeground(TEXT_LIGHT);
-        userInfoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        userInfoLabel.setName("userInfoLabel");
-        sidebar.add(userInfoLabel);
-
-        sidebar.add(Box.createVerticalStrut(40));
-
-        // Add separator line
-        JSeparator separator = new JSeparator(SwingConstants.HORIZONTAL);
-        separator.setMaximumSize(new Dimension(180, 2));
-        separator.setForeground(BORDER_LIGHT);
-        separator.setAlignmentX(Component.CENTER_ALIGNMENT);
-        sidebar.add(separator);
-
-        sidebar.add(Box.createVerticalStrut(20));
-    }
-
-    private JLabel createLogoImageLabel() {
-        try {
-            // Try different possible paths for the logo
-            String[] possiblePaths = {
-                    "/resources/logo.png",
-                    "/images/logo.png",
-                    "logo.png",
-                    "resources/logo.png",
-                    "images/logo.png"
-            };
-
-            for (String path : possiblePaths) {
-                java.net.URL logoURL = getClass().getResource(path);
-                if (logoURL != null) {
-                    System.out.println("Found logo at: " + path);
-                    ImageIcon originalIcon = new ImageIcon(logoURL);
-                    Image scaledImage = originalIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH); // Smaller size (40x40)
-                    JLabel label = new JLabel(new ImageIcon(scaledImage));
-                    label.setAlignmentY(Component.CENTER_ALIGNMENT); // Changed from CENTER_ALIGNMENT_X to CENTER_ALIGNMENT_Y
-                    return label;
-                }
-            }
-
-            // If not found in resources, try absolute path as fallback
-            java.net.URL logoURL = getClass().getClassLoader().getResource("logo.png");
-            if (logoURL != null) {
-                ImageIcon originalIcon = new ImageIcon(logoURL);
-                Image scaledImage = originalIcon.getImage().getScaledInstance(90, 90, Image.SCALE_SMOOTH); // Smaller size (40x40)
-                JLabel label = new JLabel(new ImageIcon(scaledImage));
-                label.setAlignmentY(Component.CENTER_ALIGNMENT); // Changed from CENTER_ALIGNMENT_X to CENTER_ALIGNMENT_Y
-                return label;
-            }
-
-            System.out.println("Logo not found in any of the paths");
-
-        } catch (Exception e) {
-            System.err.println("Error loading logo image: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private void updateUserInfoInSidebar() {
-        for (Component comp : sidebarPanel.getComponents()) {
-            if (comp.getName() != null && comp.getName().equals("userInfoLabel")) {
-                String displayName = userName.isEmpty() ? "Not logged in" : userName + " (" + userType + ")";
-                ((JLabel) comp).setText(displayName);
-                break;
-            }
-        }
-    }
-
-    private void updateSidebarMenu() {
-        // Clear existing menu items
-        Component[] components = sidebarPanel.getComponents();
-        java.util.List<Component> toRemove = new java.util.ArrayList<>();
-
-        // Keep only header components (logo and user info)
-        for (Component comp : components) {
-            if (comp instanceof JButton) {
-                toRemove.add(comp);
-            }
-        }
-
-        for (Component comp : toRemove) {
-            sidebarPanel.remove(comp);
-        }
-
-        // Add menu items based on user type
-        addSidebarMenuItems(sidebarPanel);
-
-        sidebarPanel.revalidate();
-        sidebarPanel.repaint();
-    }
-
-    private void addSidebarMenuItems(JPanel sidebar) {
-        if ("admin".equals(userType)) {
-            addSidebarButton(sidebar, "Dashboard", "ADMIN_DASHBOARD");
-            addSidebarButton(sidebar, "Sessions", "ADMIN_DASHBOARD");
-            addSidebarButton(sidebar, "Assessments", "ASSESSMENT");
-            addSidebarButton(sidebar, "Mood Tracking", "ADMIN_DASHBOARD");
-            addSidebarButton(sidebar, "Content", "ADMIN_DASHBOARD");
-            addSidebarButton(sidebar, "Event", "ADMIN_DASHBOARD");
-        } else if ("psychologist".equals(userType)) {
-            addSidebarButton(sidebar, "Dashboard", "RESULTS");
-            addSidebarButton(sidebar, "Sessions", "RESULTS");
-            addSidebarButton(sidebar, "Assessments", "RESULTS");
-            addSidebarButton(sidebar, "Mood Tracking", "RESULTS");
-            addSidebarButton(sidebar, "Content", "RESULTS");
-            addSidebarButton(sidebar, "Event", "RESULTS");
-        } else if ("patient".equals(userType)) {
-            addSidebarButton(sidebar, "Dashboard", "TAKE_ASSESSMENT");
-            addSidebarButton(sidebar, "Session", "TAKE_ASSESSMENT");
-            addSidebarButton(sidebar, "Assessment", "TAKE_ASSESSMENT");
-            addSidebarButton(sidebar, "Mood Tracking", "TAKE_ASSESSMENT");
-            addSidebarButton(sidebar, "Content", "TAKE_ASSESSMENT");
-            addSidebarButton(sidebar, "Event", "TAKE_ASSESSMENT");
-        }
-
-        sidebar.add(Box.createVerticalGlue());
-
-        // Common settings and logout for all logged-in users
-        if (!userType.isEmpty()) {
-            addSidebarButton(sidebar, "Settings", "SETTINGS");
-            addSidebarButton(sidebar, "Logout", "LOGOUT");
-        }
-
-        sidebar.revalidate();
-        sidebar.repaint();
-    }
-
-    private void addSidebarButton(JPanel sidebar, String text, String panelName) {
-        JButton button = new JButton(text);
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        button.setForeground(TEXT_DARK);
-        button.setBackground(SIDEBAR_BG);
-        button.setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
-        button.setHorizontalAlignment(SwingConstants.LEFT);
-        button.setFocusPainted(false);
-        button.setContentAreaFilled(false);
-        button.setOpaque(true);
-        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        // Hover effect
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setBackground(HOVER_GREEN);
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setBackground(SIDEBAR_BG);
-            }
-        });
-
-        // Action listener
-        button.addActionListener(e -> handleSidebarNavigation(panelName));
-
-        sidebar.add(button);
-    }
-
-    private void handleSidebarNavigation(String panelName) {
-        if ("LOGOUT".equals(panelName)) {
-            logout();
-            return;
-        }
-
-        // Navigation based on panel name
-        switch (panelName) {
-            case "ADMIN_DASHBOARD":
-                showAdminDashboard();
-                break;
-            case "PSYCHOLOGIST_DASHBOARD":
-                showPsychologistDashboard();
-                break;
-            case "PATIENT_DASHBOARD":
-                showPatientDashboard();
-                break;
-            case "PSYCHOLOGIST_TABLE":
-                showPsychologistTablePanel();
-                break;
-            case "PATIENT_TABLE":
-                showPatientTablePanel();
-                break;
-            case "ASSESSMENT":
-                showAssessmentPanel();
-                break;
-            case "QUESTIONS":
-                showQuestionPanel();
-                break;
-            case "RESULTS":
-                showResultsPanel();
-                break;
-            case "TAKE_ASSESSMENT":
-                showTakeAssessmentPanel();
-                break;
-            case "MY_RESULTS":
-                showResultsPanel();
-                break;
-            case "SETTINGS":
-                JOptionPane.showMessageDialog(this,
-                        "Settings feature coming soon!",
-                        "Coming Soon",
-                        JOptionPane.INFORMATION_MESSAGE);
-                break;
-            default:
-                // For other panels, show coming soon message
-                String buttonText = "";
-                for (Component comp : sidebarPanel.getComponents()) {
-                    if (comp instanceof JButton && ((JButton) comp).getActionListeners().length > 0) {
-                        // Find which button was clicked
-                        buttonText = ((JButton) comp).getText();
-                    }
-                }
-                JOptionPane.showMessageDialog(this,
-                        buttonText + " feature coming soon!",
-                        "Coming Soon",
-                        JOptionPane.INFORMATION_MESSAGE);
-        }
-    }
-
-    // ================= LOGIN/LOGOUT SYSTEM =================
-    public void login(String userType, int userId, String userName) {
-        this.userType = userType.toLowerCase();
-        this.userId = userId;
-        this.userName = userName;
-
-        System.out.println("User logged in: " + userName + " (" + this.userType + ") ID: " + userId);
-
-        // Update sidebar user info
-        updateUserInfoInSidebar();
-
-        // Show sidebar for all logged-in users
-        sidebarPanel.setVisible(true);
-
-        // Refresh sidebar menu based on user type
-        updateSidebarMenu();
-
-        // Navigate to appropriate panel based on user type
-        switch (this.userType) {
-            case "admin":
-                showAdminDashboard();
-                break;
-            case "patient":
-                showTakeAssessmentPanel();
-                break;
-            case "psychologist":
-                showResultsPanel();
-                break;
-            default:
-                showWelcomePanel();
-        }
-
-        revalidate();
-        repaint();
-    }
-
-    public void logout() {
-        System.out.println("User logging out: " + userName);
-
-        userType = "";
-        userId = 0;
-        userName = "";
-
-        // Hide sidebar
-        sidebarPanel.setVisible(false);
-
-        // Clear sidebar menu
-        updateSidebarMenu();
-
-        // Reset user info label
-        updateUserInfoInSidebar();
-
-        // Show welcome panel
-        showWelcomePanel();
-
-        revalidate();
-        repaint();
-    }
-
-    // ================= NAVIGATION METHODS =================
-    public void showWelcomePanel() {
-        sidebarPanel.setVisible(false);
-        showPanel("WELCOME");
-    }
-
-    public void showLoginPanel() {
-        sidebarPanel.setVisible(false);
-        showPanel("LOGIN");
-    }
-
-    public void showSignUpPanel() {
-        sidebarPanel.setVisible(false);
-        showPanel("SIGNUP");
-    }
-
-    public void showAdminDashboard() {
-        if (adminDashboardPanel != null) {
-            adminDashboardPanel.refreshData();
-        }
-        showPanel("ADMIN_DASHBOARD");
-    }
-
-    public void showPatientDashboard() {
-        showPanel("PATIENT_DASHBOARD");
-    }
-
-    public void showPsychologistDashboard() {
-        showPanel("PSYCHOLOGIST_DASHBOARD");
-    }
-
-    public void showPsychologistTablePanel() {
-        if (psychologistTablePanel != null) {
-            psychologistTablePanel.refreshTable();
-        }
-        showPanel("PSYCHOLOGIST_TABLE");
-    }
-
-    public void showPatientTablePanel() {
-        if (patientTablePanel != null) {
-            patientTablePanel.refreshTable();
-        }
-        showPanel("PATIENT_TABLE");
-    }
-
-    public void showAssessmentPanel() {
-        // Create AssessmentPanel if it doesn't exist
-        if (assessmentPanel == null) {
-            assessmentPanel = new AssessmentPanel(this, assessmentController);
-            mainPanel.add(assessmentPanel, "ASSESSMENT");
-        }
-
-        // Refresh and show the panel
-        try {
-            assessmentPanel.refreshData();
-            showPanel("ASSESSMENT");
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                    "Error loading assessments: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        }
-    }
-
-    public void showQuestionPanel() {
-        // Create QuestionPanel if it doesn't exist
-        if (questionPanel == null) {
-            questionPanel = new QuestionPanel(this, questionController, assessmentController);
-            mainPanel.add(questionPanel, "QUESTIONS");
-        }
-
-        // Refresh and show the panel
-        try {
-            questionPanel.refreshData();
-            showPanel("QUESTIONS");
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                    "Error loading questions: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        }
-    }
-
-    public void showTakeAssessmentPanel() {
-        // Create TakeAssessmentPanel if it doesn't exist
-        if (takeAssessmentPanel == null) {
-            takeAssessmentPanel = new TakeAssessmentPanel(this, assessmentController, resultController);
-            mainPanel.add(takeAssessmentPanel, "TAKE_ASSESSMENT");
-        }
-
-        // Set user ID for the take assessment panel
-        takeAssessmentPanel.setUserId(userId);
-
-        // Refresh and show the panel
-        try {
-            takeAssessmentPanel.refreshData();
-            showPanel("TAKE_ASSESSMENT");
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                    "Error loading assessments: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        }
-    }
-
-    public void showResultsPanel() {
-        // Create ResultsPanel if it doesn't exist
-        if (resultsPanel == null) {
-            resultsPanel = new ResultsPanel(this, resultController);
-            mainPanel.add(resultsPanel, "RESULTS");
-        }
-
-        // Set user ID for the results panel
-        resultsPanel.setUserId(userId);
-
-        // Refresh and show the panel
-        try {
-            resultsPanel.refreshData();
-            showPanel("RESULTS");
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                    "Error loading results: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        }
-    }
-
-    // Show QuestionPanel with specific assessment ID (for Manage Questions button)
-    public void showQuestionPanelWithAssessment(int assessmentId) {
-        showQuestionPanel();
-        if (questionPanel != null) {
-            questionPanel.setCurrentAssessmentId(assessmentId);
-        }
-    }
-
-    // Generic showPanel method
-    public void showPanel(String panelName) {
-        System.out.println("Navigating to: " + panelName);
-
-        if (cardLayout != null && mainPanel != null) {
-            // Create panel if it doesn't exist
-            if (panelNeedsCreation(panelName)) {
-                createPanel(panelName);
-            }
-
-            cardLayout.show(mainPanel, panelName);
-
-            // Refresh data when panel is shown
-            refreshPanelData(panelName);
-        }
-    }
-
-    private boolean panelNeedsCreation(String panelName) {
-        switch (panelName) {
-            case "ASSESSMENT":
-                return assessmentPanel == null;
-            case "QUESTIONS":
-                return questionPanel == null;
-            case "TAKE_ASSESSMENT":
-                return takeAssessmentPanel == null;
-            case "RESULTS":
-                return resultsPanel == null;
-            default:
-                return false;
-        }
-    }
-
-    private void createPanel(String panelName) {
-        switch (panelName) {
-            case "ASSESSMENT":
-                assessmentPanel = new AssessmentPanel(this, assessmentController);
-                mainPanel.add(assessmentPanel, "ASSESSMENT");
-                break;
-            case "QUESTIONS":
-                questionPanel = new QuestionPanel(this, questionController, assessmentController);
-                mainPanel.add(questionPanel, "QUESTIONS");
-                break;
-            case "TAKE_ASSESSMENT":
-                takeAssessmentPanel = new TakeAssessmentPanel(this, assessmentController, resultController);
-                mainPanel.add(takeAssessmentPanel, "TAKE_ASSESSMENT");
-                break;
-            case "RESULTS":
-                resultsPanel = new ResultsPanel(this, resultController);
-                mainPanel.add(resultsPanel, "RESULTS");
-                break;
-        }
-    }
-
-    private void refreshPanelData(String panelName) {
-        switch (panelName) {
-            case "ASSESSMENT":
-                if (assessmentPanel != null) assessmentPanel.refreshData();
-                break;
-            case "QUESTIONS":
-                if (questionPanel != null) questionPanel.refreshData();
-                break;
-            case "TAKE_ASSESSMENT":
-                if (takeAssessmentPanel != null) takeAssessmentPanel.refreshData();
-                break;
-            case "RESULTS":
-                if (resultsPanel != null) resultsPanel.refreshData();
-                break;
-            case "ADMIN_DASHBOARD":
-                if (adminDashboardPanel != null) adminDashboardPanel.refreshData();
-                break;
-            case "PSYCHOLOGIST_TABLE":
-                if (psychologistTablePanel != null) psychologistTablePanel.refreshTable();
-                break;
-            case "PATIENT_TABLE":
-                if (patientTablePanel != null) patientTablePanel.refreshTable();
-                break;
-        }
-    }
-
-    // ================= DIALOG METHODS =================
-    public void showAddPsychologistDialog(PsychologistTablePanel panel) {
-        AddPsychologistDialog dialog = new AddPsychologistDialog(this, panel);
-        dialog.setVisible(true);
-    }
-
-    public void showUpdatePsychologistDialog(PsychologistTablePanel panel, int id,
-                                             String firstName, String lastName,
-                                             String phone, String dob, String email) {
-        UpdatePsychologistDialog dialog = new UpdatePsychologistDialog(
-                this, panel, id, firstName, lastName, phone, dob, email);
-        dialog.setVisible(true);
-    }
-
-    public void showUpdatePatientDialog(PatientTablePanel panel, int id,
-                                        String firstName, String lastName,
-                                        String phone, String dob, String email) {
-        UpdatePatientDialog dialog = new UpdatePatientDialog(
-                this, panel, id, firstName, lastName, phone, dob, email);
-        dialog.setVisible(true);
-    }
-
     // ================= GETTERS =================
-    public AssessmentController getAssessmentController() {
-        return assessmentController;
-    }
-
-    public QuestionController getQuestionController() {
-        return questionController;
-    }
-
-    public AssessmentResultController getResultController() {
-        return resultController;
-    }
-
-    public String getUserType() {
-        return userType;
-    }
-
-    public int getUserId() {
-        return userId;
-    }
-
-    public String getUserName() {
-        return userName;
-    }
-
-    // Get logged in user ID for panels
-    public int getLoggedInUserId() {
-        return userId;
-    }
+    public AssessmentController getAssessmentController() { return assessmentController; }
+    public QuestionController getQuestionController() { return questionController; }
+    public AssessmentResultController getResultController() { return resultController; }
+    public String getUserType() { return currentUserType; }
+    public int getUserId() { return currentUserId; }
+    public String getUserName() { return currentUserName; }
+    public int getLoggedInUserId() { return currentUserId; }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            MentisLoginFrame frame = new MentisLoginFrame();
-            frame.setVisible(true);
-        });
+        launch(args);
     }
 }
