@@ -280,6 +280,8 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Sessions", "ADMIN_DASHBOARD");
             addSidebarButton("Assessments", "ASSESSMENT");
             addSidebarButton("Mood Tracking", "ADMIN_DASHBOARD");
+            // Open wellbeing (goal/mood/AI) dashboard in a separate JavaFX window
+            addSidebarButton("Wellbeing", "WELLBEING");
             addSidebarButton("Content", "ADMIN_DASHBOARD");
             addSidebarButton("Event", "ADMIN_DASHBOARD");
 
@@ -289,6 +291,7 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Sessions", "RESULTS");
             addSidebarButton("Assessments", "RESULTS");
             addSidebarButton("Mood Tracking", "RESULTS");
+            addSidebarButton("Wellbeing", "WELLBEING");
             addSidebarButton("Content", "RESULTS");
             addSidebarButton("Event", "RESULTS");
 
@@ -298,6 +301,7 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Session", "TAKE_ASSESSMENT");
             addSidebarButton("Assessment", "TAKE_ASSESSMENT");
             addSidebarButton("Mood Tracking", "TAKE_ASSESSMENT");
+            addSidebarButton("Wellbeing", "WELLBEING");
             addSidebarButton("Content", "TAKE_ASSESSMENT");
             addSidebarButton("Event", "TAKE_ASSESSMENT");
         }
@@ -346,6 +350,9 @@ public class MentisLoginFrame extends Application {
                 break;
             case "TAKE_ASSESSMENT":
                 showTakeAssessmentPanel();
+                break;
+            case "WELLBEING":
+                openWellbeingDashboard();
                 break;
             case "LOGOUT":
                 logout();
@@ -450,6 +457,28 @@ public class MentisLoginFrame extends Application {
         showQuestionPanel();
         if (questionPanel != null) {
             questionPanel.setCurrentAssessmentId(assessmentId);
+        }
+    }
+
+    /**
+     * Open the wellbeing dashboard (HomeView + Mood/Goal/Reflect + AI)
+     * in a separate JavaFX window, without affecting the main Mentis frame.
+     */
+    private void openWellbeingDashboard() {
+        try {
+            javafx.fxml.FXMLLoader loader =
+                    new javafx.fxml.FXMLLoader(getClass().getResource("/fxml/HomeView.fxml"));
+            javafx.scene.Parent root = loader.load();
+
+            javafx.stage.Stage stage = new javafx.stage.Stage();
+            stage.setTitle("Mentis - Wellbeing Dashboard");
+            stage.setScene(new javafx.scene.Scene(root));
+            stage.setMaximized(true);
+            stage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Error",
+                    "Unable to open Wellbeing dashboard: " + e.getMessage());
         }
     }
 
