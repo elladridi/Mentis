@@ -7,7 +7,9 @@ import java.sql.SQLException;
 public class DatabaseConnection {
 
     // Database credentials - CHANGE THESE to match your database
-    private static final String URL = "jdbc:mysql://localhost:3306/mentis";
+    // NOTE: The actual schema on your MySQL appears to be named "Mentis" (capital M),
+    // so we align the URL accordingly to avoid "Unknown database 'mentis'".
+    private static final String URL = "jdbc:mysql://localhost:3306/Mentis";
     private static final String USER = "root";
     private static final String PASSWORD = "";
 
