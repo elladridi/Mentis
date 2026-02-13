@@ -2,11 +2,14 @@ package ui;
 
 import controller.AssessmentController;
 import controller.AssessmentResultController;
+import controller.ContentNodeController;
+import controller.ContentPathController;
 import controller.QuestionController;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -15,6 +18,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.util.Optional;
@@ -50,8 +54,9 @@ public class MentisLoginFrame extends Application {
     private AssessmentController assessmentController;
     private QuestionController questionController;
     private AssessmentResultController resultController;
+    private ContentPathController contentPathController;
 
-    // Panels (will be created as needed)
+    // Panels - ALL panels are created ONCE and REUSED!
     private MentisWelcomePanel welcomePanel;
     private MentisLoginPanel loginPanel;
     private Mentissignuppanel signupPanel;
@@ -62,7 +67,12 @@ public class MentisLoginFrame extends Application {
     private QuestionPanel questionPanel;
     private TakeAssessmentPanel takeAssessmentPanel;
     private ResultsPanel resultsPanel;
+    private ContentUploadPanel contentUploadPanel;
+    private AccessLogsPanel accessLogsPanel;
     private Label userInfoLabel;
+
+    // Track current visible panel
+    private Node currentVisiblePanel = null;
 
     @Override
     public void start(Stage primaryStage) {
@@ -76,25 +86,31 @@ public class MentisLoginFrame extends Application {
         // Main container with BorderPane
         mainContainer = new BorderPane();
 
-        // Create sidebar (initially hidden)
+        // Create sidebar
         sidebar = createSidebar();
         sidebar.setVisible(false);
 
-        // Create content area with StackPane for panel switching
+        // Create content area
         contentArea = new StackPane();
         contentArea.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
 
-        // Initialize panels
-        initializePanels();
+        // Initialize ALL panels at startup
+        initializeAllPanels();
 
-        // Add panels to content area
+        // Add ALL panels to content area ONCE - FIXED: Only add base panels!
         contentArea.getChildren().addAll(
                 welcomePanel,
                 loginPanel,
                 signupPanel,
                 adminDashboardPanel,
                 psychologistTablePanel,
-                patientTablePanel
+                patientTablePanel,
+                assessmentPanel,
+                questionPanel,
+                takeAssessmentPanel,
+                resultsPanel,
+                contentUploadPanel
+                // ⚠️ CRITICAL: accessLogsPanel is NOT added here - created on demand!
         );
 
         // Hide all panels initially
@@ -124,6 +140,7 @@ public class MentisLoginFrame extends Application {
             assessmentController = new AssessmentController();
             questionController = new QuestionController();
             resultController = new AssessmentResultController();
+            contentPathController = new ContentPathController();
             System.out.println("All controllers initialized successfully");
         } catch (Exception e) {
             System.err.println("Error initializing controllers: " + e.getMessage());
@@ -133,6 +150,7 @@ public class MentisLoginFrame extends Application {
             assessmentController = createMockAssessmentController();
             questionController = createMockQuestionController();
             resultController = createMockResultController();
+            contentPathController = new ContentPathController();
 
             System.out.println("Using mock controllers for testing");
 
@@ -142,33 +160,66 @@ public class MentisLoginFrame extends Application {
         }
     }
 
-    private void initializePanels() {
+    /**
+     * ⭐⭐⭐ FIXED: Initialize ALL panels ONCE and REUSE them! ⭐⭐⭐
+     */
+    private void initializeAllPanels() {
+        System.out.println("Initializing all panels...");
+
         welcomePanel = new MentisWelcomePanel(this);
         loginPanel = new MentisLoginPanel(this);
         signupPanel = new Mentissignuppanel(this);
         adminDashboardPanel = new AdminDashboardPanel(this);
         psychologistTablePanel = new PsychologistTablePanel(this);
         patientTablePanel = new PatientTablePanel(this);
+        assessmentPanel = new AssessmentPanel(this, assessmentController);
+        questionPanel = new QuestionPanel(this, questionController, assessmentController);
+        takeAssessmentPanel = new TakeAssessmentPanel(this, assessmentController, resultController);
+        resultsPanel = new ResultsPanel(this, resultController);
+        contentUploadPanel = new ContentUploadPanel(this);
 
-        // Other panels will be created on demand
-        assessmentPanel = null;
-        questionPanel = null;
-        takeAssessmentPanel = null;
-        resultsPanel = null;
+        // ⚠️ CRITICAL: DO NOT create AccessLogsPanel here - create on demand!
+        accessLogsPanel = null;
+
+        System.out.println("All panels initialized successfully");
     }
 
+    /**
+     * ⭐⭐⭐ FIXED: Hide EVERY panel properly! ⭐⭐⭐
+     */
     private void hideAllPanels() {
-        welcomePanel.setVisible(false);
-        loginPanel.setVisible(false);
-        signupPanel.setVisible(false);
-        adminDashboardPanel.setVisible(false);
-        psychologistTablePanel.setVisible(false);
-        patientTablePanel.setVisible(false);
+        // Hide sidebar
+        sidebar.setVisible(false);
 
+        // Hide ALL panels - no exceptions!
+        if (welcomePanel != null) welcomePanel.setVisible(false);
+        if (loginPanel != null) loginPanel.setVisible(false);
+        if (signupPanel != null) signupPanel.setVisible(false);
+        if (adminDashboardPanel != null) adminDashboardPanel.setVisible(false);
+        if (psychologistTablePanel != null) psychologistTablePanel.setVisible(false);
+        if (patientTablePanel != null) patientTablePanel.setVisible(false);
         if (assessmentPanel != null) assessmentPanel.setVisible(false);
         if (questionPanel != null) questionPanel.setVisible(false);
         if (takeAssessmentPanel != null) takeAssessmentPanel.setVisible(false);
         if (resultsPanel != null) resultsPanel.setVisible(false);
+        if (contentUploadPanel != null) contentUploadPanel.setVisible(false);
+        if (accessLogsPanel != null) accessLogsPanel.setVisible(false);
+
+        currentVisiblePanel = null;
+
+        System.out.println("All panels hidden");
+    }
+
+    /**
+     * ⭐⭐⭐ FIXED: Show ONLY one panel, hide all others ⭐⭐⭐
+     */
+    private void showOnlyPanel(Node panelToShow) {
+        hideAllPanels();
+        if (panelToShow != null) {
+            panelToShow.setVisible(true);
+            currentVisiblePanel = panelToShow;
+            System.out.println("  - Showing panel: " + panelToShow.getClass().getSimpleName());
+        }
     }
 
     // ================= SIDEBAR CREATION =================
@@ -179,11 +230,9 @@ public class MentisLoginFrame extends Application {
         sidebar.setPadding(new Insets(20, 15, 20, 15));
         sidebar.setSpacing(10);
 
-        // Header with logo
         HBox header = createSidebarHeader();
         sidebar.getChildren().add(header);
 
-        // User info label
         userInfoLabel = new Label("Not logged in");
         userInfoLabel.setFont(Font.font("Segoe UI", 14));
         userInfoLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
@@ -191,7 +240,6 @@ public class MentisLoginFrame extends Application {
         userInfoLabel.setMaxWidth(Double.MAX_VALUE);
         sidebar.getChildren().add(userInfoLabel);
 
-        // Separator
         Separator separator = new Separator();
         separator.setStyle("-fx-background-color: #" + toHex(BORDER_LIGHT) + ";");
         separator.setMaxWidth(180);
@@ -205,21 +253,18 @@ public class MentisLoginFrame extends Application {
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(0, 0, 20, 0));
 
-        // Logo
         ImageView logoView = createLogoImageView();
         if (logoView != null) {
             logoView.setFitWidth(50);
             logoView.setFitHeight(50);
             header.getChildren().add(logoView);
         } else {
-            // Fallback emoji
-            Label emojiLogo = new Label("🧠");
-            emojiLogo.setFont(Font.font("Segoe UI", 32));
-            emojiLogo.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
-            header.getChildren().add(emojiLogo);
+            Label fallbackLogo = new Label("M");
+            fallbackLogo.setFont(Font.font("Segoe UI", FontWeight.BOLD, 32));
+            fallbackLogo.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+            header.getChildren().add(fallbackLogo);
         }
 
-        // App name
         Label appName = new Label("Mentis");
         appName.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
         appName.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
@@ -246,13 +291,12 @@ public class MentisLoginFrame extends Application {
             }
         } catch (Exception e) {
             System.err.println("Error loading logo: " + e.getMessage());
-            e.printStackTrace();
         }
         return null;
     }
 
     private void updateSidebarMenu() {
-        // Clear existing menu items (keep header, user info, and first separator)
+        // Clear existing menu items
         sidebar.getChildren().removeIf(node ->
                 node instanceof Button || (node instanceof Separator && sidebar.getChildren().indexOf(node) > 2)
         );
@@ -260,7 +304,12 @@ public class MentisLoginFrame extends Application {
         // Add menu items based on user type
         addSidebarMenuItems();
 
-        // Add logout button at bottom
+        // Add Access Logs button ONLY for admin
+        if ("admin".equals(currentUserType)) {
+            addSidebarButton("Access Logs", "ACCESS_LOGS");
+        }
+
+        // Add logout button
         if (!currentUserType.isEmpty()) {
             VBox spacer = new VBox();
             VBox.setVgrow(spacer, Priority.ALWAYS);
@@ -272,37 +321,32 @@ public class MentisLoginFrame extends Application {
         }
     }
 
-    // ================= FIXED: User-specific sidebar menu items =================
     private void addSidebarMenuItems() {
         if ("admin".equals(currentUserType)) {
-            // Admin menu items with proper navigation targets
             addSidebarButton("Dashboard", "ADMIN_DASHBOARD");
             addSidebarButton("Sessions", "ADMIN_DASHBOARD");
             addSidebarButton("Assessments", "ASSESSMENT");
             addSidebarButton("Mood Tracking", "ADMIN_DASHBOARD");
-            // Open wellbeing (goal/mood/AI) dashboard in a separate JavaFX window
             addSidebarButton("Wellbeing", "WELLBEING");
-            addSidebarButton("Content", "ADMIN_DASHBOARD");
+            addSidebarButton("Content", "CONTENT");
             addSidebarButton("Event", "ADMIN_DASHBOARD");
 
         } else if ("psychologist".equals(currentUserType)) {
-            // Psychologist menu items - all go to RESULTS panel
             addSidebarButton("Dashboard", "RESULTS");
             addSidebarButton("Sessions", "RESULTS");
             addSidebarButton("Assessments", "RESULTS");
             addSidebarButton("Mood Tracking", "RESULTS");
             addSidebarButton("Wellbeing", "WELLBEING");
-            addSidebarButton("Content", "RESULTS");
+            addSidebarButton("Content", "CONTENT");
             addSidebarButton("Event", "RESULTS");
 
         } else if ("patient".equals(currentUserType)) {
-            // Patient menu items - all go to TAKE_ASSESSMENT panel
             addSidebarButton("Dashboard", "TAKE_ASSESSMENT");
             addSidebarButton("Session", "TAKE_ASSESSMENT");
             addSidebarButton("Assessment", "TAKE_ASSESSMENT");
             addSidebarButton("Mood Tracking", "TAKE_ASSESSMENT");
             addSidebarButton("Wellbeing", "WELLBEING");
-            addSidebarButton("Content", "TAKE_ASSESSMENT");
+            addSidebarButton("Content", "CONTENT");
             addSidebarButton("Event", "TAKE_ASSESSMENT");
         }
     }
@@ -317,7 +361,7 @@ public class MentisLoginFrame extends Application {
         Button button = new Button(text);
         button.setMaxWidth(Double.MAX_VALUE);
         button.setPrefHeight(45);
-        button.setFont(Font.font("Segoe UI", 16));
+        button.setFont(Font.font("Segoe UI", 15));
         button.setTextFill(Color.web(toHex(TEXT_DARK)));
         button.setStyle(
                 "-fx-background-color: #" + toHex(SIDEBAR_BG) + ";" +
@@ -327,7 +371,6 @@ public class MentisLoginFrame extends Application {
                         "-fx-padding: 10 20 10 20;"
         );
 
-        // Hover effect
         button.setOnMouseEntered(e ->
                 button.setStyle("-fx-background-color: #" + toHex(HOVER_GREEN) + "; -fx-background-radius: 0; -fx-alignment: CENTER_LEFT; -fx-padding: 10 20 10 20;"));
         button.setOnMouseExited(e ->
@@ -336,8 +379,9 @@ public class MentisLoginFrame extends Application {
         return button;
     }
 
-    // ================= FIXED: Navigation handler with target panel =================
     private void handleSidebarNavigation(String menuText, String targetPanel) {
+        System.out.println("🔵 Navigation to: " + targetPanel);
+
         switch (targetPanel) {
             case "ADMIN_DASHBOARD":
                 showAdminDashboard();
@@ -354,6 +398,12 @@ public class MentisLoginFrame extends Application {
             case "WELLBEING":
                 openWellbeingDashboard();
                 break;
+            case "CONTENT":
+                showContentUploadPanel();
+                break;
+            case "ACCESS_LOGS":
+                showAccessLogsPanel();
+                break;
             case "LOGOUT":
                 logout();
                 break;
@@ -365,114 +415,132 @@ public class MentisLoginFrame extends Application {
 
     // ================= NAVIGATION METHODS =================
     public void showWelcomePanel() {
-        hideAllPanels();
-        welcomePanel.setVisible(true);
+        System.out.println("🔵 Showing Welcome Panel");
+        showOnlyPanel(welcomePanel);
         sidebar.setVisible(false);
     }
 
     public void showLoginPanel() {
-        hideAllPanels();
-        loginPanel.setVisible(true);
+        System.out.println("🔵 Showing Login Panel");
+        showOnlyPanel(loginPanel);
         sidebar.setVisible(false);
     }
 
     public void showSignUpPanel() {
-        hideAllPanels();
-        signupPanel.setVisible(true);
+        System.out.println("🔵 Showing SignUp Panel");
+        showOnlyPanel(signupPanel);
         sidebar.setVisible(false);
     }
 
     public void showAdminDashboard() {
-        hideAllPanels();
-        adminDashboardPanel.setVisible(true);
+        System.out.println("🔵 Showing Admin Dashboard");
+        showOnlyPanel(adminDashboardPanel);
         sidebar.setVisible(true);
         adminDashboardPanel.refreshData();
     }
 
+    /**
+     * ⭐⭐⭐ FIXED: Access Logs panel - CREATED ONCE, REUSED! ⭐⭐⭐
+     */
+    public void showAccessLogsPanel() {
+        System.out.println("🔵 Showing Access Logs Panel");
+
+        try {
+            // Set current user in ContentPathController
+            contentPathController.setCurrentUser(currentUserId, currentUserType);
+
+            // ⚠️ CRITICAL: Create panel ONLY ONCE!
+            if (accessLogsPanel == null) {
+                accessLogsPanel = new AccessLogsPanel(this, contentPathController);
+                contentArea.getChildren().add(accessLogsPanel);
+                System.out.println("  - Created new AccessLogsPanel");
+            }
+
+            // Show the panel
+            showOnlyPanel(accessLogsPanel);
+            sidebar.setVisible(true);
+            accessLogsPanel.refreshData();
+
+            System.out.println("✅ Access Logs Panel shown");
+
+        } catch (Exception e) {
+            System.err.println("❌ Error showing Access Logs: " + e.getMessage());
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Error", "Cannot open access logs: " + e.getMessage());
+        }
+    }
+
     public void showPsychologistTablePanel() {
-        hideAllPanels();
-        psychologistTablePanel.setVisible(true);
+        showOnlyPanel(psychologistTablePanel);
         sidebar.setVisible(true);
         psychologistTablePanel.refreshTable();
     }
 
     public void showPatientTablePanel() {
-        hideAllPanels();
-        patientTablePanel.setVisible(true);
+        showOnlyPanel(patientTablePanel);
         sidebar.setVisible(true);
         patientTablePanel.refreshTable();
     }
 
     public void showAssessmentPanel() {
-        if (assessmentPanel == null) {
-            assessmentPanel = new AssessmentPanel(this, assessmentController);
-            contentArea.getChildren().add(assessmentPanel);
-        }
-
-        hideAllPanels();
-        assessmentPanel.setVisible(true);
+        System.out.println("🔵 Showing Assessment Panel");
+        showOnlyPanel(assessmentPanel);
         sidebar.setVisible(true);
         assessmentPanel.refreshData();
     }
 
     public void showQuestionPanel() {
-        if (questionPanel == null) {
-            questionPanel = new QuestionPanel(this, questionController, assessmentController);
-            contentArea.getChildren().add(questionPanel);
-        }
-
-        hideAllPanels();
-        questionPanel.setVisible(true);
+        showOnlyPanel(questionPanel);
         sidebar.setVisible(true);
         questionPanel.refreshData();
     }
 
     public void showTakeAssessmentPanel() {
-        if (takeAssessmentPanel == null) {
-            takeAssessmentPanel = new TakeAssessmentPanel(this, assessmentController, resultController);
-            contentArea.getChildren().add(takeAssessmentPanel);
-        }
-
+        System.out.println("🔵 Showing Take Assessment Panel");
         takeAssessmentPanel.setUserId(currentUserId);
-        hideAllPanels();
-        takeAssessmentPanel.setVisible(true);
+        showOnlyPanel(takeAssessmentPanel);
         sidebar.setVisible(true);
         takeAssessmentPanel.refreshData();
     }
 
     public void showResultsPanel() {
-        if (resultsPanel == null) {
-            resultsPanel = new ResultsPanel(this, resultController);
-            contentArea.getChildren().add(resultsPanel);
-        }
-
+        System.out.println("🔵 Showing Results Panel");
         resultsPanel.setUserId(currentUserId);
-        hideAllPanels();
-        resultsPanel.setVisible(true);
+        showOnlyPanel(resultsPanel);
         sidebar.setVisible(true);
         resultsPanel.refreshData();
     }
 
-    public void showQuestionPanelWithAssessment(int assessmentId) {
-        showQuestionPanel();
-        if (questionPanel != null) {
-            questionPanel.setCurrentAssessmentId(assessmentId);
-        }
+    /**
+     * ⭐⭐⭐ FIXED: Content panel - ALREADY CREATED, JUST REUSE! ⭐⭐⭐
+     */
+    public void showContentUploadPanel() {
+        System.out.println("🔵 Showing Content Upload Panel");
+
+        // ⚠️ CRITICAL: Panel already exists from initializeAllPanels()!
+        contentUploadPanel.setUserId(currentUserId);
+        showOnlyPanel(contentUploadPanel);
+        sidebar.setVisible(true);
+        contentUploadPanel.loadContentTable();
+        contentUploadPanel.updateHistoryButtons();
+
+        System.out.println("✅ ContentUploadPanel shown for user: " + currentUserId + " (" + currentUserType + ")");
     }
 
-    /**
-     * Open the wellbeing dashboard (HomeView + Mood/Goal/Reflect + AI)
-     * in a separate JavaFX window, without affecting the main Mentis frame.
-     */
+    public void showQuestionPanelWithAssessment(int assessmentId) {
+        showQuestionPanel();
+        questionPanel.setCurrentAssessmentId(assessmentId);
+    }
+
     private void openWellbeingDashboard() {
         try {
             javafx.fxml.FXMLLoader loader =
                     new javafx.fxml.FXMLLoader(getClass().getResource("/fxml/HomeView.fxml"));
             javafx.scene.Parent root = loader.load();
 
-            javafx.stage.Stage stage = new javafx.stage.Stage();
+            Stage stage = new Stage();
             stage.setTitle("Mentis - Wellbeing Dashboard");
-            stage.setScene(new javafx.scene.Scene(root));
+            stage.setScene(new Scene(root));
             stage.setMaximized(true);
             stage.show();
         } catch (Exception e) {
@@ -496,14 +564,23 @@ public class MentisLoginFrame extends Application {
         this.currentUserId = userId;
         this.currentUserName = userName;
 
-        System.out.println("User logged in: " + userName + " (" + this.currentUserType + ") ID: " + userId);
+        System.out.println("✅ User logged in: " + userName + " (" + this.currentUserType + ") ID: " + userId);
 
-        // Update sidebar
         userInfoLabel.setText(userName + " (" + userType + ")");
-        sidebar.setVisible(true);
         updateSidebarMenu();
+        sidebar.setVisible(true);
 
-        // Navigate to appropriate panel
+        // Update user context in all relevant panels
+        contentUploadPanel.setUserId(userId);
+        takeAssessmentPanel.setUserId(userId);
+        resultsPanel.setUserId(userId);
+
+        // Reset AccessLogsPanel so it gets recreated with new user context
+        if (accessLogsPanel != null) {
+            // We'll recreate it when needed
+            accessLogsPanel = null;
+        }
+
         switch (this.currentUserType) {
             case "admin":
                 showAdminDashboard();
@@ -519,17 +596,29 @@ public class MentisLoginFrame extends Application {
         }
     }
 
+    /**
+     * ⭐⭐⭐ FIXED: Logout - COMPLETELY CLEAN STATE! ⭐⭐⭐
+     */
     public void logout() {
-        System.out.println("User logging out: " + currentUserName);
+        System.out.println("🔴 Logging out: " + currentUserName);
 
+        // Clear user data
         currentUserType = "";
         currentUserId = 0;
         currentUserName = "";
 
+        // Reset dynamic panels to force fresh state on next login
+        accessLogsPanel = null;
+
+        // Update UI
         userInfoLabel.setText("Not logged in");
-        sidebar.setVisible(false);
         updateSidebarMenu();
-        showWelcomePanel();
+
+        // ⚠️ CRITICAL: Hide sidebar and show welcome panel
+        sidebar.setVisible(false);
+        showOnlyPanel(welcomePanel);
+
+        System.out.println("✅ Logout complete - Welcome Panel shown, sidebar hidden");
     }
 
     // ================= DIALOG METHODS =================
@@ -562,7 +651,6 @@ public class MentisLoginFrame extends Application {
         alert.showAndWait();
     }
 
-    // ================= UTILITY METHODS =================
     private String toHex(Color color) {
         return String.format("%02x%02x%02x",
                 (int)(color.getRed() * 255),
@@ -632,6 +720,7 @@ public class MentisLoginFrame extends Application {
     public AssessmentController getAssessmentController() { return assessmentController; }
     public QuestionController getQuestionController() { return questionController; }
     public AssessmentResultController getResultController() { return resultController; }
+    public ContentPathController getContentPathController() { return contentPathController; }
     public String getUserType() { return currentUserType; }
     public int getUserId() { return currentUserId; }
     public String getUserName() { return currentUserName; }

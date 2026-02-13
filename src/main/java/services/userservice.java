@@ -6,6 +6,8 @@ import utils.DatabaseConnection;
 import java.sql.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class userservice {
     private static void closeResources(Connection conn, Statement stmt, ResultSet rs) {
@@ -17,7 +19,6 @@ public class userservice {
             System.err.println("❌ Error closing resources: " + e.getMessage());
         }
     }
-
 
     /* ===================== REGISTER ===================== */
     public static boolean registeruser(user user) {
@@ -192,7 +193,7 @@ public class userservice {
             return sb.toString();
 
         } catch (NoSuchAlgorithmException e) {
-            return password; // dev fallback only
+            return password;
         }
     }
 
@@ -211,13 +212,7 @@ public class userservice {
         return date != null &&
                 date.matches("^\\d{4}-\\d{2}-\\d{2}$");
     }
-    // Add these methods to your userservice.java class
 
-    /**
-     * Get user by email
-     * @param email User's email
-     * @return user object if found, null otherwise
-     */
     public static user getuserByEmail(String email) {
         String sql = "SELECT * FROM user WHERE email = ?";
 
@@ -280,4 +275,46 @@ public class userservice {
         }
     }
 
+    /* ===================== ⭐⭐⭐ COMPLETELY FIXED: GET ONLY REAL PATIENTS! ⭐⭐⭐ ===================== */
+    public static List<user> getAllPatients() {
+        List<user> patients = new ArrayList<>();
+
+        String sql = "SELECT * FROM `user` WHERE LOWER(type) = 'patient' ORDER BY firstname, lastname";
+
+        System.out.println("🔍 Fetching patients from database...");
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            ResultSet rs = stmt.executeQuery();
+            int count = 0;
+
+            while (rs.next()) {
+                // GET EACH FIELD INDIVIDUALLY TO VERIFY
+                int id = rs.getInt("id");
+                String firstName = rs.getString("firstname");
+                String lastName = rs.getString("lastname");
+                String phone = rs.getString("phone");
+                String dob = rs.getString("dateofbirth");
+                String type = rs.getString("type");
+                String email = rs.getString("email");
+                String password = rs.getString("password");
+
+                // DEBUG: Print what we got from database
+                System.out.println("  - RAW DB RECORD: ID=" + id + ", Name=" + firstName + " " + lastName + ", Type=" + type);
+
+                user u = new user(id, firstName, lastName, phone, dob, type, email, password);
+                patients.add(u);
+                count++;
+            }
+
+            System.out.println("✅ Total patients loaded: " + count);
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error getting patients: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return patients;
+    }
 }

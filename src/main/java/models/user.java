@@ -2,7 +2,7 @@ package models;
 
 public class user {
 
-    private static int id;
+    private int id;  // ← REMOVED static! Now each user has their OWN id
     private String firstName;
     private String lastName;
     private String phone;
@@ -37,7 +37,7 @@ public class user {
     }
 
     // Getters and Setters
-    public static int getId() {
+    public int getId() {
         return id;
     }
 
