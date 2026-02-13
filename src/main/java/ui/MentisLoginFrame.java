@@ -5,6 +5,8 @@ import controller.AssessmentResultController;
 import controller.ContentNodeController;
 import controller.ContentPathController;
 import controller.QuestionController;
+import controller.SessionController;
+import controller.SessionReviewController;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -55,6 +57,8 @@ public class MentisLoginFrame extends Application {
     private QuestionController questionController;
     private AssessmentResultController resultController;
     private ContentPathController contentPathController;
+    private SessionController sessionController;
+    private SessionReviewController sessionReviewController;
 
     // Panels - ALL panels are created ONCE and REUSED!
     private MentisWelcomePanel welcomePanel;
@@ -69,6 +73,15 @@ public class MentisLoginFrame extends Application {
     private ResultsPanel resultsPanel;
     private ContentUploadPanel contentUploadPanel;
     private AccessLogsPanel accessLogsPanel;
+
+    // Session Module Panels
+    private SessionPanel sessionPanel;
+    private PatientAvailableSessionsPanel patientAvailableSessionsPanel;
+    private PatientMySessionsPanel patientMySessionsPanel;
+    private MyReviewsPanel myReviewsPanel;
+    private ReservationsPanel reservationsPanel;
+    private RecommendationsPanel recommendationsPanel; // ⭐ NEW: Recommendations panel
+
     private Label userInfoLabel;
 
     // Track current visible panel
@@ -97,7 +110,7 @@ public class MentisLoginFrame extends Application {
         // Initialize ALL panels at startup
         initializeAllPanels();
 
-        // Add ALL panels to content area ONCE - FIXED: Only add base panels!
+        // Add ALL panels to content area ONCE
         contentArea.getChildren().addAll(
                 welcomePanel,
                 loginPanel,
@@ -109,7 +122,13 @@ public class MentisLoginFrame extends Application {
                 questionPanel,
                 takeAssessmentPanel,
                 resultsPanel,
-                contentUploadPanel
+                contentUploadPanel,
+                sessionPanel,
+                patientAvailableSessionsPanel,
+                patientMySessionsPanel,
+                myReviewsPanel,
+                reservationsPanel,
+                recommendationsPanel // ⭐ ADDED: Recommendations panel
                 // ⚠️ CRITICAL: accessLogsPanel is NOT added here - created on demand!
         );
 
@@ -141,6 +160,8 @@ public class MentisLoginFrame extends Application {
             questionController = new QuestionController();
             resultController = new AssessmentResultController();
             contentPathController = new ContentPathController();
+            sessionController = new SessionController();
+            sessionReviewController = new SessionReviewController();
             System.out.println("All controllers initialized successfully");
         } catch (Exception e) {
             System.err.println("Error initializing controllers: " + e.getMessage());
@@ -151,6 +172,8 @@ public class MentisLoginFrame extends Application {
             questionController = createMockQuestionController();
             resultController = createMockResultController();
             contentPathController = new ContentPathController();
+            sessionController = createMockSessionController();
+            sessionReviewController = createMockSessionReviewController();
 
             System.out.println("Using mock controllers for testing");
 
@@ -161,7 +184,7 @@ public class MentisLoginFrame extends Application {
     }
 
     /**
-     * ⭐⭐⭐ FIXED: Initialize ALL panels ONCE and REUSE them! ⭐⭐⭐
+     * Initialize ALL panels ONCE and REUSE them!
      */
     private void initializeAllPanels() {
         System.out.println("Initializing all panels...");
@@ -178,6 +201,14 @@ public class MentisLoginFrame extends Application {
         resultsPanel = new ResultsPanel(this, resultController);
         contentUploadPanel = new ContentUploadPanel(this);
 
+        // Session Module Panels
+        sessionPanel = new SessionPanel(this, sessionController);
+        patientAvailableSessionsPanel = new PatientAvailableSessionsPanel(this, sessionController);
+        patientMySessionsPanel = new PatientMySessionsPanel(this, sessionController);
+        myReviewsPanel = new MyReviewsPanel(this, sessionReviewController);
+        reservationsPanel = new ReservationsPanel(this, sessionController);
+        recommendationsPanel = new RecommendationsPanel(this, sessionController); // ⭐ NEW: Initialize recommendations panel
+
         // ⚠️ CRITICAL: DO NOT create AccessLogsPanel here - create on demand!
         accessLogsPanel = null;
 
@@ -185,7 +216,7 @@ public class MentisLoginFrame extends Application {
     }
 
     /**
-     * ⭐⭐⭐ FIXED: Hide EVERY panel properly! ⭐⭐⭐
+     * Hide EVERY panel properly!
      */
     private void hideAllPanels() {
         // Hide sidebar
@@ -204,6 +235,12 @@ public class MentisLoginFrame extends Application {
         if (resultsPanel != null) resultsPanel.setVisible(false);
         if (contentUploadPanel != null) contentUploadPanel.setVisible(false);
         if (accessLogsPanel != null) accessLogsPanel.setVisible(false);
+        if (sessionPanel != null) sessionPanel.setVisible(false);
+        if (patientAvailableSessionsPanel != null) patientAvailableSessionsPanel.setVisible(false);
+        if (patientMySessionsPanel != null) patientMySessionsPanel.setVisible(false);
+        if (myReviewsPanel != null) myReviewsPanel.setVisible(false);
+        if (reservationsPanel != null) reservationsPanel.setVisible(false);
+        if (recommendationsPanel != null) recommendationsPanel.setVisible(false); // ⭐ NEW: Hide recommendations panel
 
         currentVisiblePanel = null;
 
@@ -211,13 +248,14 @@ public class MentisLoginFrame extends Application {
     }
 
     /**
-     * ⭐⭐⭐ FIXED: Show ONLY one panel, hide all others ⭐⭐⭐
+     * Show ONLY one panel, hide all others
      */
     private void showOnlyPanel(Node panelToShow) {
         hideAllPanels();
         if (panelToShow != null) {
             panelToShow.setVisible(true);
             currentVisiblePanel = panelToShow;
+            sidebar.setVisible(true);
             System.out.println("  - Showing panel: " + panelToShow.getClass().getSimpleName());
         }
     }
@@ -323,17 +361,23 @@ public class MentisLoginFrame extends Application {
 
     private void addSidebarMenuItems() {
         if ("admin".equals(currentUserType)) {
+            // Admin menu items
             addSidebarButton("Dashboard", "ADMIN_DASHBOARD");
-            addSidebarButton("Sessions", "ADMIN_DASHBOARD");
+            addSidebarButton("Manage Sessions", "SESSION_ADMIN");
+            addSidebarButton("Reservations", "RESERVATIONS");
             addSidebarButton("Assessments", "ASSESSMENT");
+            addSidebarButton("Psychologists", "PSYCHOLOGIST");
+            addSidebarButton("Patients", "PATIENT");
             addSidebarButton("Mood Tracking", "ADMIN_DASHBOARD");
             addSidebarButton("Wellbeing", "WELLBEING");
             addSidebarButton("Content", "CONTENT");
             addSidebarButton("Event", "ADMIN_DASHBOARD");
 
         } else if ("psychologist".equals(currentUserType)) {
+            // Psychologist menu items
             addSidebarButton("Dashboard", "RESULTS");
-            addSidebarButton("Sessions", "RESULTS");
+            addSidebarButton("Manage Sessions", "SESSION_ADMIN");
+            addSidebarButton("Reservations", "RESERVATIONS");
             addSidebarButton("Assessments", "RESULTS");
             addSidebarButton("Mood Tracking", "RESULTS");
             addSidebarButton("Wellbeing", "WELLBEING");
@@ -341,13 +385,18 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Event", "RESULTS");
 
         } else if ("patient".equals(currentUserType)) {
-            addSidebarButton("Dashboard", "TAKE_ASSESSMENT");
-            addSidebarButton("Session", "TAKE_ASSESSMENT");
-            addSidebarButton("Assessment", "TAKE_ASSESSMENT");
-            addSidebarButton("Mood Tracking", "TAKE_ASSESSMENT");
+            // Patient menu items - ADDED RECOMMENDATIONS
+            addSidebarButton("Dashboard", "PATIENT_DASHBOARD");
+            addSidebarButton("Available Sessions", "PATIENT_AVAILABLE_SESSIONS");
+            addSidebarButton("My Sessions", "PATIENT_MY_SESSIONS");
+            addSidebarButton("My Reviews", "PATIENT_MY_REVIEWS");
+            addSidebarButton("Recommended For You", "RECOMMENDATIONS"); // ⭐ NEW
+            addSidebarButton("Take Assessment", "TAKE_ASSESSMENT");
+            addSidebarButton("My Results", "RESULTS");
+            addSidebarButton("Mood Tracking", "PATIENT_DASHBOARD");
             addSidebarButton("Wellbeing", "WELLBEING");
             addSidebarButton("Content", "CONTENT");
-            addSidebarButton("Event", "TAKE_ASSESSMENT");
+            addSidebarButton("Event", "PATIENT_DASHBOARD");
         }
     }
 
@@ -404,6 +453,33 @@ public class MentisLoginFrame extends Application {
             case "ACCESS_LOGS":
                 showAccessLogsPanel();
                 break;
+            case "SESSION_ADMIN":
+                showSessionPanel();
+                break;
+            case "RESERVATIONS":
+                showReservationsPanel();
+                break;
+            case "PATIENT_AVAILABLE_SESSIONS":
+                showPatientAvailableSessionsPanel();
+                break;
+            case "PATIENT_MY_SESSIONS":
+                showPatientMySessionsPanel();
+                break;
+            case "PATIENT_MY_REVIEWS":
+                showMyReviewsPanel();
+                break;
+            case "RECOMMENDATIONS": // ⭐ NEW
+                showRecommendationsPanel();
+                break;
+            case "PATIENT_DASHBOARD":
+                showTakeAssessmentPanel();
+                break;
+            case "PSYCHOLOGIST":
+                showPsychologistTablePanel();
+                break;
+            case "PATIENT":
+                showPatientTablePanel();
+                break;
             case "LOGOUT":
                 logout();
                 break;
@@ -435,12 +511,11 @@ public class MentisLoginFrame extends Application {
     public void showAdminDashboard() {
         System.out.println("🔵 Showing Admin Dashboard");
         showOnlyPanel(adminDashboardPanel);
-        sidebar.setVisible(true);
         adminDashboardPanel.refreshData();
     }
 
     /**
-     * ⭐⭐⭐ FIXED: Access Logs panel - CREATED ONCE, REUSED! ⭐⭐⭐
+     * Access Logs panel - CREATED ONCE, REUSED!
      */
     public void showAccessLogsPanel() {
         System.out.println("🔵 Showing Access Logs Panel");
@@ -449,7 +524,7 @@ public class MentisLoginFrame extends Application {
             // Set current user in ContentPathController
             contentPathController.setCurrentUser(currentUserId, currentUserType);
 
-            // ⚠️ CRITICAL: Create panel ONLY ONCE!
+            // Create panel ONLY ONCE!
             if (accessLogsPanel == null) {
                 accessLogsPanel = new AccessLogsPanel(this, contentPathController);
                 contentArea.getChildren().add(accessLogsPanel);
@@ -458,7 +533,6 @@ public class MentisLoginFrame extends Application {
 
             // Show the panel
             showOnlyPanel(accessLogsPanel);
-            sidebar.setVisible(true);
             accessLogsPanel.refreshData();
 
             System.out.println("✅ Access Logs Panel shown");
@@ -472,26 +546,22 @@ public class MentisLoginFrame extends Application {
 
     public void showPsychologistTablePanel() {
         showOnlyPanel(psychologistTablePanel);
-        sidebar.setVisible(true);
         psychologistTablePanel.refreshTable();
     }
 
     public void showPatientTablePanel() {
         showOnlyPanel(patientTablePanel);
-        sidebar.setVisible(true);
         patientTablePanel.refreshTable();
     }
 
     public void showAssessmentPanel() {
         System.out.println("🔵 Showing Assessment Panel");
         showOnlyPanel(assessmentPanel);
-        sidebar.setVisible(true);
         assessmentPanel.refreshData();
     }
 
     public void showQuestionPanel() {
         showOnlyPanel(questionPanel);
-        sidebar.setVisible(true);
         questionPanel.refreshData();
     }
 
@@ -499,7 +569,6 @@ public class MentisLoginFrame extends Application {
         System.out.println("🔵 Showing Take Assessment Panel");
         takeAssessmentPanel.setUserId(currentUserId);
         showOnlyPanel(takeAssessmentPanel);
-        sidebar.setVisible(true);
         takeAssessmentPanel.refreshData();
     }
 
@@ -507,24 +576,58 @@ public class MentisLoginFrame extends Application {
         System.out.println("🔵 Showing Results Panel");
         resultsPanel.setUserId(currentUserId);
         showOnlyPanel(resultsPanel);
-        sidebar.setVisible(true);
         resultsPanel.refreshData();
     }
 
     /**
-     * ⭐⭐⭐ FIXED: Content panel - ALREADY CREATED, JUST REUSE! ⭐⭐⭐
+     * Content panel - ALREADY CREATED, JUST REUSE!
      */
     public void showContentUploadPanel() {
         System.out.println("🔵 Showing Content Upload Panel");
-
-        // ⚠️ CRITICAL: Panel already exists from initializeAllPanels()!
         contentUploadPanel.setUserId(currentUserId);
         showOnlyPanel(contentUploadPanel);
-        sidebar.setVisible(true);
         contentUploadPanel.loadContentTable();
         contentUploadPanel.updateHistoryButtons();
-
         System.out.println("✅ ContentUploadPanel shown for user: " + currentUserId + " (" + currentUserType + ")");
+    }
+
+    // ========== SESSION MODULE NAVIGATION METHODS ==========
+
+    public void showSessionPanel() {
+        System.out.println("🔵 Showing Admin/Psychologist Session Panel");
+        showOnlyPanel(sessionPanel);
+        sessionPanel.refreshData();
+    }
+
+    public void showReservationsPanel() {
+        System.out.println("🔵 Showing Reservations Panel");
+        showOnlyPanel(reservationsPanel);
+        reservationsPanel.refreshData();
+    }
+
+    public void showPatientAvailableSessionsPanel() {
+        System.out.println("🔵 Showing Patient Available Sessions Panel");
+        showOnlyPanel(patientAvailableSessionsPanel);
+        patientAvailableSessionsPanel.refreshData();
+    }
+
+    public void showPatientMySessionsPanel() {
+        System.out.println("🔵 Showing Patient My Sessions Panel");
+        showOnlyPanel(patientMySessionsPanel);
+        patientMySessionsPanel.refreshData();
+    }
+
+    public void showMyReviewsPanel() {
+        System.out.println("🔵 Showing My Reviews Panel");
+        showOnlyPanel(myReviewsPanel);
+        myReviewsPanel.refreshData();
+    }
+
+    // ⭐ NEW: Show Recommendations Panel
+    public void showRecommendationsPanel() {
+        System.out.println("🔵 Showing Recommendations Panel");
+        showOnlyPanel(recommendationsPanel);
+        recommendationsPanel.refreshData();
     }
 
     public void showQuestionPanelWithAssessment(int assessmentId) {
@@ -577,16 +680,16 @@ public class MentisLoginFrame extends Application {
 
         // Reset AccessLogsPanel so it gets recreated with new user context
         if (accessLogsPanel != null) {
-            // We'll recreate it when needed
             accessLogsPanel = null;
         }
 
+        // Navigate to appropriate panel based on user type
         switch (this.currentUserType) {
             case "admin":
                 showAdminDashboard();
                 break;
             case "patient":
-                showTakeAssessmentPanel();
+                showPatientAvailableSessionsPanel();
                 break;
             case "psychologist":
                 showResultsPanel();
@@ -597,7 +700,7 @@ public class MentisLoginFrame extends Application {
     }
 
     /**
-     * ⭐⭐⭐ FIXED: Logout - COMPLETELY CLEAN STATE! ⭐⭐⭐
+     * Logout - COMPLETELY CLEAN STATE!
      */
     public void logout() {
         System.out.println("🔴 Logging out: " + currentUserName);
@@ -614,7 +717,7 @@ public class MentisLoginFrame extends Application {
         userInfoLabel.setText("Not logged in");
         updateSidebarMenu();
 
-        // ⚠️ CRITICAL: Hide sidebar and show welcome panel
+        // Hide sidebar and show welcome panel
         sidebar.setVisible(false);
         showOnlyPanel(welcomePanel);
 
@@ -716,11 +819,85 @@ public class MentisLoginFrame extends Application {
         };
     }
 
+    private SessionController createMockSessionController() {
+        return new SessionController() {
+            @Override
+            public java.util.List<models.Session> getAllSessions() throws java.sql.SQLException {
+                System.out.println("Mock: getAllSessions() called");
+                return new java.util.ArrayList<>();
+            }
+            @Override
+            public java.util.List<models.Session> getActiveSessions() throws java.sql.SQLException {
+                System.out.println("Mock: getActiveSessions() called");
+                return new java.util.ArrayList<>();
+            }
+            @Override
+            public void createSession(models.Session session) throws java.sql.SQLException {
+                System.out.println("Mock: createSession() called");
+            }
+            @Override
+            public void updateSession(models.Session session) throws java.sql.SQLException {
+                System.out.println("Mock: updateSession() called");
+            }
+            @Override
+            public void deleteSession(int sessionId) throws java.sql.SQLException {
+                System.out.println("Mock: deleteSession() called for ID: " + sessionId);
+            }
+            @Override
+            public boolean updateSessionStatus(int sessionId, String status) throws java.sql.SQLException {
+                System.out.println("Mock: updateSessionStatus() called - ID: " + sessionId + ", Status: " + status);
+                return true;
+            }
+            @Override
+            public java.util.List<models.Session> getAvailableSessions() throws java.sql.SQLException {
+                System.out.println("Mock: getAvailableSessions() called");
+                return new java.util.ArrayList<>();
+            }
+            @Override
+            public java.util.List<models.Session> getPatientSessions(int patientId) throws java.sql.SQLException {
+                System.out.println("Mock: getPatientSessions() called for patient: " + patientId);
+                return new java.util.ArrayList<>();
+            }
+            @Override
+            public void reserveSession(int sessionId, int patientId) throws java.sql.SQLException {
+                System.out.println("Mock: reserveSession() called - Session: " + sessionId + ", Patient: " + patientId);
+            }
+            @Override
+            public void cancelReservation(int sessionId, int patientId) throws java.sql.SQLException {
+                System.out.println("Mock: cancelReservation() called - Session: " + sessionId + ", Patient: " + patientId);
+            }
+        };
+    }
+
+    private SessionReviewController createMockSessionReviewController() {
+        return new SessionReviewController() {
+            @Override
+            public java.util.List<models.SessionReview> getMyReviews(int patientId) throws java.sql.SQLException {
+                System.out.println("Mock: getMyReviews() called for patient: " + patientId);
+                return new java.util.ArrayList<>();
+            }
+            @Override
+            public void addReview(int sessionId, int patientId, int rating, String comment) throws java.sql.SQLException {
+                System.out.println("Mock: addReview() called");
+            }
+            @Override
+            public void updateReview(int reviewId, int patientId, int rating, String comment) throws java.sql.SQLException {
+                System.out.println("Mock: updateReview() called");
+            }
+            @Override
+            public void deleteReview(int reviewId, int patientId) throws java.sql.SQLException {
+                System.out.println("Mock: deleteReview() called");
+            }
+        };
+    }
+
     // ================= GETTERS =================
     public AssessmentController getAssessmentController() { return assessmentController; }
     public QuestionController getQuestionController() { return questionController; }
     public AssessmentResultController getResultController() { return resultController; }
     public ContentPathController getContentPathController() { return contentPathController; }
+    public SessionController getSessionController() { return sessionController; }
+    public SessionReviewController getSessionReviewController() { return sessionReviewController; }
     public String getUserType() { return currentUserType; }
     public int getUserId() { return currentUserId; }
     public String getUserName() { return currentUserName; }
