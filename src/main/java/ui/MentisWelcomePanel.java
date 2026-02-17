@@ -103,14 +103,18 @@ public class MentisWelcomePanel extends VBox {
         mainContent.add(title, 0, row++);
 
         // Subtitle
+        // Subtitle - FIXED CENTERING
         Label subtitle = new Label("Your space for mental well-being and personal development");
         subtitle.setFont(Font.font("Georgia", FontPosture.ITALIC, 20));
         subtitle.setTextFill(Color.web(toHex(PRIMARY)));
         subtitle.setTextAlignment(TextAlignment.CENTER);
         subtitle.setWrapText(true);
         subtitle.setMaxWidth(800);
+        subtitle.setAlignment(Pos.CENTER); // ← ADD THIS LINE
+        subtitle.setMaxWidth(Double.MAX_VALUE); // ← ADD THIS LINE
         mainContent.add(subtitle, 0, row++);
         GridPane.setMargin(subtitle, new Insets(20, 0, 40, 0));
+        GridPane.setHalignment(subtitle, javafx.geometry.HPos.CENTER); // ← ADD THIS LINE
 
         // Buttons panel
         HBox buttonPanel = createButtonPanel();

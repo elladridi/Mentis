@@ -80,7 +80,7 @@ public class MentisLoginFrame extends Application {
     private PatientMySessionsPanel patientMySessionsPanel;
     private MyReviewsPanel myReviewsPanel;
     private ReservationsPanel reservationsPanel;
-    private RecommendationsPanel recommendationsPanel; // ⭐ NEW: Recommendations panel
+    private RecommendationsPanel recommendationsPanel;
 
     private Label userInfoLabel;
 
@@ -99,9 +99,8 @@ public class MentisLoginFrame extends Application {
         // Main container with BorderPane
         mainContainer = new BorderPane();
 
-        // Create sidebar
+        // Create sidebar (initially not added to layout)
         sidebar = createSidebar();
-        sidebar.setVisible(false);
 
         // Create content area
         contentArea = new StackPane();
@@ -128,18 +127,16 @@ public class MentisLoginFrame extends Application {
                 patientMySessionsPanel,
                 myReviewsPanel,
                 reservationsPanel,
-                recommendationsPanel // ⭐ ADDED: Recommendations panel
-                // ⚠️ CRITICAL: accessLogsPanel is NOT added here - created on demand!
+                recommendationsPanel
         );
 
         // Hide all panels initially
         hideAllPanels();
 
-        // Show welcome panel
+        // Show welcome panel (this will set the layout correctly)
         showWelcomePanel();
 
-        // Layout
-        mainContainer.setLeft(sidebar);
+        // Layout - initially set only the center (no sidebar)
         mainContainer.setCenter(contentArea);
 
         root.getChildren().add(mainContainer);
@@ -207,7 +204,7 @@ public class MentisLoginFrame extends Application {
         patientMySessionsPanel = new PatientMySessionsPanel(this, sessionController);
         myReviewsPanel = new MyReviewsPanel(this, sessionReviewController);
         reservationsPanel = new ReservationsPanel(this, sessionController);
-        recommendationsPanel = new RecommendationsPanel(this, sessionController); // ⭐ NEW: Initialize recommendations panel
+        recommendationsPanel = new RecommendationsPanel(this, sessionController);
 
         // ⚠️ CRITICAL: DO NOT create AccessLogsPanel here - create on demand!
         accessLogsPanel = null;
@@ -219,9 +216,6 @@ public class MentisLoginFrame extends Application {
      * Hide EVERY panel properly!
      */
     private void hideAllPanels() {
-        // Hide sidebar
-        sidebar.setVisible(false);
-
         // Hide ALL panels - no exceptions!
         if (welcomePanel != null) welcomePanel.setVisible(false);
         if (loginPanel != null) loginPanel.setVisible(false);
@@ -240,7 +234,7 @@ public class MentisLoginFrame extends Application {
         if (patientMySessionsPanel != null) patientMySessionsPanel.setVisible(false);
         if (myReviewsPanel != null) myReviewsPanel.setVisible(false);
         if (reservationsPanel != null) reservationsPanel.setVisible(false);
-        if (recommendationsPanel != null) recommendationsPanel.setVisible(false); // ⭐ NEW: Hide recommendations panel
+        if (recommendationsPanel != null) recommendationsPanel.setVisible(false);
 
         currentVisiblePanel = null;
 
@@ -249,13 +243,35 @@ public class MentisLoginFrame extends Application {
 
     /**
      * Show ONLY one panel, hide all others
+     * This method also handles sidebar visibility and layout
      */
     private void showOnlyPanel(Node panelToShow) {
         hideAllPanels();
+
         if (panelToShow != null) {
             panelToShow.setVisible(true);
             currentVisiblePanel = panelToShow;
-            sidebar.setVisible(true);
+
+            // List of panels that should be FULL WIDTH (no sidebar)
+            boolean isFullWidthPanel =
+                    panelToShow == welcomePanel ||
+                            panelToShow == loginPanel ||
+                            panelToShow == signupPanel;
+
+            if (isFullWidthPanel) {
+                // Remove sidebar completely for full-width panels
+                mainContainer.setLeft(null);
+                // Content area takes full width
+                mainContainer.setCenter(contentArea);
+                System.out.println("  - FULL WIDTH MODE: " + panelToShow.getClass().getSimpleName() + " (sidebar removed)");
+            } else {
+                // Add sidebar back for dashboard panels
+                mainContainer.setLeft(sidebar);
+                mainContainer.setCenter(contentArea);
+                sidebar.setVisible(true);
+                System.out.println("  - SIDEBAR MODE: " + panelToShow.getClass().getSimpleName() + " (sidebar visible)");
+            }
+
             System.out.println("  - Showing panel: " + panelToShow.getClass().getSimpleName());
         }
     }
@@ -385,12 +401,12 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Event", "RESULTS");
 
         } else if ("patient".equals(currentUserType)) {
-            // Patient menu items - ADDED RECOMMENDATIONS
+            // Patient menu items
             addSidebarButton("Dashboard", "PATIENT_DASHBOARD");
             addSidebarButton("Available Sessions", "PATIENT_AVAILABLE_SESSIONS");
             addSidebarButton("My Sessions", "PATIENT_MY_SESSIONS");
             addSidebarButton("My Reviews", "PATIENT_MY_REVIEWS");
-            addSidebarButton("Recommended For You", "RECOMMENDATIONS"); // ⭐ NEW
+            addSidebarButton("Recommended For You", "RECOMMENDATIONS");
             addSidebarButton("Take Assessment", "TAKE_ASSESSMENT");
             addSidebarButton("My Results", "RESULTS");
             addSidebarButton("Mood Tracking", "PATIENT_DASHBOARD");
@@ -468,7 +484,7 @@ public class MentisLoginFrame extends Application {
             case "PATIENT_MY_REVIEWS":
                 showMyReviewsPanel();
                 break;
-            case "RECOMMENDATIONS": // ⭐ NEW
+            case "RECOMMENDATIONS":
                 showRecommendationsPanel();
                 break;
             case "PATIENT_DASHBOARD":
@@ -493,19 +509,16 @@ public class MentisLoginFrame extends Application {
     public void showWelcomePanel() {
         System.out.println("🔵 Showing Welcome Panel");
         showOnlyPanel(welcomePanel);
-        sidebar.setVisible(false);
     }
 
     public void showLoginPanel() {
         System.out.println("🔵 Showing Login Panel");
         showOnlyPanel(loginPanel);
-        sidebar.setVisible(false);
     }
 
     public void showSignUpPanel() {
         System.out.println("🔵 Showing SignUp Panel");
         showOnlyPanel(signupPanel);
-        sidebar.setVisible(false);
     }
 
     public void showAdminDashboard() {
@@ -623,7 +636,6 @@ public class MentisLoginFrame extends Application {
         myReviewsPanel.refreshData();
     }
 
-    // ⭐ NEW: Show Recommendations Panel
     public void showRecommendationsPanel() {
         System.out.println("🔵 Showing Recommendations Panel");
         showOnlyPanel(recommendationsPanel);
@@ -671,7 +683,6 @@ public class MentisLoginFrame extends Application {
 
         userInfoLabel.setText(userName + " (" + userType + ")");
         updateSidebarMenu();
-        sidebar.setVisible(true);
 
         // Update user context in all relevant panels
         contentUploadPanel.setUserId(userId);
@@ -717,11 +728,10 @@ public class MentisLoginFrame extends Application {
         userInfoLabel.setText("Not logged in");
         updateSidebarMenu();
 
-        // Hide sidebar and show welcome panel
-        sidebar.setVisible(false);
-        showOnlyPanel(welcomePanel);
+        // Show welcome panel (this will remove sidebar)
+        showWelcomePanel();
 
-        System.out.println("✅ Logout complete - Welcome Panel shown, sidebar hidden");
+        System.out.println("✅ Logout complete - Welcome Panel shown, sidebar removed");
     }
 
     // ================= DIALOG METHODS =================
