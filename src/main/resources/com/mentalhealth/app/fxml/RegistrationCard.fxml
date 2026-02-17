@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.geometry.Insets?>
+
+<HBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.mentalhealth.app.controllers.RegistrationCardController"
+      fx:id="cardRoot"
+      styleClass="registration-card"
+      spacing="0"
+      alignment="CENTER_LEFT"
+      stylesheets="@../styles/mentis.css">
+
+    <!-- Left Accent Bar -->
+    <VBox fx:id="cardAccentBar" styleClass="card-accent-bar"/>
+
+    <!-- Main Card Content -->
+    <VBox spacing="12" HBox.hgrow="ALWAYS">
+        <padding>
+            <Insets top="18" right="20" bottom="18" left="20"/>
+        </padding>
+
+        <!-- Header Row: User Info + Date Badge -->
+        <HBox alignment="CENTER_LEFT" spacing="12">
+
+            <!-- User Avatar Circle -->
+            <StackPane styleClass="user-avatar-wrapper">
+                <Circle radius="20" styleClass="user-avatar-circle"/>
+                <Label fx:id="userInitialLabel"
+                       text="J"
+                       styleClass="user-avatar-letter"/>
+            </StackPane>
+
+            <!-- User Details Column -->
+            <VBox spacing="2" HBox.hgrow="ALWAYS">
+                <!-- Name + Status Row -->
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label fx:id="userNameLabel"
+                           text="John Doe"
+                           styleClass="reg-user-name"/>
+                    <Label fx:id="statusLabel"
+                           text="✓ Confirmed"
+                           styleClass="status-badge-confirmed"/>
+                </HBox>
+                <!-- Contact Info Row -->
+                <HBox alignment="CENTER_LEFT" spacing="16">
+                    <Label fx:id="emailLabel"
+                           text="📧 john.doe@example.com"
+                           styleClass="reg-contact-text"/>
+                    <Label fx:id="phoneLabel"
+                           text="📱 +1 234 567 8900"
+                           styleClass="reg-contact-text"/>
+                </HBox>
+            </VBox>
+
+            <!-- Date Badge -->
+            <VBox alignment="CENTER" styleClass="date-badge">
+                <Label fx:id="dateDayLabel"
+                       text="15"
+                       styleClass="date-badge-day"/>
+                <Label fx:id="dateMonthLabel"
+                       text="MAR"
+                       styleClass="date-badge-month"/>
+            </VBox>
+        </HBox>
+
+        <!-- Divider Line -->
+        <HBox styleClass="card-divider"/>
+
+        <!-- Details Row: Ticket + Payment + Actions -->
+        <HBox alignment="CENTER_LEFT" spacing="24">
+
+            <!-- Ticket Information -->
+            <HBox spacing="16" alignment="CENTER_LEFT">
+
+                <!-- Ticket Type Block -->
+                <VBox spacing="4" styleClass="info-block">
+                    <Label text="Ticket Type" styleClass="info-block-label"/>
+                    <Label fx:id="ticketTypeLabel"
+                           text="🎟 Standard"
+                           styleClass="ticket-type-badge"/>
+                </VBox>
+
+                <!-- Quantity Block -->
+                <VBox spacing="4" styleClass="info-block">
+                    <Label text="Quantity" styleClass="info-block-label"/>
+                    <Label fx:id="ticketCountLabel"
+                           text="2 tickets"
+                           styleClass="info-block-value"/>
+                </VBox>
+            </HBox>
+
+            <!-- Separator -->
+            <Separator orientation="VERTICAL" styleClass="info-separator"/>
+
+            <!-- Payment Information -->
+            <HBox spacing="16" alignment="CENTER_LEFT">
+
+                <!-- Amount Block -->
+                <VBox spacing="4" styleClass="info-block">
+                    <Label text="Amount" styleClass="info-block-label"/>
+                    <Label fx:id="priceLabel"
+                           text="$150.00"
+                           styleClass="price-amount"/>
+                </VBox>
+
+                <!-- Payment Status Block -->
+                <VBox spacing="4" styleClass="info-block">
+                    <Label text="Payment" styleClass="info-block-label"/>
+                    <Label fx:id="paymentLabel"
+                           text="💳 Paid"
+                           styleClass="payment-status-paid"/>
+                </VBox>
+            </HBox>
+
+            <!-- Spacer -->
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <!-- Action Buttons -->
+            <HBox alignment="CENTER_RIGHT" spacing="8" styleClass="card-actions">
+
+                <!-- View Button -->
+                <Button fx:id="viewBtn"
+                        text="👁"
+                        onAction="#handleView"
+                        styleClass="btn-icon-view">
+                    <tooltip>
+                        <Tooltip text="View Details"/>
+                    </tooltip>
+                </Button>
+
+                <!-- Edit Button -->
+                <Button fx:id="editBtn"
+                        text="✏️"
+                        onAction="#handleEdit"
+                        styleClass="btn-icon-edit">
+                    <tooltip>
+                        <Tooltip text="Edit Registration"/>
+                    </tooltip>
+                </Button>
+
+                <!-- Delete Button -->
+                <Button fx:id="deleteBtn"
+                        text="🗑️"
+                        onAction="#handleDelete"
+                        styleClass="btn-icon-delete">
+                    <tooltip>
+                        <Tooltip text="Delete Registration"/>
+                    </tooltip>
+                </Button>
+            </HBox>
+        </HBox>
+
+        <!-- Special Requests Row (Conditional) -->
+        <HBox fx:id="requestsRow"
+              alignment="CENTER_LEFT"
+              spacing="8"
+              styleClass="requests-row"
+              visible="false"
+              managed="false">
+            <Label text="📝" styleClass="requests-icon"/>
+            <Label text="Special Requests:" styleClass="requests-label"/>
+            <Label fx:id="requestsLabel"
+                   text=""
+                   styleClass="requests-text"
+                   wrapText="true"
+                   HBox.hgrow="ALWAYS"/>
+        </HBox>
+
+    </VBox>
+
+</HBox>
