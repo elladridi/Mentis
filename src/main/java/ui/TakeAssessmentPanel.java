@@ -951,13 +951,23 @@ public class TakeAssessmentPanel extends VBox {
     private VBox createAnalysisTab(Map<String, Object> result) {
         VBox panel = new VBox();
         panel.setStyle("-fx-background-color: white;");
-        panel.setPadding(new Insets(20, 20, 20, 20));
+        panel.setPadding(new Insets(20));
 
-        TextArea textArea = new TextArea(result.get("aiAnalysis").toString());
+        // Clean markdown symbols from the text
+        String rawAnalysis = result.get("aiAnalysis").toString();
+        String cleanedAnalysis = rawAnalysis
+                .replace("**", "")
+                .replace("###", "")
+                .replace("##", "")
+                .replace("# ", "")
+                .replace("•", "→");
+
+        TextArea textArea = new TextArea(cleanedAnalysis);
         textArea.setEditable(false);
-        textArea.setFont(Font.font("Monospaced", 13));
+        textArea.setFont(Font.font("Segoe UI", 14));
         textArea.setWrapText(true);
         VBox.setVgrow(textArea, Priority.ALWAYS);
+        textArea.setPrefHeight(500);
 
         panel.getChildren().add(textArea);
         return panel;
