@@ -25,6 +25,10 @@ import java.util.*;
 import java.text.SimpleDateFormat;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+import models.Session;
+import services.SessionService;
 import services.userservice;
 import services.AssessmentService;
 
@@ -95,8 +99,7 @@ public class ResultsPanel extends VBox {
 
         Button refreshButton = createRefreshButton();
 
-        // Show progress button for patients only (not admin / psychologist)
-        if (!"admin".equals(userType) && !"psychologist".equals(userType)) {
+        if (!"Admin".equals(userType) && !"Psychologist".equals(userType)) {
             Button progressBtn = createProgressButton();
             topRightPanel.getChildren().addAll(userTypeLabel, createSpacer(10), progressBtn, createSpacer(10), refreshButton);
         } else {
@@ -111,9 +114,9 @@ public class ResultsPanel extends VBox {
 
     private String getUserTypeDisplay(String userType) {
         switch (userType) {
-            case "patient":      return "Patient - Your Results";
-            case "psychologist": return "PSYCHOLOGIST - All Results";
-            case "admin":        return "ADMINISTRATOR - All Results";
+            case "Patient":      return "Patient - Your Results";
+            case "Psychologist": return "PSYCHOLOGIST - Your Patients' Results";
+            case "Admin":        return "ADMINISTRATOR - All Results";
             default:             return "User: " + userType.toUpperCase();
         }
     }
@@ -789,6 +792,7 @@ public class ResultsPanel extends VBox {
     //  DATA REFRESH - UPDATED to fetch user names and assessment titles
     // ═══════════════════════════════════════════════════════════════
 
+    // Add this method to refreshData() to filter for psychologists
     public void refreshData() {
         clearTable();
 
@@ -802,11 +806,16 @@ public class ResultsPanel extends VBox {
             if ("patient".equals(userType)) {
                 results = controller.getUserResults(loggedInUserId);
                 displayMessage = "Showing your results";
+            } else if ("psychologist".equals(userType)) {
+                // For psychologists: only show results of patients who have sessions with them
+                results = getResultsForPsychologistPatients(loggedInUserId);
+                displayMessage = "Showing results of your patients";
             } else {
                 results = controller.getAllResults();
                 displayMessage = "Showing all results";
             }
 
+            // Rest of the existing code remains the same...
             resultData = FXCollections.observableArrayList();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
@@ -860,6 +869,49 @@ public class ResultsPanel extends VBox {
             e.printStackTrace();
             showAlert("Error", "Error: " + e.getMessage(), Alert.AlertType.ERROR);
         }
+    }
+
+    // Add this new method to get results for psychologist's patients
+    private List<AssessmentResult> getResultsForPsychologistPatients(int psychologistId) throws SQLException {
+        List<AssessmentResult> filteredResults = new ArrayList<>();
+
+        try {
+            // Get all results first
+            List<AssessmentResult> allResults = controller.getAllResults();
+
+            // Create SessionService to check patient sessions
+            SessionService sessionService = new SessionService();
+
+            // Get all sessions for this psychologist (assuming sessions have a psychologist_id field)
+            // You'll need to add this method to SessionService
+            List<Session> psychologistSessions = sessionService.getSessionsByPsychologist(psychologistId);
+
+            // Get unique patient IDs from these sessions
+            Set<Integer> patientIds = new HashSet<>();
+            for (Session session : psychologistSessions) {
+                if (session.getReservedBy() != null) {
+                    patientIds.add(session.getReservedBy());
+                }
+            }
+
+            // Filter results to only include patients in the set
+            for (AssessmentResult result : allResults) {
+                if (patientIds.contains(result.getUserId())) {
+                    filteredResults.add(result);
+                }
+            }
+
+            System.out.println("Psychologist " + psychologistId + " can see results for " + patientIds.size() + " patients");
+            System.out.println("Filtered " + filteredResults.size() + " results out of " + allResults.size());
+
+        } catch (Exception e) {
+            System.err.println("Error filtering results for psychologist: " + e.getMessage());
+            e.printStackTrace();
+            // Return empty list on error
+            return new ArrayList<>();
+        }
+
+        return filteredResults;
     }
 
     private void showNotification(String message, boolean isSuccess) {
