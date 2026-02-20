@@ -25,6 +25,8 @@ import java.util.*;
 import java.text.SimpleDateFormat;
 import java.sql.SQLException;
 import java.util.List;
+import services.userservice;
+import services.AssessmentService;
 
 public class ResultsPanel extends VBox {
 
@@ -34,6 +36,10 @@ public class ResultsPanel extends VBox {
     private ObservableList<ResultModel> resultData;
     private Label userTypeLabel;
     private Label notificationLabel;
+
+    // Add service instances to fetch user and assessment data
+    private userservice userService;
+    private AssessmentService assessmentService;
 
     // Color constants
     private static final Color BACKGROUND_BEIGE = Color.rgb(243, 243, 243);
@@ -49,6 +55,8 @@ public class ResultsPanel extends VBox {
     public ResultsPanel(MentisLoginFrame parentApp, AssessmentResultController controller) {
         this.parentApp = parentApp;
         this.controller = controller;
+        this.userService = new userservice();
+        this.assessmentService = new AssessmentService();
 
         setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
         setPadding(new Insets(45, 50, 45, 50));
@@ -207,7 +215,7 @@ public class ResultsPanel extends VBox {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  TABLE
+    //  TABLE - UPDATED TO SHOW NAMES INSTEAD OF IDs
     // ═══════════════════════════════════════════════════════════════
 
     private void createTable() {
@@ -235,15 +243,41 @@ public class ResultsPanel extends VBox {
         idCol.setPrefWidth(50);
         idCol.setStyle("-fx-alignment: CENTER;");
 
-        TableColumn<ResultModel, Integer> userIdCol = new TableColumn<>("User ID");
-        userIdCol.setCellValueFactory(new PropertyValueFactory<>("userId"));
-        userIdCol.setPrefWidth(80);
-        userIdCol.setStyle("-fx-alignment: CENTER;");
+        // REPLACED: User ID column with User Name column
+        TableColumn<ResultModel, String> userNameCol = new TableColumn<>("User Name");
+        userNameCol.setCellValueFactory(new PropertyValueFactory<>("userName"));
+        userNameCol.setPrefWidth(150);
+        userNameCol.setStyle("-fx-alignment: CENTER-LEFT;");
+        userNameCol.setCellFactory(col -> new TableCell<ResultModel, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+                }
+            }
+        });
 
-        TableColumn<ResultModel, Integer> assessmentIdCol = new TableColumn<>("Assessment ID");
-        assessmentIdCol.setCellValueFactory(new PropertyValueFactory<>("assessmentId"));
-        assessmentIdCol.setPrefWidth(110);
-        assessmentIdCol.setStyle("-fx-alignment: CENTER;");
+        // REPLACED: Assessment ID column with Assessment Title column
+        TableColumn<ResultModel, String> assessmentTitleCol = new TableColumn<>("Assessment");
+        assessmentTitleCol.setCellValueFactory(new PropertyValueFactory<>("assessmentTitle"));
+        assessmentTitleCol.setPrefWidth(200);
+        assessmentTitleCol.setStyle("-fx-alignment: CENTER-LEFT;");
+        assessmentTitleCol.setCellFactory(col -> new TableCell<ResultModel, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+                }
+            }
+        });
 
         TableColumn<ResultModel, Integer> scoreCol = new TableColumn<>("Score");
         scoreCol.setCellValueFactory(new PropertyValueFactory<>("totalScore"));
@@ -296,7 +330,8 @@ public class ResultsPanel extends VBox {
         actionCol.setCellFactory(col -> new ActionButtonCell());
         actionCol.setStyle("-fx-alignment: CENTER;");
 
-        resultsTable.getColumns().addAll(idCol, userIdCol, assessmentIdCol, scoreCol,
+        // Updated columns order - now showing names instead of IDs
+        resultsTable.getColumns().addAll(idCol, userNameCol, assessmentTitleCol, scoreCol,
                 riskCol, dateCol, sessionCol, actionCol);
 
         resultsTable.getColumns().forEach(col -> col.setStyle(
@@ -354,48 +389,56 @@ public class ResultsPanel extends VBox {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  RESULT MODEL
+    //  RESULT MODEL - UPDATED to include userName and assessmentTitle
     // ═══════════════════════════════════════════════════════════════
 
     public static class ResultModel {
         private final SimpleIntegerProperty resultId;
-        private final SimpleIntegerProperty userId;
-        private final SimpleIntegerProperty assessmentId;
+        private final SimpleIntegerProperty userId; // Keep for reference
+        private final SimpleIntegerProperty assessmentId; // Keep for reference
+        private final SimpleStringProperty userName; // New field
+        private final SimpleStringProperty assessmentTitle; // New field
         private final SimpleIntegerProperty totalScore;
         private final SimpleStringProperty riskLevel;
         private final SimpleStringProperty takenAt;
         private final SimpleBooleanProperty suggestSession;
 
-        public ResultModel(int resultId, int userId, int assessmentId, int totalScore,
-                           String riskLevel, String takenAt, boolean suggestSession) {
-            this.resultId      = new SimpleIntegerProperty(resultId);
-            this.userId        = new SimpleIntegerProperty(userId);
-            this.assessmentId  = new SimpleIntegerProperty(assessmentId);
-            this.totalScore    = new SimpleIntegerProperty(totalScore);
-            this.riskLevel     = new SimpleStringProperty(riskLevel);
-            this.takenAt       = new SimpleStringProperty(takenAt);
+        public ResultModel(int resultId, int userId, int assessmentId, String userName, String assessmentTitle,
+                           int totalScore, String riskLevel, String takenAt, boolean suggestSession) {
+            this.resultId = new SimpleIntegerProperty(resultId);
+            this.userId = new SimpleIntegerProperty(userId);
+            this.assessmentId = new SimpleIntegerProperty(assessmentId);
+            this.userName = new SimpleStringProperty(userName);
+            this.assessmentTitle = new SimpleStringProperty(assessmentTitle);
+            this.totalScore = new SimpleIntegerProperty(totalScore);
+            this.riskLevel = new SimpleStringProperty(riskLevel);
+            this.takenAt = new SimpleStringProperty(takenAt);
             this.suggestSession = new SimpleBooleanProperty(suggestSession);
         }
 
-        public int getResultId()      { return resultId.get(); }
-        public int getUserId()        { return userId.get(); }
-        public int getAssessmentId()  { return assessmentId.get(); }
-        public int getTotalScore()    { return totalScore.get(); }
-        public String getRiskLevel()  { return riskLevel.get(); }
-        public String getTakenAt()    { return takenAt.get(); }
+        public int getResultId() { return resultId.get(); }
+        public int getUserId() { return userId.get(); }
+        public int getAssessmentId() { return assessmentId.get(); }
+        public String getUserName() { return userName.get(); }
+        public String getAssessmentTitle() { return assessmentTitle.get(); }
+        public int getTotalScore() { return totalScore.get(); }
+        public String getRiskLevel() { return riskLevel.get(); }
+        public String getTakenAt() { return takenAt.get(); }
         public boolean isSuggestSession() { return suggestSession.get(); }
 
-        public SimpleIntegerProperty resultIdProperty()     { return resultId; }
-        public SimpleIntegerProperty userIdProperty()       { return userId; }
+        public SimpleIntegerProperty resultIdProperty() { return resultId; }
+        public SimpleIntegerProperty userIdProperty() { return userId; }
         public SimpleIntegerProperty assessmentIdProperty() { return assessmentId; }
-        public SimpleIntegerProperty totalScoreProperty()   { return totalScore; }
-        public SimpleStringProperty riskLevelProperty()     { return riskLevel; }
-        public SimpleStringProperty takenAtProperty()       { return takenAt; }
+        public SimpleStringProperty userNameProperty() { return userName; }
+        public SimpleStringProperty assessmentTitleProperty() { return assessmentTitle; }
+        public SimpleIntegerProperty totalScoreProperty() { return totalScore; }
+        public SimpleStringProperty riskLevelProperty() { return riskLevel; }
+        public SimpleStringProperty takenAtProperty() { return takenAt; }
         public SimpleBooleanProperty suggestSessionProperty() { return suggestSession; }
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  VIEW RESULT DETAILS
+    //  VIEW RESULT DETAILS - UPDATED to show names in dialog
     // ═══════════════════════════════════════════════════════════════
 
     private void viewResultDetails(ResultModel resultModel) {
@@ -415,7 +458,7 @@ public class ResultsPanel extends VBox {
             }
 
             if (result != null) {
-                showResultDialog(result);
+                showResultDialog(result, resultModel.getUserName(), resultModel.getAssessmentTitle());
             } else {
                 showAlert("Error", "Result not found!", Alert.AlertType.ERROR);
             }
@@ -425,7 +468,8 @@ public class ResultsPanel extends VBox {
         }
     }
 
-    private void showResultDialog(AssessmentResult result) {
+    // UPDATED to accept userName and assessmentTitle
+    private void showResultDialog(AssessmentResult result, String userName, String assessmentTitle) {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
         dialog.setTitle("Result Details");
@@ -448,8 +492,10 @@ public class ResultsPanel extends VBox {
         detailsGrid.setPadding(new Insets(15, 0, 15, 0));
 
         addDetailRow(detailsGrid, 0, "Result ID:",     String.valueOf(result.getResultId()));
-        addDetailRow(detailsGrid, 1, "User ID:",       String.valueOf(result.getUserId()));
-        addDetailRow(detailsGrid, 2, "Assessment ID:", String.valueOf(result.getAssessmentId()));
+        // Show user name instead of ID
+        addDetailRow(detailsGrid, 1, "User:",          userName + " (ID: " + result.getUserId() + ")");
+        // Show assessment title instead of ID
+        addDetailRow(detailsGrid, 2, "Assessment:",    assessmentTitle + " (ID: " + result.getAssessmentId() + ")");
         addDetailRow(detailsGrid, 3, "Total Score:",   String.valueOf(result.getTotalScore()));
 
         Label riskValue = new Label(result.getRiskLevel());
@@ -740,7 +786,7 @@ public class ResultsPanel extends VBox {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  DATA REFRESH
+    //  DATA REFRESH - UPDATED to fetch user names and assessment titles
     // ═══════════════════════════════════════════════════════════════
 
     public void refreshData() {
@@ -766,10 +812,34 @@ public class ResultsPanel extends VBox {
 
             if (results != null && !results.isEmpty()) {
                 for (AssessmentResult result : results) {
+                    // Fetch user name
+                    String userName = "Unknown User";
+                    try {
+                        models.user user = userService.getuserById(result.getUserId());
+                        if (user != null) {
+                            userName = user.getFirstName() + " " + user.getLastName();
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error fetching user for ID " + result.getUserId() + ": " + e.getMessage());
+                    }
+
+                    // Fetch assessment title
+                    String assessmentTitle = "Unknown Assessment";
+                    try {
+                        models.Assessment assessment = assessmentService.getAssessmentById(result.getAssessmentId());
+                        if (assessment != null) {
+                            assessmentTitle = assessment.getTitle();
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error fetching assessment for ID " + result.getAssessmentId() + ": " + e.getMessage());
+                    }
+
                     resultData.add(new ResultModel(
                             result.getResultId(),
                             result.getUserId(),
                             result.getAssessmentId(),
+                            userName,
+                            assessmentTitle,
                             result.getTotalScore(),
                             result.getRiskLevel(),
                             sdf.format(result.getTakenAt()),

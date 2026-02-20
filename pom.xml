@@ -34,6 +34,38 @@
             <version>${javafx.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-web</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+
+        <!-- ZXing Core -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+            <version>1.4.7</version>
+        </dependency>
+
+
+        <!-- ZXing Java SE (for QR image generation) -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
         <!-- MySQL Connector -->
         <dependency>
             <groupId>mysql</groupId>
@@ -54,4 +86,5 @@
             </plugin>
         </plugins>
     </build>
+
 </project>

@@ -22,6 +22,9 @@ import javafx.stage.Stage;
 import models.Assessment;
 import models.AssessmentResult;
 import models.Question;
+import models.AdaptiveAssessmentSession;
+import services.AdaptiveQuestionService;
+import services.GeminiService;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -32,14 +35,23 @@ import java.util.*;
 public class TakeAssessmentPanel extends VBox {
 
     private int userId;
-    private MentisLoginFrame parentApp;  // FIXED: Changed from MentisLoginFrame to MentisLoginFrame
+    private MentisLoginFrame parentApp;
     private AssessmentController assessmentController;
     private AssessmentResultController resultController;
+    private AdaptiveQuestionService adaptiveService;
     private List<Assessment> availableAssessments;
     private List<Question> currentQuestions;
+    private List<Question> originalQuestions;
     private Map<Integer, String> answers;
     private int currentQuestionIndex = 0;
     private int currentAssessmentId = 0;
+
+    // Adaptive assessment fields
+    private AdaptiveAssessmentSession adaptiveSession;
+    private boolean useAdaptiveMode = true;
+    private static final int MAX_ADAPTIVE_QUESTIONS = 8;
+    private boolean adaptiveEnabled = true;
+    private boolean isAdapting = false;
 
     // UI Components
     private StackPane contentStack;
@@ -55,6 +67,7 @@ public class TakeAssessmentPanel extends VBox {
     private ImageView assessmentImageView;
     private TextField searchField;
     private Label userInfoLabel;
+    private Label adaptiveStatusLabel;
 
     // For image handling
     private Map<Integer, Image> assessmentImages = new HashMap<>();
@@ -78,13 +91,14 @@ public class TakeAssessmentPanel extends VBox {
     private static final Color TYPE_GENERAL = Color.rgb(165, 186, 227);
     private static final Color TYPE_DEFAULT = Color.rgb(165, 186, 227);
 
-    public TakeAssessmentPanel(MentisLoginFrame parentApp, AssessmentController assessmentController,  // FIXED: Parameter type
+    public TakeAssessmentPanel(MentisLoginFrame parentApp, AssessmentController assessmentController,
                                AssessmentResultController resultController) {
         this.parentApp = parentApp;
         this.assessmentController = assessmentController;
         this.resultController = resultController;
         this.answers = new HashMap<>();
         this.userId = parentApp.getUserId();
+        this.adaptiveService = new AdaptiveQuestionService();
 
         setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
         setPadding(new Insets(0));
@@ -111,7 +125,7 @@ public class TakeAssessmentPanel extends VBox {
         selectionPanel.setPadding(new Insets(45, 50, 45, 50));
         selectionPanel.setVisible(true);
 
-        // Header
+        // Header - REMOVED user ID from top
         BorderPane headerPanel = new BorderPane();
         headerPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
         headerPanel.setPadding(new Insets(0, 0, 35, 0));
@@ -120,21 +134,15 @@ public class TakeAssessmentPanel extends VBox {
         titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 42));
         titleLabel.setTextFill(Color.web(toHex(ACCENT_GREEN)));
 
-        // Top right - User info and links
+        // Top right - Only Results link (removed user ID)
         HBox topRightPanel = new HBox(30);
         topRightPanel.setAlignment(Pos.CENTER_RIGHT);
         topRightPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
 
-        userInfoLabel = new Label("User ID: " + userId);
-        userInfoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        userInfoLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-        userInfoLabel.setPadding(new Insets(0, 20, 0, 0));
-
         Button resultsLink = createHeaderLink("Results");
-        // FIXED: Changed from showPanel to showResultsPanel
         resultsLink.setOnAction(e -> parentApp.showResultsPanel());
 
-        topRightPanel.getChildren().addAll(userInfoLabel, resultsLink);
+        topRightPanel.getChildren().add(resultsLink);
         headerPanel.setLeft(titleLabel);
         headerPanel.setRight(topRightPanel);
 
@@ -150,7 +158,6 @@ public class TakeAssessmentPanel extends VBox {
 
         searchField = new TextField();
         searchField.setPromptText("Type assessment title to search...");
-        // FIXED: Removed setFont and added to CSS
         searchField.setPrefWidth(300);
         searchField.setStyle(
                 "-fx-font-family: 'Segoe UI';" +
@@ -173,28 +180,12 @@ public class TakeAssessmentPanel extends VBox {
 
         searchPanel.getChildren().addAll(searchLabel, searchField, searchButton, clearSearchButton);
 
-        // User info display
-        HBox userPanel = new HBox();
-        userPanel.setAlignment(Pos.CENTER_LEFT);
-        userPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        userPanel.setPadding(new Insets(0, 0, 30, 0));
-
-        Label userLabel = new Label("Logged in as User ID: " + userId);
-        userLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        userLabel.setTextFill(Color.web(toHex(ACCENT_GREEN)));
-        userLabel.setStyle(
-                "-fx-border-color: #" + toHex(ACCENT_LIGHT_GREEN) + ";" +
-                        "-fx-border-width: 1;" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-padding: 10 15;"
-        );
-
-        userPanel.getChildren().add(userLabel);
+        // REMOVED the user panel with "Logged in as User ID: 0"
 
         // Header container
         VBox headerContainer = new VBox(0);
         headerContainer.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        headerContainer.getChildren().addAll(headerPanel, searchPanel, userPanel);
+        headerContainer.getChildren().addAll(headerPanel, searchPanel);
 
         // Cards grid
         cardsGrid = new GridPane();
@@ -309,6 +300,169 @@ public class TakeAssessmentPanel extends VBox {
         return button;
     }
 
+    private void createQuestionPanel() {
+        questionPanel = new VBox(20);
+        questionPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
+        questionPanel.setPadding(new Insets(30, 50, 30, 50));
+        questionPanel.setVisible(false);
+
+        // Top panel with back button only (removed adaptive status)
+        HBox topPanel = new HBox();
+        topPanel.setAlignment(Pos.CENTER_LEFT);
+        topPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
+        topPanel.setPadding(new Insets(0, 0, 15, 0));
+        topPanel.setSpacing(20);
+
+        Button backButton = new Button("← Back to Assessments");
+        backButton.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        backButton.setTextFill(Color.web(toHex(ACCENT_GREEN)));
+        backButton.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-border-width: 0;" +
+                        "-fx-cursor: hand;"
+        );
+        backButton.setOnAction(e -> showSelectionPanel());
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        topPanel.getChildren().addAll(backButton, spacer);
+
+        // Main content container
+        VBox centerContainer = new VBox();
+        centerContainer.setAlignment(Pos.CENTER);
+        centerContainer.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
+        VBox.setVgrow(centerContainer, Priority.ALWAYS);
+
+        // Question card - FIXED: Image takes full width, no white sides
+        VBox card = new VBox(20);
+        card.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
+                        "-fx-border-width: 1;" +
+                        "-fx-border-radius: 10;" +
+                        "-fx-background-radius: 10;" +
+                        "-fx-padding: 30 0 30 0;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);"
+        );
+        card.setAlignment(Pos.TOP_CENTER);
+        card.setMaxWidth(900);
+        card.setMinHeight(500);
+        card.setMaxHeight(Region.USE_COMPUTED_SIZE);
+
+        // Question number
+        questionNumberLabel = new Label("Question 1 of 8");
+        questionNumberLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        questionNumberLabel.setTextFill(Color.web(toHex(TEXT_GRAY)));
+        questionNumberLabel.setPadding(new Insets(0, 40, 10, 40));
+
+        // Image display - FIXED: Full width, no white sides
+        assessmentImageView = new ImageView();
+        assessmentImageView.setFitWidth(900);
+        assessmentImageView.setFitHeight(250);
+        assessmentImageView.setPreserveRatio(true);
+        assessmentImageView.setStyle(
+                "-fx-background-color: #f5f5f5;" +
+                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
+                        "-fx-border-width: 1 0 1 0;"
+        );
+
+        // Question text
+        questionTextLabel = new Label();
+        questionTextLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
+        questionTextLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        questionTextLabel.setWrapText(true);
+        questionTextLabel.setTextAlignment(TextAlignment.CENTER);
+        questionTextLabel.setMaxWidth(700);
+        questionTextLabel.setMinHeight(80);
+        questionTextLabel.setPadding(new Insets(20, 40, 20, 40));
+
+        // Answer combo box
+        answerCombo = new ComboBox<>();
+        answerCombo.setStyle(
+                "-fx-font-family: 'Segoe UI';" +
+                        "-fx-font-size: 15px;" +
+                        "-fx-background-color: white;" +
+                        "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
+                        "-fx-border-width: 1.5;" +
+                        "-fx-border-radius: 5;" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 8 12;"
+        );
+        answerCombo.setPrefWidth(500);
+        answerCombo.setPrefHeight(45);
+        answerCombo.setPromptText("Select your answer...");
+
+        card.getChildren().addAll(questionNumberLabel, assessmentImageView, questionTextLabel, answerCombo);
+
+        // Center the card
+        HBox cardWrapper = new HBox(card);
+        cardWrapper.setAlignment(Pos.CENTER);
+        cardWrapper.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
+        HBox.setHgrow(card, Priority.NEVER);
+
+        centerContainer.getChildren().add(cardWrapper);
+
+        // Navigation buttons
+        HBox navPanel = new HBox(20);
+        navPanel.setAlignment(Pos.CENTER);
+        navPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
+        navPanel.setPadding(new Insets(20, 0, 0, 0));
+
+        prevButton = createNavButton("Previous", ACCENT_LIGHT_GREEN);
+        prevButton.setDisable(true);
+        prevButton.setOnAction(e -> showPreviousQuestion());
+
+        nextButton = createNavButton("Next", ACCENT_LIGHT_GREEN);
+        nextButton.setDisable(true);
+        nextButton.setOnAction(e -> showNextQuestion());
+
+        submitButton = createNavButton("Submit", ACCENT_GREEN);
+        submitButton.setTextFill(Color.WHITE);
+        submitButton.setDisable(true);
+        submitButton.setOnAction(e -> submitAssessment());
+
+        navPanel.getChildren().addAll(prevButton, nextButton, submitButton);
+
+        questionPanel.getChildren().addAll(topPanel, centerContainer, navPanel);
+        VBox.setVgrow(centerContainer, Priority.ALWAYS);
+    }
+
+    private Button createNavButton(String text, Color bgColor) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+        button.setTextFill(bgColor == ACCENT_GREEN ? Color.WHITE : Color.web(toHex(TEXT_DARK)));
+        button.setStyle(
+                "-fx-background-color: #" + toHex(bgColor) + ";" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 10 30;" +
+                        "-fx-cursor: hand;"
+        );
+
+        button.setOnMouseEntered(e -> {
+            if (!button.isDisable()) {
+                button.setStyle(
+                        "-fx-background-color: #" + toHex(bgColor.darker()) + ";" +
+                                "-fx-background-radius: 5;" +
+                                "-fx-padding: 10 30;" +
+                                "-fx-cursor: hand;"
+                );
+            }
+        });
+        button.setOnMouseExited(e -> {
+            if (!button.isDisable()) {
+                button.setStyle(
+                        "-fx-background-color: #" + toHex(bgColor) + ";" +
+                                "-fx-background-radius: 5;" +
+                                "-fx-padding: 10 30;" +
+                                "-fx-cursor: hand;"
+                );
+            }
+        });
+
+        return button;
+    }
+
     private void searchAssessments(String searchText) {
         if (searchText == null || searchText.trim().isEmpty()) {
             refreshData();
@@ -384,155 +538,6 @@ public class TakeAssessmentPanel extends VBox {
         GridPane.setColumnSpan(emptyLabel, 2);
     }
 
-    private void createQuestionPanel() {
-        questionPanel = new VBox(20);
-        questionPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        questionPanel.setPadding(new Insets(45, 50, 45, 50));
-        questionPanel.setVisible(false);
-
-        // Back button
-        HBox topPanel = new HBox();
-        topPanel.setAlignment(Pos.CENTER_LEFT);
-        topPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        topPanel.setPadding(new Insets(0, 0, 30, 0));
-
-        Button backButton = new Button("← Back to Assessments");
-        backButton.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 15));
-        backButton.setTextFill(Color.web(toHex(ACCENT_GREEN)));
-        backButton.setStyle(
-                "-fx-background-color: transparent;" +
-                        "-fx-border-width: 0;" +
-                        "-fx-cursor: hand;"
-        );
-        backButton.setOnAction(e -> showSelectionPanel());
-
-        topPanel.getChildren().add(backButton);
-
-        // Question card
-        VBox card = new VBox(25);
-        card.setStyle(
-                "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-width: 1;" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;"
-        );
-        card.setPadding(new Insets(50, 60, 50, 60));
-        card.setAlignment(Pos.TOP_CENTER);
-        card.setMaxWidth(800);
-        card.setMaxHeight(600);
-
-        // Question number
-        questionNumberLabel = new Label("Question 1 of 10");
-        questionNumberLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
-        questionNumberLabel.setTextFill(Color.web(toHex(TEXT_GRAY)));
-        questionNumberLabel.setPadding(new Insets(0, 0, 25, 0));
-
-        // Image display
-        assessmentImageView = new ImageView();
-        assessmentImageView.setFitWidth(400);
-        assessmentImageView.setFitHeight(200);
-        assessmentImageView.setPreserveRatio(true);
-        assessmentImageView.setStyle(
-                "-fx-background-color: #f0f0f0;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;"
-        );
-
-        // Question text
-        questionTextLabel = new Label("[question text will appear here]");
-        questionTextLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 19));
-        questionTextLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-        questionTextLabel.setWrapText(true);
-        questionTextLabel.setTextAlignment(TextAlignment.CENTER);
-        questionTextLabel.setMaxWidth(600);
-        questionTextLabel.setPadding(new Insets(0, 0, 35, 0));
-
-        // Answer combo box - FIXED: Removed setFont and added to CSS
-        answerCombo = new ComboBox<>();
-        answerCombo.setStyle(
-                "-fx-font-family: 'Segoe UI';" +
-                        "-fx-font-size: 15px;" +
-                        "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
-                        "-fx-border-width: 2;" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8 15;"
-        );
-        answerCombo.setPrefWidth(600);
-        answerCombo.setPrefHeight(50);
-
-        card.getChildren().addAll(questionNumberLabel, assessmentImageView, questionTextLabel, answerCombo);
-
-        // Center the card
-        HBox centerBox = new HBox();
-        centerBox.setAlignment(Pos.CENTER);
-        centerBox.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        centerBox.getChildren().add(card);
-        HBox.setHgrow(card, Priority.NEVER);
-
-        // Navigation buttons
-        HBox navPanel = new HBox(25);
-        navPanel.setAlignment(Pos.CENTER);
-        navPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        navPanel.setPadding(new Insets(30, 0, 0, 0));
-
-        prevButton = createNavButton("Previous", ACCENT_LIGHT_GREEN);
-        prevButton.setDisable(true);
-        prevButton.setOnAction(e -> showPreviousQuestion());
-
-        nextButton = createNavButton("Next", ACCENT_LIGHT_GREEN);
-        nextButton.setDisable(true);
-        nextButton.setOnAction(e -> showNextQuestion());
-
-        submitButton = createNavButton("Submit", ACCENT_GREEN);
-        submitButton.setTextFill(Color.WHITE);
-        submitButton.setDisable(true);
-        submitButton.setOnAction(e -> submitAssessment());
-
-        navPanel.getChildren().addAll(prevButton, nextButton, submitButton);
-
-        questionPanel.getChildren().addAll(topPanel, centerBox, navPanel);
-        VBox.setVgrow(centerBox, Priority.ALWAYS);
-    }
-
-    private Button createNavButton(String text, Color bgColor) {
-        Button button = new Button(text);
-        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
-        button.setTextFill(bgColor == ACCENT_GREEN ? Color.WHITE : Color.web(toHex(TEXT_DARK)));
-        button.setStyle(
-                "-fx-background-color: #" + toHex(bgColor) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 12 35;" +
-                        "-fx-cursor: hand;"
-        );
-
-        button.setOnMouseEntered(e -> {
-            if (!button.isDisable()) {
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(bgColor.darker()) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 35;" +
-                                "-fx-cursor: hand;"
-                );
-            }
-        });
-        button.setOnMouseExited(e -> {
-            if (!button.isDisable()) {
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(bgColor) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 35;" +
-                                "-fx-cursor: hand;"
-                );
-            }
-        });
-
-        return button;
-    }
-
     public void refreshData() {
         try {
             availableAssessments = assessmentController.getActiveAssessments();
@@ -592,8 +597,8 @@ public class TakeAssessmentPanel extends VBox {
                 if (imgFile.exists()) {
                     Image image = new Image(new FileInputStream(imgFile));
                     assessmentImageView.setImage(image);
-                    assessmentImageView.setFitWidth(400);
-                    assessmentImageView.setFitHeight(200);
+                    assessmentImageView.setFitWidth(900);
+                    assessmentImageView.setFitHeight(250);
                     assessmentImageView.setPreserveRatio(true);
                     return;
                 }
@@ -602,12 +607,12 @@ public class TakeAssessmentPanel extends VBox {
             }
         }
 
-        // If no image or error, show a colored placeholder
+        // If no image or error, show a colored placeholder that spans full width
         assessmentImageView.setImage(null);
         assessmentImageView.setStyle(
                 "-fx-background-color: #" + toHex(getTypeColor(assessment.getType())) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;"
+                        "-fx-border-width: 1 0 1 0;" +
+                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";"
         );
     }
 
@@ -751,15 +756,28 @@ public class TakeAssessmentPanel extends VBox {
             }
 
             currentAssessmentId = assessment.getAssessmentId();
-            currentQuestions = resultController.getQuestionsByAssessment(currentAssessmentId);
+            originalQuestions = resultController.getQuestionsByAssessment(currentAssessmentId);
 
-            if (currentQuestions == null || currentQuestions.isEmpty()) {
+            if (originalQuestions == null || originalQuestions.isEmpty()) {
                 showAlert("Error", "No questions found for this assessment!", Alert.AlertType.ERROR);
                 return;
             }
 
+            // Initialize adaptive session
+            adaptiveSession = new AdaptiveAssessmentSession(
+                    currentAssessmentId, userId, originalQuestions);
+
+            // Set adaptive mode
+            adaptiveSession.setUseAIAdaptive(useAdaptiveMode);
+            adaptiveEnabled = true;
+            isAdapting = false;
+
+            currentQuestions = new ArrayList<>(originalQuestions);
             currentQuestionIndex = 0;
             answers.clear();
+
+            // Shuffle questions for better adaptive experience
+            Collections.shuffle(currentQuestions);
 
             prevButton.setDisable(true);
             nextButton.setDisable(currentQuestions.size() <= 1);
@@ -776,6 +794,30 @@ public class TakeAssessmentPanel extends VBox {
         }
     }
 
+    private Question getNextAdaptiveQuestion() {
+        if (adaptiveSession == null || originalQuestions == null || !adaptiveEnabled) {
+            return null;
+        }
+
+        // Check if we've reached the maximum number of adaptive questions
+        if (adaptiveSession.getQuestionCount() >= MAX_ADAPTIVE_QUESTIONS) {
+            adaptiveEnabled = false;
+            return null;
+        }
+
+        // Get remaining questions that haven't been asked
+        List<Question> asked = adaptiveSession.getAskedQuestions();
+        List<Question> remaining = new ArrayList<>(originalQuestions);
+        remaining.removeAll(asked);
+
+        if (remaining.isEmpty()) {
+            return null;
+        }
+
+        // Let the adaptive service decide the next question
+        return adaptiveService.getNextAdaptiveQuestion(adaptiveSession, remaining);
+    }
+
     private void showQuestion(int index) {
         if (currentQuestions == null || index < 0 || index >= currentQuestions.size()) {
             return;
@@ -784,7 +826,14 @@ public class TakeAssessmentPanel extends VBox {
         Question question = currentQuestions.get(index);
 
         questionNumberLabel.setText("Question " + (index + 1) + " of " + currentQuestions.size());
-        questionTextLabel.setText(question.getText());
+
+        // Ensure full question text is displayed
+        String questionText = question.getText();
+        questionTextLabel.setText(questionText);
+
+        // Force layout refresh
+        questionTextLabel.setWrapText(true);
+        questionTextLabel.autosize();
 
         String[] options = resultController.parseScaleToOptions(question.getScale());
         answerCombo.getItems().clear();
@@ -817,8 +866,35 @@ public class TakeAssessmentPanel extends VBox {
     }
 
     private void showNextQuestion() {
+        saveCurrentAnswer(); // Save current answer before moving
+
+        // Add the answered question to adaptive session
+        Question currentQ = currentQuestions.get(currentQuestionIndex);
+        String answer = answers.get(currentQ.getQuestionId());
+        int score = resultController.parseAnswerToScore(answer, currentQ.getScale());
+        adaptiveSession.addAnsweredQuestion(currentQ, answer, score);
+
+        // Adaptive starts after 2nd question (index 1)
+        if (useAdaptiveMode && adaptiveEnabled && currentQuestionIndex >= 1 && !isAdapting) {
+            // Try to get an adaptive next question
+            Question adaptiveQuestion = getNextAdaptiveQuestion();
+
+            if (adaptiveQuestion != null && !adaptiveSession.getAskedQuestions().contains(adaptiveQuestion)) {
+                // Set flag to prevent multiple adaptations
+                isAdapting = true;
+
+                // Insert adaptive question at next position
+                currentQuestions.add(currentQuestionIndex + 1, adaptiveQuestion);
+
+                // Reset flag after a short delay
+                Platform.runLater(() -> {
+                    isAdapting = false;
+                });
+            }
+        }
+
+        // Move to next question
         if (currentQuestionIndex < currentQuestions.size() - 1) {
-            saveCurrentAnswer();
             currentQuestionIndex++;
             showQuestion(currentQuestionIndex);
         }
@@ -827,11 +903,28 @@ public class TakeAssessmentPanel extends VBox {
     private void submitAssessment() {
         saveCurrentAnswer();
 
-        if (answers.size() < currentQuestions.size()) {
+        // Proper validation - check if all questions have answers
+        boolean allAnswered = true;
+        for (Question question : currentQuestions) {
+            if (!answers.containsKey(question.getQuestionId())) {
+                allAnswered = false;
+                break;
+            }
+        }
+
+        if (!allAnswered) {
             showAlert("Incomplete Assessment",
                     "Please answer all questions before submitting!",
                     Alert.AlertType.WARNING);
             return;
+        }
+
+        // Add last question to adaptive session if not already added
+        if (adaptiveSession != null && adaptiveSession.getAskedQuestions().size() < currentQuestions.size()) {
+            Question lastQ = currentQuestions.get(currentQuestionIndex);
+            String answer = answers.get(lastQ.getQuestionId());
+            int score = resultController.parseAnswerToScore(answer, lastQ.getScale());
+            adaptiveSession.addAnsweredQuestion(lastQ, answer, score);
         }
 
         Map<Integer, Integer> answerScores = new HashMap<>();
@@ -865,8 +958,6 @@ public class TakeAssessmentPanel extends VBox {
     private void showResultsWithAI(Map<String, Object> result) {
         Stage resultDialog = new Stage();
         resultDialog.initModality(Modality.APPLICATION_MODAL);
-        // FIXED: Removed initOwner since getScene() doesn't exist in MentisLoginFrame
-        // resultDialog.initOwner(parentApp.getScene().getWindow());
         resultDialog.setTitle("Assessment Results");
         resultDialog.setMinWidth(700);
         resultDialog.setMinHeight(800);
@@ -930,7 +1021,16 @@ public class TakeAssessmentPanel extends VBox {
         textArea.setFont(Font.font("Monospaced", 14));
         textArea.setWrapText(true);
 
+        // Add adaptive assessment info if available
+        String adaptiveInfo = "";
+        if (adaptiveSession != null && useAdaptiveMode) {
+            adaptiveInfo = "\n=== ADAPTIVE ASSESSMENT INFO ===\n" +
+                    "Questions Asked: " + adaptiveSession.getQuestionCount() + "\n" +
+                    "Category Scores: " + adaptiveSession.getCategoryScores() + "\n\n";
+        }
+
         String summary = "=== ASSESSMENT RESULTS ===\n\n" +
+                adaptiveInfo +
                 "Total Score: " + result.get("totalScore") + "\n" +
                 "Risk Level: " + result.get("riskLevel") + "\n" +
                 "Session Suggested: " + (result.get("suggestSession").equals(true) ? "Yes" : "No") + "\n\n" +
@@ -1032,7 +1132,6 @@ public class TakeAssessmentPanel extends VBox {
                     new FileChooser.ExtensionFilter("Text Files", "*.txt")
             );
 
-            // FIXED: Removed initOwner since getScene() doesn't exist in MentisLoginFrame
             File file = fileChooser.showSaveDialog(null);
             if (file != null) {
                 Files.write(file.toPath(), content.getBytes());
@@ -1060,7 +1159,6 @@ public class TakeAssessmentPanel extends VBox {
                     new FileChooser.ExtensionFilter("HTML Files", "*.html")
             );
 
-            // FIXED: Removed initOwner since getScene() doesn't exist in MentisLoginFrame
             File file = fileChooser.showSaveDialog(null);
             if (file != null) {
                 Files.write(file.toPath(), content.getBytes());
@@ -1094,14 +1192,15 @@ public class TakeAssessmentPanel extends VBox {
         currentQuestions = null;
         answers.clear();
         currentQuestionIndex = 0;
+        isAdapting = false;
 
         // Clear the assessment image
         if (assessmentImageView != null) {
             assessmentImageView.setImage(null);
             assessmentImageView.setStyle(
-                    "-fx-background-color: #fafafa;" +
-                            "-fx-border-radius: 5;" +
-                            "-fx-background-radius: 5;"
+                    "-fx-background-color: #f5f5f5;" +
+                            "-fx-border-width: 1 0 1 0;" +
+                            "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";"
             );
         }
 
@@ -1120,8 +1219,6 @@ public class TakeAssessmentPanel extends VBox {
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
-        // FIXED: Removed initOwner since getScene() doesn't exist in MentisLoginFrame
-        // alert.initOwner(parentApp.getScene().getWindow());
         alert.showAndWait();
     }
 
@@ -1131,9 +1228,7 @@ public class TakeAssessmentPanel extends VBox {
 
     public void setUserId(int userId) {
         this.userId = userId;
-        if (userInfoLabel != null) {
-            userInfoLabel.setText("User ID: " + userId);
-        }
+        // Don't show user ID in UI anymore
         refreshData();
     }
 

@@ -88,11 +88,6 @@ public class AssessmentResultController {
     //  GEMINI AI ANALYSIS — uses your existing GeminiService
     // ═══════════════════════════════════════════════════════════════
 
-    /**
-     * Tries Gemini first. If the API call fails for any reason,
-     * automatically falls back to the rule-based analysis so the
-     * app never crashes.
-     */
     private String generateAIAnalysis(List<Question> questions,
                                       Map<Integer, Integer> scores,
                                       Map<Integer, String> originalAnswers,

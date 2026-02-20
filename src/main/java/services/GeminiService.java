@@ -150,4 +150,17 @@ public class GeminiService {
         }
         return rawJson;
     }
+
+    public static String generateAdaptiveQuestion(String context, String focus) throws Exception {
+        String prompt = String.format(
+                "You are an expert clinical psychologist. Based on this assessment context: %s\n\n" +
+                        "Generate ONE specific, clinically appropriate %s question. " +
+                        "The question should be in first-person format and use a 5-point scale " +
+                        "(Never/Rarely/Sometimes/Often/Always).\n\n" +
+                        "Return ONLY the question text, no explanations, no numbering.",
+                context, focus
+        );
+
+        return generateContent(prompt);
+    }
 }
