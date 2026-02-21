@@ -16,6 +16,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
+import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -25,6 +26,8 @@ import models.Question;
 import models.AdaptiveAssessmentSession;
 import services.AdaptiveQuestionService;
 import services.GeminiService;
+import services.GeolocationService;
+import services.YouTubeRecommendationService;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -963,33 +966,32 @@ public class TakeAssessmentPanel extends VBox {
         resultDialog.setMinHeight(800);
 
         BorderPane mainPanel = new BorderPane();
-        mainPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
+        mainPanel.setStyle("-fx-background-color: #f3f3f3;");
 
-        // Tabbed pane
         TabPane tabbedPane = new TabPane();
         tabbedPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
         tabbedPane.setStyle("-fx-background-color: white;");
 
-        // Tab 1: Summary
-        Tab summaryTab = new Tab("📊 Summary");
-        summaryTab.setContent(createSummaryTab(result));
-
-        // Tab 2: AI Analysis
-        Tab analysisTab = new Tab("🤖 AI Analysis");
-        analysisTab.setContent(createAnalysisTab(result));
-
-        // Tab 3: Recommendations
+        Tab summaryTab         = new Tab("📊 Summary");
+        Tab analysisTab        = new Tab("🤖 AI Analysis");
         Tab recommendationsTab = new Tab("💡 Recommendations");
+
+        summaryTab.setContent(createSummaryTab(result));
+        analysisTab.setContent(createAnalysisTab(result));
         recommendationsTab.setContent(createRecommendationsTab(result));
 
         tabbedPane.getTabs().addAll(summaryTab, analysisTab, recommendationsTab);
         mainPanel.setCenter(tabbedPane);
 
-        // Export button panel
+        // ── Risk check (fixed) ───────────────────────────────────────────────
+        String riskLevel = (String) result.get("riskLevel");
+        System.out.println("[DEBUG] riskLevel = '" + riskLevel + "' → isCritical=" + isCriticalRisk(riskLevel));
+        boolean isCritical = isCriticalRisk(riskLevel);
+
+        // ── Buttons ──────────────────────────────────────────────────────────
         HBox buttonPanel = new HBox(20);
         buttonPanel.setAlignment(Pos.CENTER);
-        buttonPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        buttonPanel.setPadding(new Insets(15, 0, 15, 0));
+        buttonPanel.setStyle("-fx-background-color: #f3f3f3; -fx-padding: 15px;");
 
         Button exportTextBtn = createExportButton("Export as Text File");
         exportTextBtn.setOnAction(e -> exportAsText(result));
@@ -998,12 +1000,35 @@ public class TakeAssessmentPanel extends VBox {
         exportHTMLBtn.setOnAction(e -> exportAsHTML(result));
 
         Button closeBtn = createExportButton("Close");
-        closeBtn.setOnAction(e -> {
-            resultDialog.close();
-            showSelectionPanel();
-        });
+        closeBtn.setOnAction(e -> { resultDialog.close(); showSelectionPanel(); });
 
-        buttonPanel.getChildren().addAll(exportTextBtn, exportHTMLBtn, closeBtn);
+        if (isCritical) {
+            Button emergencyBtn = createEmergencyButton();
+            emergencyBtn.setOnAction(e ->
+                    GeolocationService.checkAndShowEmergencyResources(riskLevel, null)
+            );
+            buttonPanel.getChildren().addAll(emergencyBtn, exportTextBtn, exportHTMLBtn, closeBtn);
+
+            // Show warning popup after dialog opens
+            Platform.runLater(() -> {
+                Alert warn = new Alert(Alert.AlertType.WARNING);
+                warn.setTitle("⚠️ CRITICAL RISK DETECTED");
+                warn.setHeaderText("Please seek immediate support");
+                warn.setContentText(
+                        "Your results indicate a HIGH risk level.\n\n" +
+                                "Click '🚨 EMERGENCY HELP' below to find the nearest\n" +
+                                "hospitals and mental health centers on a live map.\n\n" +
+                                "Emergency Contacts:\n" +
+                                "  • 911 (US) / 112 (EU) — Emergency Services\n" +
+                                "  • 988 — Mental Health Crisis Line (US)\n" +
+                                "  • Text HOME to 741741 — Crisis Text Line"
+                );
+                warn.show();
+            });
+        } else {
+            buttonPanel.getChildren().addAll(exportTextBtn, exportHTMLBtn, closeBtn);
+        }
+
         mainPanel.setBottom(buttonPanel);
 
         Scene scene = new Scene(mainPanel, 700, 800);
@@ -1011,40 +1036,85 @@ public class TakeAssessmentPanel extends VBox {
         resultDialog.showAndWait();
     }
 
+    // Add helper method to check critical risk
+    private boolean isCriticalRisk(String riskLevel) {
+        return GeolocationService.isCriticalRisk(riskLevel);
+    }
+
+    // Add emergency button creation
+    private Button createEmergencyButton() {
+        Button button = new Button("🚨 EMERGENCY HELP");
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        button.setTextFill(Color.WHITE);
+        button.setStyle(
+                "-fx-background-color: #ff4444;" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 10 20;" +
+                        "-fx-cursor: hand;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(255,0,0,0.5), 10, 0, 0, 0);"
+        );
+
+        // Add pulsing animation effect
+        button.setOnMouseEntered(e ->
+                button.setStyle(
+                        "-fx-background-color: #ff6666;" +
+                                "-fx-background-radius: 5;" +
+                                "-fx-padding: 10 20;" +
+                                "-fx-cursor: hand;" +
+                                "-fx-effect: dropshadow(gaussian, rgba(255,0,0,0.8), 15, 0, 0, 0);"
+                )
+        );
+
+        button.setOnMouseExited(e ->
+                button.setStyle(
+                        "-fx-background-color: #ff4444;" +
+                                "-fx-background-radius: 5;" +
+                                "-fx-padding: 10 20;" +
+                                "-fx-cursor: hand;" +
+                                "-fx-effect: dropshadow(gaussian, rgba(255,0,0,0.5), 10, 0, 0, 0);"
+                )
+        );
+
+        return button;
+    }
+
     private VBox createSummaryTab(Map<String, Object> result) {
         VBox panel = new VBox(20);
         panel.setStyle("-fx-background-color: white;");
-        panel.setPadding(new Insets(20, 20, 20, 20));
+        panel.setPadding(new Insets(20));
 
         TextArea textArea = new TextArea();
         textArea.setEditable(false);
-        textArea.setFont(Font.font("Monospaced", 14));
+        textArea.setFont(Font.font("Monospaced", 13));
         textArea.setWrapText(true);
 
-        // Add adaptive assessment info if available
+        // Adaptive info block
         String adaptiveInfo = "";
         if (adaptiveSession != null && useAdaptiveMode) {
-            adaptiveInfo = "\n=== ADAPTIVE ASSESSMENT INFO ===\n" +
-                    "Questions Asked: " + adaptiveSession.getQuestionCount() + "\n" +
-                    "Category Scores: " + adaptiveSession.getCategoryScores() + "\n\n";
+            adaptiveInfo =
+                    "=== ADAPTIVE ASSESSMENT INFO ===\n" +
+                            "Questions Asked : " + adaptiveSession.getQuestionCount() + "\n" +
+                            "Category Scores : " + adaptiveSession.getCategoryScores() + "\n\n";
         }
 
-        String summary = "=== ASSESSMENT RESULTS ===\n\n" +
-                adaptiveInfo +
-                "Total Score: " + result.get("totalScore") + "\n" +
-                "Risk Level: " + result.get("riskLevel") + "\n" +
-                "Session Suggested: " + (result.get("suggestSession").equals(true) ? "Yes" : "No") + "\n\n" +
+        // Pull full AI analysis but cap at ~800 chars so it stays readable
+        String fullAI = result.get("aiAnalysis") != null ? result.get("aiAnalysis").toString() : "";
+        String keyInsights = fullAI.length() > 800 ? fullAI.substring(0, 800) + "…\n(see AI Analysis tab for full report)" : fullAI;
 
-                "=== INTERPRETATION ===\n" +
-                result.get("interpretation") + "\n\n" +
-
-                "=== KEY INSIGHTS ===\n" +
-                result.get("aiAnalysis").toString().split("\n\n")[0];
+        String summary =
+                "=== ASSESSMENT RESULTS ===\n\n" +
+                        adaptiveInfo +
+                        "Total Score      : " + result.get("totalScore") + "\n" +
+                        "Risk Level       : " + result.get("riskLevel") + "\n" +
+                        "Session Suggested: " + (Boolean.TRUE.equals(result.get("suggestSession")) ? "Yes" : "No") + "\n\n" +
+                        "=== INTERPRETATION ===\n" +
+                        result.get("interpretation") + "\n\n" +
+                        "=== KEY INSIGHTS ===\n" +
+                        keyInsights;
 
         textArea.setText(summary);
         VBox.setVgrow(textArea, Priority.ALWAYS);
         panel.getChildren().add(textArea);
-
         return panel;
     }
 
@@ -1073,19 +1143,193 @@ public class TakeAssessmentPanel extends VBox {
         return panel;
     }
 
+
     private VBox createRecommendationsTab(Map<String, Object> result) {
-        VBox panel = new VBox();
+        VBox panel = new VBox(0);
         panel.setStyle("-fx-background-color: white;");
-        panel.setPadding(new Insets(20, 20, 20, 20));
 
-        TextArea textArea = new TextArea(result.get("recommendedContent").toString());
-        textArea.setEditable(false);
-        textArea.setFont(Font.font("Segoe UI", 14));
-        textArea.setWrapText(true);
-        VBox.setVgrow(textArea, Priority.ALWAYS);
+        // ── Text recommendations (top half) ─────────────────────────────────
+        Label recHeader = new Label("💡 Personalized Recommendations");
+        recHeader.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+        recHeader.setTextFill(Color.web("#3c7860"));
+        recHeader.setPadding(new Insets(16, 20, 6, 20));
 
-        panel.getChildren().add(textArea);
+        TextArea recText = new TextArea(result.get("recommendedContent").toString());
+        recText.setEditable(false);
+        recText.setFont(Font.font("Segoe UI", 13));
+        recText.setWrapText(true);
+        recText.setPrefHeight(160);
+        recText.setStyle("-fx-background-color: #f9f9f9; -fx-border-color: #e0e0e0;");
+
+        // ── YouTube section header ───────────────────────────────────────────
+        HBox ytHeader = new HBox(10);
+        ytHeader.setAlignment(Pos.CENTER_LEFT);
+        ytHeader.setPadding(new Insets(14, 20, 6, 20));
+        ytHeader.setStyle("-fx-background-color: #fff3f3; -fx-border-color: #ffcdd2; -fx-border-width: 1 0 1 0;");
+
+        Label ytIcon = new Label("▶");
+        ytIcon.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
+        ytIcon.setStyle("-fx-text-fill: #ff0000;");
+
+        Label ytLabel = new Label("Therapy & Relaxation Videos");
+        ytLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+        ytLabel.setTextFill(Color.web("#333"));
+
+        Label loadingLabel = new Label("Loading videos…");
+        loadingLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
+        loadingLabel.setTextFill(Color.web("#888"));
+
+        Region ytSpacer = new Region();
+        HBox.setHgrow(ytSpacer, Priority.ALWAYS);
+        ytHeader.getChildren().addAll(ytIcon, ytLabel, ytSpacer, loadingLabel);
+
+        // ── WebView for video cards ──────────────────────────────────────────
+        WebView webView = new WebView();
+        webView.setContextMenuEnabled(false);
+        webView.getEngine().setUserAgent("Mozilla/5.0 MentisMentalHealthApp/1.0");
+        VBox.setVgrow(webView, Priority.ALWAYS);
+
+        // Show placeholder skeleton while loading
+        webView.getEngine().loadContent(buildSkeletonHtml());
+
+        panel.getChildren().addAll(recHeader, recText, ytHeader, webView);
+
+        // ── Fetch videos in background ───────────────────────────────────────
+        String riskLevel      = (String) result.getOrDefault("riskLevel", "");
+        String assessmentType = getAssessmentType();   // helper below
+
+        Thread fetchThread = new Thread(() -> {
+            List<YouTubeRecommendationService.VideoResult> videos =
+                    YouTubeRecommendationService.fetchVideos(assessmentType, riskLevel, 6);
+
+            Platform.runLater(() -> {
+                loadingLabel.setText(videos.isEmpty()
+                        ? "Could not load videos"
+                        : videos.size() + " videos found");
+                webView.getEngine().loadContent(buildVideoCardsHtml(videos));
+            });
+        });
+        fetchThread.setDaemon(true);
+        fetchThread.start();
+
         return panel;
+    }
+
+    /**
+     * Get the assessment type string for the current assessment.
+     * Looks it up from availableAssessments by currentAssessmentId.
+     */
+    private String getAssessmentType() {
+        if (availableAssessments != null) {
+            for (Assessment a : availableAssessments) {
+                if (a.getAssessmentId() == currentAssessmentId) {
+                    return a.getType();
+                }
+            }
+        }
+        return "general";
+    }
+
+    /**
+     * Skeleton loading HTML shown while videos are fetching.
+     */
+    private String buildSkeletonHtml() {
+        return "<!DOCTYPE html><html><head><style>" +
+                "body{margin:0;padding:12px;background:#fafafa;font-family:Arial,sans-serif;}" +
+                ".grid{display:flex;flex-wrap:wrap;gap:12px;}" +
+                ".card{width:calc(33% - 8px);background:#f0f0f0;border-radius:8px;" +
+                "height:180px;animation:pulse 1.2s infinite alternate;}" +
+                "@keyframes pulse{from{opacity:0.5}to{opacity:1}}" +
+                "</style></head><body>" +
+                "<div class='grid'>" +
+                "<div class='card'></div><div class='card'></div><div class='card'></div>" +
+                "<div class='card'></div><div class='card'></div><div class='card'></div>" +
+                "</div></body></html>";
+    }
+
+    /**
+     * Build a rich HTML grid of video cards from fetched results.
+     * Clicking a card opens it in the default browser via JavaScript bridge,
+     * OR falls back to showing the URL in an alert (works without bridge too).
+     */
+    private String buildVideoCardsHtml(List<YouTubeRecommendationService.VideoResult> videos) {
+        if (videos.isEmpty()) {
+            return "<!DOCTYPE html><html><body style='font-family:Arial;padding:30px;color:#888;text-align:center;'>" +
+                    "<p style='font-size:16px;'>⚠️ Could not load videos.<br>" +
+                    "Check your YouTube API key in YouTubeRecommendationService.java<br>" +
+                    "or your internet connection.</p></body></html>";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<!DOCTYPE html><html><head><style>\n")
+                .append("*{margin:0;padding:0;box-sizing:border-box;}\n")
+                .append("body{background:#fafafa;font-family:Arial,sans-serif;padding:12px;}\n")
+                .append(".grid{display:flex;flex-wrap:wrap;gap:12px;}\n")
+                .append(".card{\n")
+                .append("  width:calc(33.33% - 8px);background:white;border-radius:10px;\n")
+                .append("  box-shadow:0 2px 8px rgba(0,0,0,0.10);overflow:hidden;\n")
+                .append("  cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;\n")
+                .append("  text-decoration:none;display:block;color:inherit;\n")
+                .append("}\n")
+                .append(".card:hover{transform:translateY(-3px);box-shadow:0 6px 18px rgba(0,0,0,0.16);}\n")
+                .append(".thumb-wrap{position:relative;width:100%;padding-top:56.25%;overflow:hidden;background:#000;}\n")
+                .append(".thumb-wrap img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;}\n")
+                .append(".play-overlay{\n")
+                .append("  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);\n")
+                .append("  width:42px;height:42px;background:rgba(255,0,0,0.85);border-radius:50%;\n")
+                .append("  display:flex;align-items:center;justify-content:center;\n")
+                .append("  font-size:18px;color:white;pointer-events:none;\n")
+                .append("}\n")
+                .append(".info{padding:10px;}\n")
+                .append(".title{font-size:12px;font-weight:bold;color:#111;line-height:1.4;\n")
+                .append("  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}\n")
+                .append(".channel{font-size:11px;color:#606060;margin-top:4px;}\n")
+                .append(".yt-badge{display:inline-block;margin-top:5px;background:#ff0000;\n")
+                .append("  color:white;font-size:10px;padding:2px 7px;border-radius:3px;font-weight:bold;}\n")
+                .append("</style></head><body>\n")
+                .append("<div class='grid'>\n");
+
+        for (YouTubeRecommendationService.VideoResult v : videos) {
+            String safeTitle   = v.title.replace("'", "\\'").replace("\"", "&quot;");
+            String safeUrl     = v.watchUrl;
+            String safeThumb   = v.thumbnail.isEmpty()
+                    ? "https://i.ytimg.com/vi/" + v.videoId + "/mqdefault.jpg"
+                    : v.thumbnail;
+            String safeChannel = v.channelTitle.replace("'", "\\'");
+
+            sb.append("  <a class='card' href='").append(safeUrl).append("' ")
+                    .append("onclick=\"window.open('").append(safeUrl).append("','_blank');return false;\">\n")
+                    .append("    <div class='thumb-wrap'>\n")
+                    .append("      <img src='").append(safeThumb).append("' alt='").append(safeTitle).append("'/>\n")
+                    .append("      <div class='play-overlay'>▶</div>\n")
+                    .append("    </div>\n")
+                    .append("    <div class='info'>\n")
+                    .append("      <div class='title'>").append(v.title.replace("<","&lt;").replace(">","&gt;")).append("</div>\n")
+                    .append("      <div class='channel'>").append(v.channelTitle.replace("<","&lt;")).append("</div>\n")
+                    .append("      <span class='yt-badge'>YouTube</span>\n")
+                    .append("    </div>\n")
+                    .append("  </a>\n");
+        }
+
+        sb.append("</div>\n");
+
+        // JS bridge: open in system browser via JavaFX WebEngine
+        sb.append("<script>\n")
+                .append("document.querySelectorAll('.card').forEach(function(card){\n")
+                .append("  card.addEventListener('click',function(e){\n")
+                .append("    e.preventDefault();\n")
+                .append("    var url = card.getAttribute('href');\n")
+                .append("    // Try JavaFX hostServices bridge first\n")
+                .append("    try { javaApp.openUrl(url); } catch(ex) {\n")
+                .append("      // Fallback: load in current WebView\n")
+                .append("      window.location.href = url;\n")
+                .append("    }\n")
+                .append("  });\n")
+                .append("});\n")
+                .append("</script>\n")
+                .append("</body></html>");
+
+        return sb.toString();
     }
 
     private Button createExportButton(String text) {
