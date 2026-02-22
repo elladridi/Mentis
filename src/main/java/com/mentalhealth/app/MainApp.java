@@ -4,9 +4,12 @@ import com.mentalhealth.app.controllers.EventController;
 import com.mentalhealth.app.utils.DatabaseConnection;
 import com.mentalhealth.app.views.ComponentFactory;
 import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -52,7 +55,7 @@ public class MainApp extends Application {
         header.setStyle("-fx-background-color: #F1F6F4;" +
                 "-fx-border-color: #DDE5E2; -fx-border-width: 0 0 1 0;");
 
-        // ====== LOGO (Image Only) ======
+        // Logo
         ImageView logoImage = new ImageView();
         try {
             Image img = new Image(getClass().getResourceAsStream(
@@ -61,7 +64,7 @@ public class MainApp extends Application {
         } catch (Exception e) {
             System.err.println("Logo not found: " + e.getMessage());
         }
-        logoImage.setFitHeight(60);
+        logoImage.setFitHeight(45);
         logoImage.setPreserveRatio(true);
         logoImage.setPickOnBounds(true);
         logoImage.setCursor(Cursor.HAND);
@@ -104,9 +107,15 @@ public class MainApp extends Application {
         sidebar.getChildren().add(menuTitle);
 
         String[][] items = {
-                {"📊", "Dashboard"}, {"📅", "Bookings"},
-                {"📝", "Assessments"}, {"😊", "Mood Tracker"},
-                {"📚", "Content"}, {"📌", "Events"}, {"⚙️", "Settings"}
+                {"📊", "Dashboard"},
+                {"📅", "Bookings"},
+                {"📝", "Assessments"},
+                {"😊", "Mood Tracker"},
+                {"🎯", "Goals"},
+                {"💭", "Reflect"},
+                {"📚", "Content"},
+                {"📌", "Events"},
+                {"⚙️", "Settings"}
         };
 
         for (String[] item : items) {
@@ -115,8 +124,17 @@ public class MainApp extends Application {
             btn.setOnAction(e -> {
                 activeMenu = item[1];
                 refreshMenuStyles();
-                if (item[1].equals("Events")) loadEventsView();
-                else loadPlaceholder(item[0] + " " + item[1]);
+                switch (item[1]) {
+                    case "Dashboard" -> loadFXMLView("/fxml/HomeView.fxml", "Dashboard");
+                    case "Mood Tracker" -> loadFXMLView("/fxml/MoodView.fxml", "Mood Tracker");
+                    case "Goals" -> loadFXMLView("/fxml/GoalView.fxml", "Goals");
+                    case "Reflect" -> loadFXMLView("/fxml/ReflectView.fxml", "Reflect");
+                    case "Events" -> loadEventsView();
+                    case "Assessments" -> loadUIPanel("assessment");
+                    case "Bookings" -> loadUIPanel("sessions");
+                    case "Content" -> loadUIPanel("content");
+                    default -> loadPlaceholder(item[0] + " " + item[1]);
+                }
             });
             sidebar.getChildren().add(btn);
         }
@@ -175,11 +193,80 @@ public class MainApp extends Application {
                 "-fx-background-radius: 10; -fx-padding: 12 15; -fx-cursor: hand;";
     }
 
+    // =================== VIEW LOADERS ===================
+
+    /**
+     * Load YOUR Events module
+     */
     private void loadEventsView() {
         EventController controller = new EventController();
         contentArea.setCenter(controller.getView());
     }
 
+    /**
+     * Load teammate's FXML views (Mood, Goals, Reflect, Dashboard)
+     */
+    private void loadFXMLView(String fxmlPath, String name) {
+        try {
+            Parent view = FXMLLoader.load(getClass().getResource(fxmlPath));
+            contentArea.setCenter(view);
+        } catch (Exception e) {
+            System.err.println("Error loading " + name + ": " + e.getMessage());
+            e.printStackTrace();
+            loadErrorView(name, e.getMessage());
+        }
+    }
+
+    /**
+     * Load teammate's UI panels (Assessments, Sessions, Content)
+     * These are Java Swing/JavaFX programmatic panels
+     */
+    private void loadUIPanel(String panelType) {
+        try {
+            Node panel = null;
+            switch (panelType) {
+                case "assessment" -> {
+                    // Try to load AssessmentPanel from ui package
+                    Class<?> clazz = Class.forName("ui.AssessmentPanel");
+                    Object instance = clazz.getDeclaredConstructor().newInstance();
+                    if (instance instanceof Node) {
+                        panel = (Node) instance;
+                    }
+                }
+                case "sessions" -> {
+                    Class<?> clazz = Class.forName("ui.SessionPanel");
+                    Object instance = clazz.getDeclaredConstructor().newInstance();
+                    if (instance instanceof Node) {
+                        panel = (Node) instance;
+                    }
+                }
+                case "content" -> {
+                    Class<?> clazz = Class.forName("ui.ContentUploadPanel");
+                    Object instance = clazz.getDeclaredConstructor().newInstance();
+                    if (instance instanceof Node) {
+                        panel = (Node) instance;
+                    }
+                }
+            }
+
+            if (panel != null) {
+                ScrollPane sp = new ScrollPane(panel);
+                sp.setFitToWidth(true);
+                sp.setStyle("-fx-background: #FFFFFF; -fx-background-color: #FFFFFF;");
+                contentArea.setCenter(sp);
+            } else {
+                loadPlaceholder("📋 " + panelType);
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading panel " + panelType + ": " + e.getMessage());
+            e.printStackTrace();
+            loadErrorView(panelType, e.getMessage());
+        }
+    }
+
+    /**
+     * Placeholder for modules not yet connected
+     */
     private void loadPlaceholder(String pageName) {
         VBox box = new VBox(20);
         box.setAlignment(Pos.CENTER);
@@ -202,6 +289,43 @@ public class MainApp extends Application {
         });
 
         box.getChildren().addAll(icon, title, sub, goBtn);
+        contentArea.setCenter(box);
+    }
+
+    /**
+     * Error view when a module fails to load
+     */
+    private void loadErrorView(String moduleName, String errorMsg) {
+        VBox box = new VBox(20);
+        box.setAlignment(Pos.CENTER);
+        box.setPadding(new Insets(40));
+        box.setStyle("-fx-background-color: #FFFFFF;");
+
+        Label icon = new Label("⚠️");
+        icon.setStyle("-fx-font-size: 50px;");
+
+        Label title = new Label("Could not load: " + moduleName);
+        title.setStyle("-fx-text-fill: #1E1E1E; -fx-font-size: 20px; -fx-font-weight: bold;");
+
+        Label error = new Label(errorMsg != null ? errorMsg : "Unknown error");
+        error.setStyle("-fx-text-fill: #D62828; -fx-font-size: 13px;");
+        error.setWrapText(true);
+        error.setMaxWidth(500);
+
+        Label hint = new Label(
+                "This module may need additional setup.\n" +
+                        "Check the console for detailed error messages.");
+        hint.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 13px;");
+        hint.setTextAlignment(TextAlignment.CENTER);
+
+        Button backBtn = ComponentFactory.styledButton("📌 Go to Events", "#9BC7B5");
+        backBtn.setOnAction(e -> {
+            activeMenu = "Events";
+            refreshMenuStyles();
+            loadEventsView();
+        });
+
+        box.getChildren().addAll(icon, title, error, hint, backBtn);
         contentArea.setCenter(box);
     }
 
