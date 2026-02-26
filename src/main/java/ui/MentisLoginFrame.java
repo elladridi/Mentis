@@ -879,6 +879,17 @@ public class MentisLoginFrame extends Application {
         };
     }
 
+    @Override
+    public void stop() {
+        // Clean up TTS resources when application closes
+        try {
+            services.LocalTTSService.shutdown();
+            System.out.println("✅ TTS resources cleaned up");
+        } catch (Exception e) {
+            System.err.println("❌ Error cleaning up TTS: " + e.getMessage());
+        }
+        System.out.println("Application stopped");
+    }
     private SessionReviewController createMockSessionReviewController() {
         return new SessionReviewController() {
             @Override
