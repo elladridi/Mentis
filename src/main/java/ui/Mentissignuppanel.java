@@ -21,6 +21,7 @@ public class Mentissignuppanel extends VBox {
     private static final Color TEXT_GRAY = Color.GRAY;
     private static final Color TEXT_BLACK = Color.BLACK;
     private static final Color WHITE = Color.WHITE;
+    private static final Color TEXT_DARK = Color.rgb(40, 70, 50); // Add this line
 
     private RoundedTextField firstNameField;
     private RoundedTextField lastNameField;
@@ -30,6 +31,7 @@ public class Mentissignuppanel extends VBox {
     private RoundedPasswordField passwordField;
     private ComboBox<String> typeComboBox;
     private RoundedButton signUpButton;
+    private CheckBox enableFaceIDCheckBox; // NEW: Face ID option
 
     private final MentisLoginFrame parentApp;
 
@@ -242,6 +244,22 @@ public class Mentissignuppanel extends VBox {
         row4.getChildren().add(passwordField);
         HBox.setHgrow(passwordField, Priority.ALWAYS);
 
+        // ===== NEW: Face ID Option Row =====
+        HBox rowFace = new HBox(10);
+        rowFace.setAlignment(Pos.CENTER_LEFT);
+        rowFace.setPadding(new Insets(5, 0, 5, 0));
+
+        enableFaceIDCheckBox = new CheckBox("Enable Face ID for faster login");
+        enableFaceIDCheckBox.setFont(Font.font("Arial", 14));
+        enableFaceIDCheckBox.setTextFill(Color.web(toHex(TEXT_DARK)));
+        enableFaceIDCheckBox.setStyle("-fx-cursor: hand;");
+
+        // Tooltip explaining Face ID
+        Tooltip faceTooltip = new Tooltip("After registration, you can use your face to login instead of password");
+        enableFaceIDCheckBox.setTooltip(faceTooltip);
+
+        rowFace.getChildren().add(enableFaceIDCheckBox);
+
         // Row 5: Sign Up Button
         HBox row5 = new HBox();
         row5.setAlignment(Pos.CENTER);
@@ -255,7 +273,7 @@ public class Mentissignuppanel extends VBox {
 
         row5.getChildren().add(signUpButton);
 
-        formPanel.getChildren().addAll(row1, row2, row3, row4, row5);
+        formPanel.getChildren().addAll(row1, row2, row3, row4, rowFace, row5);
 
         return formPanel;
     }
@@ -278,6 +296,7 @@ public class Mentissignuppanel extends VBox {
         String email = emailField.getText().trim();
         String password = passwordField.getText();
         String type = typeComboBox.getValue();
+        boolean enableFaceID = enableFaceIDCheckBox.isSelected(); // NEW: Get Face ID preference
 
         // Validation
         if (fn.isEmpty() || fn.equals("First Name") ||
@@ -305,14 +324,50 @@ public class Mentissignuppanel extends VBox {
             return;
         }
 
+        // Create user object
         user u = new user(fn, ln, phone, dob, type, email, password);
 
+        // Register user
         if (userservice.registeruser(u)) {
+            // If registration successful
             showSuccess("Account created successfully!");
-            parentApp.showLoginPanel();
+
+            // If user wants Face ID, open registration dialog after successful signup
+            if (enableFaceID) {
+                showInfo("Please register your face now for quick login");
+
+                // Get the newly registered user by email to get their ID
+                user newUser = userservice.getuserByEmail(email);
+                if (newUser != null) {
+                    // Open Face ID registration dialog
+                    openFaceIDRegistration(newUser.getId());
+                }
+            } else {
+                // Just go to login panel
+                parentApp.showLoginPanel();
+            }
+
         } else {
             showError("Registration failed");
             signUpButton.setDisable(false);
+        }
+    }
+
+    // NEW: Method to open Face ID registration
+    private void openFaceIDRegistration(int userId) {
+        try {
+            FaceIDDialog dialog = new FaceIDDialog(parentApp, true, userId);
+
+            // After Face ID registration completes, go to login panel
+            dialog.setOnHidden(e -> {
+                parentApp.showLoginPanel();
+            });
+
+            dialog.show();
+        } catch (Exception e) {
+            System.err.println("Face ID dialog error: " + e.getMessage());
+            // Still go to login panel even if Face ID fails
+            parentApp.showLoginPanel();
         }
     }
 
@@ -322,11 +377,21 @@ public class Mentissignuppanel extends VBox {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+        signUpButton.setDisable(false);
     }
 
     private void showSuccess(String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Success");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    // NEW: Info message
+    private void showInfo(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Face ID Setup");
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
@@ -414,9 +479,6 @@ public class Mentissignuppanel extends VBox {
                 }
             });
         }
-
-        // REMOVED: The problematic override method
-        // Just use the parent class setPromptText() directly
     }
 
     class RoundedPasswordField extends PasswordField {

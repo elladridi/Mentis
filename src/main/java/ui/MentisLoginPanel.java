@@ -9,6 +9,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import ui.FaceIDDialog;  // Add this with other imports
 import models.user;
 import services.userservice;
 
@@ -181,6 +182,17 @@ public class MentisLoginPanel extends StackPane {
                 )
         );
 
+        // FIXED: Add action handler for Face ID button
+        faceLoginButton.setOnAction(e -> {
+            try {
+                FaceIDDialog dialog = new FaceIDDialog(parentApp, false, -1);
+                dialog.show();
+            } catch (Exception ex) {
+                showError("Face ID feature not available: " + ex.getMessage());
+            }
+        });
+
+        card.getChildren().add(faceLoginButton);
 
         // ===== Back Link =====
         backLink = new Hyperlink("← Back to Welcome");
@@ -243,8 +255,6 @@ public class MentisLoginPanel extends StackPane {
         dialog.show();
     }
 
-
-
     private void setLoading(boolean loading) {
         loginButton.setDisable(loading);
         emailField.setDisable(loading);
@@ -265,5 +275,16 @@ public class MentisLoginPanel extends StackPane {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    // ================= FACE ID REGISTRATION =================
+    // This method can be called after successful login to enable Face ID
+    public void enableFaceRegistration(int userId) {
+        try {
+            FaceIDDialog dialog = new FaceIDDialog(parentApp, true, userId);
+            dialog.show();
+        } catch (Exception e) {
+            showError("Face ID registration not available: " + e.getMessage());
+        }
     }
 }
