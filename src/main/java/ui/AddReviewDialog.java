@@ -14,6 +14,8 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import models.Session;
 import models.SessionReview;
+import services.ReviewModeratorService;
+import services.ModerationResult;
 
 import java.sql.SQLException;
 
@@ -24,10 +26,12 @@ public class AddReviewDialog extends Stage {
     private SessionReview existingReview;
     private Session session;
     private boolean isEdit;
+    private ReviewModeratorService moderatorService; // ⭐ NEW
 
     private ComboBox<Integer> ratingCombo;
     private TextArea commentArea;
     private Label sessionInfoLabel;
+    private Label moderationStatusLabel; // ⭐ NEW
 
     // Colors
     private static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
@@ -36,6 +40,8 @@ public class AddReviewDialog extends Stage {
     private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
     private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
     private static final Color STAR_GOLD = Color.rgb(255, 193, 7);
+    private static final Color WARNING_RED = Color.rgb(231, 76, 60); // ⭐ NEW
+    private static final Color INFO_BLUE = Color.rgb(52, 152, 219); // ⭐ NEW
 
     // Constructor for new review
     public AddReviewDialog(MentisLoginFrame parentApp, SessionReviewController reviewController, Session session) {
@@ -43,6 +49,7 @@ public class AddReviewDialog extends Stage {
         this.reviewController = reviewController;
         this.session = session;
         this.isEdit = false;
+        this.moderatorService = new ReviewModeratorService(); // ⭐ NEW
 
         initModality(Modality.APPLICATION_MODAL);
         initStyle(StageStyle.UTILITY);
@@ -59,6 +66,7 @@ public class AddReviewDialog extends Stage {
         this.reviewController = reviewController;
         this.existingReview = review;
         this.isEdit = isEdit;
+        this.moderatorService = new ReviewModeratorService(); // ⭐ NEW
 
         initModality(Modality.APPLICATION_MODAL);
         initStyle(StageStyle.UTILITY);
@@ -84,7 +92,7 @@ public class AddReviewDialog extends Stage {
         // Buttons
         root.setBottom(createButtonPanel());
 
-        Scene scene = new Scene(root, 500, 550);
+        Scene scene = new Scene(root, 550, 650); // ⭐ Made slightly taller
         setScene(scene);
         setResizable(false);
     }
@@ -148,7 +156,7 @@ public class AddReviewDialog extends Stage {
 
         ratingCombo = new ComboBox<>();
         ratingCombo.getItems().addAll(1, 2, 3, 4, 5);
-        ratingCombo.setValue(5); // Default to 5 stars
+        ratingCombo.setValue(5);
         ratingCombo.setPrefHeight(40);
         ratingCombo.setPrefWidth(80);
         ratingCombo.setStyle(
@@ -158,7 +166,6 @@ public class AddReviewDialog extends Stage {
                         "-fx-background-radius: 5;"
         );
 
-        // Star preview
         Label starPreview = new Label("★★★★★");
         starPreview.setFont(Font.font("Segoe UI", 24));
         starPreview.setTextFill(Color.web(toHex(STAR_GOLD)));
@@ -180,7 +187,7 @@ public class AddReviewDialog extends Stage {
 
         commentArea = new TextArea();
         commentArea.setPromptText("Share your experience about this session...");
-        commentArea.setPrefRowCount(6);
+        commentArea.setPrefRowCount(5);
         commentArea.setWrapText(true);
         commentArea.setStyle(
                 "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
@@ -189,11 +196,24 @@ public class AddReviewDialog extends Stage {
                         "-fx-padding: 8;"
         );
 
-        commentBox.getChildren().addAll(commentLabel, commentArea);
+        // ⭐ NEW: Moderation status label (initially hidden)
+        moderationStatusLabel = new Label();
+        moderationStatusLabel.setFont(Font.font("Segoe UI", 12));
+        moderationStatusLabel.setWrapText(true);
+        moderationStatusLabel.setPadding(new Insets(5));
+        moderationStatusLabel.setVisible(false);
+
+        // ⭐ NEW: Real-time moderation check as user types (optional)
+        commentArea.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.length() > 10) { // Only check after 10 characters
+                // You could add a "checking" indicator here
+            }
+        });
+
+        commentBox.getChildren().addAll(commentLabel, commentArea, moderationStatusLabel);
 
         formPanel.getChildren().addAll(sessionBox, ratingBox, commentBox);
 
-        // Wrap in ScrollPane
         ScrollPane scrollPane = new ScrollPane(formPanel);
         scrollPane.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
         scrollPane.setBorder(null);
@@ -255,15 +275,10 @@ public class AddReviewDialog extends Stage {
         if (existingReview != null) {
             ratingCombo.setValue(existingReview.getRating());
             commentArea.setText(existingReview.getComment());
-
-            // Update star preview
-            int rating = existingReview.getRating();
-            String stars = "★".repeat(rating) + "☆".repeat(5 - rating);
-            // Find the star preview label (it's the second child in ratingStars)
-            // This is a bit hacky - in a real app you'd store a reference
         }
     }
 
+    // ⭐ NEW: AI-Powered review moderation
     private void saveReview() {
         // Validate
         if (commentArea.getText().trim().isEmpty()) {
@@ -274,9 +289,110 @@ public class AddReviewDialog extends Stage {
         int rating = ratingCombo.getValue();
         String comment = commentArea.getText().trim();
 
+        // Show loading status
+        moderationStatusLabel.setText("⏳ AI is checking your review...");
+        moderationStatusLabel.setTextFill(Color.web(toHex(INFO_BLUE)));
+        moderationStatusLabel.setVisible(true);
+
+        // Run moderation in background to not freeze UI
+        new Thread(() -> {
+            try {
+                // Call AI moderation service
+                ModerationResult result = moderatorService.moderateReview(comment);
+
+                // Update UI on JavaFX thread
+                javafx.application.Platform.runLater(() -> {
+                    moderationStatusLabel.setVisible(false);
+
+                    if (!result.isAppropriate()) {
+                        // Show warning dialog with AI suggestions
+                        showModerationWarning(result);
+                    } else {
+                        // Review is appropriate, proceed with saving
+                        proceedWithSave(rating, comment);
+                    }
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                javafx.application.Platform.runLater(() -> {
+                    moderationStatusLabel.setVisible(false);
+                    // If AI fails, still allow saving but warn user
+                    Alert warning = new Alert(Alert.AlertType.WARNING);
+                    warning.setTitle("Moderation Service Unavailable");
+                    warning.setHeaderText("Could not check review content");
+                    warning.setContentText("Your review will be submitted without moderation. Please ensure it follows our guidelines.");
+                    warning.initOwner(this);
+
+                    ButtonType continueButton = new ButtonType("Continue Anyway");
+                    ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+                    warning.getButtonTypes().setAll(continueButton, cancelButton);
+
+                    warning.showAndWait().ifPresent(response -> {
+                        if (response == continueButton) {
+                            proceedWithSave(rating, comment);
+                        }
+                    });
+                });
+            }
+        }).start();
+    }
+
+    // ⭐ NEW: Handle inappropriate content
+    private void showModerationWarning(ModerationResult result) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Review Content Warning");
+        alert.setHeaderText("⚠️ Inappropriate Content Detected");
+
+        String details = String.format(
+                "Our AI has detected that your review may contain inappropriate language.\n\n" +
+                        "📋 **Reason**: %s\n\n" +
+                        "🔍 **Issues detected**:\n" +
+                        "%s%s%s\n\n" +
+                        "💡 **Suggested version**:\n\"%s\"\n\n" +
+                        "What would you like to do?",
+                result.getReason(),
+                result.isContainsProfanity() ? "   • Contains profanity\n" : "",
+                result.isContainsHateSpeech() ? "   • Contains hate speech\n" : "",
+                result.isContainsHarassment() ? "   • Contains harassment\n" : "",
+                result.getFilteredVersion()
+        );
+
+        Label contentLabel = new Label(details);
+        contentLabel.setWrapText(true);
+        contentLabel.setMaxWidth(450);
+
+        DialogPane dialogPane = alert.getDialogPane();
+        dialogPane.setContent(contentLabel);
+        dialogPane.setPrefWidth(500);
+
+        ButtonType editButton = new ButtonType("✏️ Edit My Review");
+        ButtonType useSuggestedButton = new ButtonType("✅ Use Suggested Version");
+        ButtonType cancelButton = new ButtonType("❌ Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        alert.getButtonTypes().setAll(editButton, useSuggestedButton, cancelButton);
+        alert.initOwner(this);
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == editButton) {
+                // Stay in dialog to edit
+                moderationStatusLabel.setText("Please revise your review to be more respectful.");
+                moderationStatusLabel.setTextFill(Color.web(toHex(WARNING_RED)));
+                moderationStatusLabel.setVisible(true);
+            } else if (response == useSuggestedButton) {
+                // Use the filtered version and save
+                commentArea.setText(result.getFilteredVersion());
+                int newRating = ratingCombo.getValue();
+                proceedWithSave(newRating, result.getFilteredVersion());
+            }
+            // Cancel just closes the dialog
+        });
+    }
+
+    // ⭐ NEW: Proceed with saving after moderation passes
+    private void proceedWithSave(int rating, String comment) {
         try {
             if (isEdit && existingReview != null) {
-                // Update existing review
                 reviewController.updateReview(
                         existingReview.getReviewId(),
                         parentApp.getUserId(),
@@ -285,7 +401,6 @@ public class AddReviewDialog extends Stage {
                 );
                 showAlert("Review updated successfully!", Alert.AlertType.INFORMATION);
             } else {
-                // Add new review
                 reviewController.addReview(
                         session.getSessionId(),
                         parentApp.getUserId(),
@@ -295,13 +410,6 @@ public class AddReviewDialog extends Stage {
                 showAlert("Review submitted successfully!", Alert.AlertType.INFORMATION);
             }
             close();
-
-            // Refresh the reviews panel if it's open
-            // This would need to be handled by the parent
-            if (parentApp != null) {
-                // You might want to add a method to refresh reviews
-                // parentApp.refreshMyReviews();
-            }
 
         } catch (SQLException e) {
             showAlert("Error: " + e.getMessage(), Alert.AlertType.ERROR);

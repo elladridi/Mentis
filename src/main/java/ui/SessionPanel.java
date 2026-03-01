@@ -15,9 +15,11 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Callback;
 import models.Session;
+import services.VideoCallService; // ⭐ NEW IMPORT
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -26,6 +28,7 @@ public class SessionPanel extends VBox {
 
     private MentisLoginFrame parentApp;
     private SessionController controller;
+    private VideoCallService videoCallService; // ⭐ NEW SERVICE
     private TableView<Session> sessionTable;
     private List<Session> sessions;
 
@@ -37,6 +40,7 @@ public class SessionPanel extends VBox {
     private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
     private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
     private static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
+    private static final Color VIDEO_BUTTON_COLOR = Color.rgb(231, 76, 60); // ⭐ NEW COLOR
 
     // Status colors
     private static final Color STATUS_ACTIVE = Color.rgb(39, 174, 96);
@@ -60,6 +64,7 @@ public class SessionPanel extends VBox {
     public SessionPanel(MentisLoginFrame parentApp, SessionController controller) {
         this.parentApp = parentApp;
         this.controller = controller;
+        this.videoCallService = new VideoCallService(); // ⭐ INITIALIZE
 
         setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
         setPadding(new Insets(40, 50, 40, 50));
@@ -242,6 +247,51 @@ public class SessionPanel extends VBox {
             }
         });
 
+        // ⭐ NEW: Video Call column for psychologists
+        TableColumn<Session, Void> videoCol = new TableColumn<>("Video");
+        videoCol.setPrefWidth(80);
+        videoCol.setCellFactory(new Callback<>() {
+            @Override
+            public TableCell<Session, Void> call(TableColumn<Session, Void> param) {
+                return new TableCell<>() {
+                    private final Button videoButton = new Button("📹");
+
+                    {
+                        videoButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+                        videoButton.setTextFill(Color.WHITE);
+                        videoButton.setStyle(
+                                "-fx-background-color: #" + toHex(VIDEO_BUTTON_COLOR) + ";" +
+                                        "-fx-background-radius: 5;" +
+                                        "-fx-padding: 5 10;" +
+                                        "-fx-cursor: hand;"
+                        );
+                        videoButton.setTooltip(new Tooltip("Start video call"));
+
+                        videoButton.setOnAction(e -> {
+                            Session session = getTableView().getItems().get(getIndex());
+                            startVideoCall(session);
+                        });
+                    }
+
+                    @Override
+                    protected void updateItem(Void item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty) {
+                            setGraphic(null);
+                        } else {
+                            Session session = getTableView().getItems().get(getIndex());
+                            // Only show video button for online sessions that are reserved
+                            if (session.getSessionType().equalsIgnoreCase("Online") && session.getReservedBy() != null) {
+                                setGraphic(videoButton);
+                            } else {
+                                setGraphic(null);
+                            }
+                        }
+                    }
+                };
+            }
+        });
+
         TableColumn<Session, Void> actionsCol = new TableColumn<>("Actions");
         actionsCol.setPrefWidth(120);
         actionsCol.setCellFactory(new Callback<>() {
@@ -282,7 +332,7 @@ public class SessionPanel extends VBox {
         });
 
         sessionTable.getColumns().addAll(titleCol, dateCol, startTimeCol, endTimeCol,
-                locationCol, typeCol, statusCol, actionsCol);
+                locationCol, typeCol, statusCol, videoCol, actionsCol);
 
         VBox.setVgrow(sessionTable, Priority.ALWAYS);
         getChildren().add(sessionTable);
@@ -439,6 +489,63 @@ public class SessionPanel extends VBox {
         Scene scene = new Scene(root);
         dialog.setScene(scene);
         dialog.showAndWait();
+    }
+
+    // ⭐ NEW: Video call method for psychologists
+    private void startVideoCall(Session session) {
+        // Check if session is online type
+        if (!session.getSessionType().equalsIgnoreCase("Online")) {
+            showAlert("Not Available", "Video calls are only available for online sessions.", Alert.AlertType.WARNING);
+            return;
+        }
+
+        // Check if session is reserved by someone
+        if (session.getReservedBy() == null) {
+            showAlert("No Patient", "This session has no patient reserved yet.", Alert.AlertType.WARNING);
+            return;
+        }
+
+        // Check if it's time for the session
+        LocalDateTime sessionTime = LocalDateTime.of(session.getSessionDate(), session.getStartTime());
+        LocalDateTime now = LocalDateTime.now();
+
+        // Allow calls 15 minutes before until session end
+        if (now.isBefore(sessionTime.minusMinutes(15))) {
+            showAlert("Too Early", "Video call will be available 15 minutes before the session.\n" +
+                            "Session starts at: " + session.getStartTime().format(timeFormatter),
+                    Alert.AlertType.WARNING);
+            return;
+        }
+
+        if (now.isAfter(sessionTime.plusHours(1))) {
+            showAlert("Session Ended", "This session has already ended.", Alert.AlertType.WARNING);
+            return;
+        }
+
+        // Generate meeting link
+        String meetingLink = videoCallService.generateMeetingLink(
+                session.getSessionId(),
+                session.getReservedBy(),
+                parentApp.getUserId()
+        );
+
+        // Show confirmation dialog
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Start Video Call");
+        confirm.setHeaderText("Start video session for: " + session.getTitle());
+        confirm.setContentText(
+                "You will be redirected to Jitsi Meet in your browser.\n\n" +
+                        "📹 Make sure your camera is working\n" +
+                        "🎤 Check your microphone\n" +
+                        "👤 Patient ID: " + session.getReservedBy() + "\n\n" +
+                        "Ready to start?"
+        );
+
+        confirm.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                videoCallService.joinMeeting(meetingLink);
+            }
+        });
     }
 
     private Button createDialogButton(String text) {

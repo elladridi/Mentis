@@ -22,7 +22,11 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import services.ReminderService;
+import models.Session;
 
+import java.sql.SQLException;
+import java.util.List;
 import java.util.Optional;
 
 public class MentisLoginFrame extends Application {
@@ -80,7 +84,9 @@ public class MentisLoginFrame extends Application {
     private PatientMySessionsPanel patientMySessionsPanel;
     private MyReviewsPanel myReviewsPanel;
     private ReservationsPanel reservationsPanel;
-    private RecommendationsPanel recommendationsPanel; // ⭐ NEW: Recommendations panel
+    private RecommendationsPanel recommendationsPanel;
+    private SimpleCalendarPanel simpleCalendarPanel;
+    private AnalyticsPanel analyticsPanel; // ⭐ NEW: Analytics panel
 
     private Label userInfoLabel;
 
@@ -128,7 +134,9 @@ public class MentisLoginFrame extends Application {
                 patientMySessionsPanel,
                 myReviewsPanel,
                 reservationsPanel,
-                recommendationsPanel // ⭐ ADDED: Recommendations panel
+                recommendationsPanel,
+                simpleCalendarPanel,
+                analyticsPanel // ⭐ ADDED: Analytics panel
                 // ⚠️ CRITICAL: accessLogsPanel is NOT added here - created on demand!
         );
 
@@ -151,6 +159,9 @@ public class MentisLoginFrame extends Application {
         primaryStage.setTitle("Mentis - Mental Health Companion");
         primaryStage.setScene(scene);
         primaryStage.show();
+
+        // Start reminder scheduler thread
+        startReminderScheduler();
     }
 
     private void initializeControllers() {
@@ -207,7 +218,9 @@ public class MentisLoginFrame extends Application {
         patientMySessionsPanel = new PatientMySessionsPanel(this, sessionController);
         myReviewsPanel = new MyReviewsPanel(this, sessionReviewController);
         reservationsPanel = new ReservationsPanel(this, sessionController);
-        recommendationsPanel = new RecommendationsPanel(this, sessionController); // ⭐ NEW: Initialize recommendations panel
+        recommendationsPanel = new RecommendationsPanel(this, sessionController);
+        simpleCalendarPanel = new SimpleCalendarPanel(this);
+        analyticsPanel = new AnalyticsPanel(this); // ⭐ NEW: Initialize analytics panel
 
         // ⚠️ CRITICAL: DO NOT create AccessLogsPanel here - create on demand!
         accessLogsPanel = null;
@@ -240,7 +253,9 @@ public class MentisLoginFrame extends Application {
         if (patientMySessionsPanel != null) patientMySessionsPanel.setVisible(false);
         if (myReviewsPanel != null) myReviewsPanel.setVisible(false);
         if (reservationsPanel != null) reservationsPanel.setVisible(false);
-        if (recommendationsPanel != null) recommendationsPanel.setVisible(false); // ⭐ NEW: Hide recommendations panel
+        if (recommendationsPanel != null) recommendationsPanel.setVisible(false);
+        if (simpleCalendarPanel != null) simpleCalendarPanel.setVisible(false);
+        if (analyticsPanel != null) analyticsPanel.setVisible(false); // ⭐ NEW: Hide analytics panel
 
         currentVisiblePanel = null;
 
@@ -365,6 +380,8 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Dashboard", "ADMIN_DASHBOARD");
             addSidebarButton("Manage Sessions", "SESSION_ADMIN");
             addSidebarButton("Reservations", "RESERVATIONS");
+            addSidebarButton("Session Calendar", "CALENDAR");
+            addSidebarButton("Analytics", "ANALYTICS"); // ⭐ NEW: Analytics for admin
             addSidebarButton("Assessments", "ASSESSMENT");
             addSidebarButton("Psychologists", "PSYCHOLOGIST");
             addSidebarButton("Patients", "PATIENT");
@@ -378,6 +395,8 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Dashboard", "RESULTS");
             addSidebarButton("Manage Sessions", "SESSION_ADMIN");
             addSidebarButton("Reservations", "RESERVATIONS");
+            addSidebarButton("Session Calendar", "CALENDAR");
+            addSidebarButton("Analytics", "ANALYTICS"); // ⭐ NEW: Analytics for psychologists
             addSidebarButton("Assessments", "RESULTS");
             addSidebarButton("Mood Tracking", "RESULTS");
             addSidebarButton("Wellbeing", "WELLBEING");
@@ -385,12 +404,12 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Event", "RESULTS");
 
         } else if ("patient".equals(currentUserType)) {
-            // Patient menu items - ADDED RECOMMENDATIONS
+            // Patient menu items
             addSidebarButton("Dashboard", "PATIENT_DASHBOARD");
             addSidebarButton("Available Sessions", "PATIENT_AVAILABLE_SESSIONS");
             addSidebarButton("My Sessions", "PATIENT_MY_SESSIONS");
             addSidebarButton("My Reviews", "PATIENT_MY_REVIEWS");
-            addSidebarButton("Recommended For You", "RECOMMENDATIONS"); // ⭐ NEW
+            addSidebarButton("Recommended For You", "RECOMMENDATIONS");
             addSidebarButton("Take Assessment", "TAKE_ASSESSMENT");
             addSidebarButton("My Results", "RESULTS");
             addSidebarButton("Mood Tracking", "PATIENT_DASHBOARD");
@@ -459,6 +478,12 @@ public class MentisLoginFrame extends Application {
             case "RESERVATIONS":
                 showReservationsPanel();
                 break;
+            case "CALENDAR":
+                showSimpleCalendarPanel();
+                break;
+            case "ANALYTICS": // ⭐ NEW: Analytics navigation
+                showAnalyticsPanel();
+                break;
             case "PATIENT_AVAILABLE_SESSIONS":
                 showPatientAvailableSessionsPanel();
                 break;
@@ -468,7 +493,7 @@ public class MentisLoginFrame extends Application {
             case "PATIENT_MY_REVIEWS":
                 showMyReviewsPanel();
                 break;
-            case "RECOMMENDATIONS": // ⭐ NEW
+            case "RECOMMENDATIONS":
                 showRecommendationsPanel();
                 break;
             case "PATIENT_DASHBOARD":
@@ -605,6 +630,19 @@ public class MentisLoginFrame extends Application {
         reservationsPanel.refreshData();
     }
 
+    public void showSimpleCalendarPanel() {
+        System.out.println("🔵 Showing Simple Calendar Panel");
+        showOnlyPanel(simpleCalendarPanel);
+        simpleCalendarPanel.refreshData();
+    }
+
+    // ⭐ NEW: Show Analytics Panel
+    public void showAnalyticsPanel() {
+        System.out.println("🔵 Showing Analytics Panel");
+        showOnlyPanel(analyticsPanel);
+        analyticsPanel.refreshData();
+    }
+
     public void showPatientAvailableSessionsPanel() {
         System.out.println("🔵 Showing Patient Available Sessions Panel");
         showOnlyPanel(patientAvailableSessionsPanel);
@@ -623,7 +661,6 @@ public class MentisLoginFrame extends Application {
         myReviewsPanel.refreshData();
     }
 
-    // ⭐ NEW: Show Recommendations Panel
     public void showRecommendationsPanel() {
         System.out.println("🔵 Showing Recommendations Panel");
         showOnlyPanel(recommendationsPanel);
@@ -683,6 +720,11 @@ public class MentisLoginFrame extends Application {
             accessLogsPanel = null;
         }
 
+        // Check for pending reminders after login
+        if ("patient".equals(currentUserType)) {
+            checkPendingReminders();
+        }
+
         // Navigate to appropriate panel based on user type
         switch (this.currentUserType) {
             case "admin":
@@ -697,6 +739,70 @@ public class MentisLoginFrame extends Application {
             default:
                 showWelcomePanel();
         }
+    }
+
+    // Check for pending reminders
+    private void checkPendingReminders() {
+        try {
+            ReminderService reminderService = new ReminderService();
+            List<ReminderService.PendingReminder> reminders =
+                    reminderService.getPendingReminders(currentUserId);
+
+            if (!reminders.isEmpty()) {
+                System.out.println("🔔 Found " + reminders.size() + " pending reminder(s)");
+
+                // Show reminders one by one
+                for (ReminderService.PendingReminder reminder : reminders) {
+                    ReminderDialog dialog = new ReminderDialog(
+                            this,
+                            reminder,
+                            () -> checkPendingReminders() // Refresh after each confirmation
+                    );
+                    dialog.showAndWait();
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Error checking reminders: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Start reminder scheduler thread
+    private void startReminderScheduler() {
+        Thread reminderThread = new Thread(() -> {
+            ReminderService reminderService = new ReminderService();
+
+            while (true) {
+                try {
+                    // Check for sessions needing reminders every hour
+                    List<Session> sessions = reminderService.getSessionsForReminder();
+
+                    for (Session session : sessions) {
+                        reminderService.sendReminder(session);
+                        System.out.println("✅ Reminder sent for session: " + session.getTitle());
+                    }
+
+                    // Sleep for 1 hour
+                    Thread.sleep(60 * 60 * 1000);
+
+                } catch (Exception e) {
+                    System.err.println("❌ Reminder scheduler error: " + e.getMessage());
+                    e.printStackTrace();
+
+                    // If error, wait 5 minutes before retrying
+                    try {
+                        Thread.sleep(5 * 60 * 1000);
+                    } catch (InterruptedException ie) {
+                        break;
+                    }
+                }
+            }
+        });
+
+        reminderThread.setDaemon(true);
+        reminderThread.start();
+
+        System.out.println("⏰ Reminder scheduler started");
     }
 
     /**

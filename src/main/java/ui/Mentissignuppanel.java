@@ -16,8 +16,9 @@ import services.userservice;
 
 public class Mentissignuppanel extends VBox {
 
-    private static final Color BG_COLOR = Color.rgb(216, 228, 222);
-    private static final Color PRIMARY = Color.rgb(88, 139, 113);
+    // ⭐ Utilise les constantes de MentisLoginFrame
+    private static final Color BG_COLOR = MentisLoginFrame.BACKGROUND_LIGHT;
+    private static final Color PRIMARY = MentisLoginFrame.ACCENT_DARK_GREEN;
     private static final Color TEXT_GRAY = Color.GRAY;
     private static final Color TEXT_BLACK = Color.BLACK;
     private static final Color WHITE = Color.WHITE;
@@ -37,7 +38,7 @@ public class Mentissignuppanel extends VBox {
         this.parentApp = parentApp;
 
         setStyle("-fx-background-color: #" + toHex(BG_COLOR) + ";");
-        setAlignment(Pos.TOP_CENTER);
+        setAlignment(Pos.CENTER);
         setPadding(new Insets(0));
         setSpacing(0);
 
@@ -414,9 +415,6 @@ public class Mentissignuppanel extends VBox {
                 }
             });
         }
-
-        // REMOVED: The problematic override method
-        // Just use the parent class setPromptText() directly
     }
 
     class RoundedPasswordField extends PasswordField {

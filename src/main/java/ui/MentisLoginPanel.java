@@ -31,15 +31,14 @@ public class MentisLoginPanel extends StackPane {
     }
 
     private void initComponents() {
-        // Set background color
-        setStyle("-fx-background-color: #D8E4DE;"); // Light sage green
+        // ⭐ Utilise la même couleur que le reste de l'application
+        setStyle("-fx-background-color: #" + toHex(MentisLoginFrame.BACKGROUND_LIGHT) + ";");
 
-        // Main container with centering
-        VBox mainContainer = new VBox(30);
-        mainContainer.setAlignment(Pos.CENTER);
-        mainContainer.setPadding(new Insets(100, 50, 100, 50));
+        // ⭐ Main container avec centrage parfait
+        BorderPane mainContainer = new BorderPane();
+        mainContainer.setStyle("-fx-background-color: #" + toHex(MentisLoginFrame.BACKGROUND_LIGHT) + ";");
 
-        // ===== Login Card =====
+        // ===== Login Card centrée =====
         VBox card = new VBox(20);
         card.setAlignment(Pos.CENTER);
         card.setMaxWidth(450);
@@ -66,7 +65,7 @@ public class MentisLoginPanel extends StackPane {
         // ===== Title =====
         Label title = new Label("Welcome Back");
         title.setFont(Font.font("Arial", FontWeight.BOLD, 32));
-        title.setTextFill(Color.web("#588B71")); // Sage green
+        title.setTextFill(Color.web(toHex(MentisLoginFrame.ACCENT_DARK_GREEN)));
         card.getChildren().add(title);
 
         // ===== Email Field =====
@@ -84,10 +83,10 @@ public class MentisLoginPanel extends StackPane {
                         "-fx-font-size: 16px;"
         );
         emailField.setOnMouseEntered(e ->
-                emailField.setStyle(emailField.getStyle() + "-fx-border-color: #588B71;")
+                emailField.setStyle(emailField.getStyle() + "-fx-border-color: #" + toHex(MentisLoginFrame.ACCENT_DARK_GREEN) + ";")
         );
         emailField.setOnMouseExited(e ->
-                emailField.setStyle(emailField.getStyle().replace("-fx-border-color: #588B71;", "-fx-border-color: #E0E0E0;"))
+                emailField.setStyle(emailField.getStyle().replace("-fx-border-color: #" + toHex(MentisLoginFrame.ACCENT_DARK_GREEN) + ";", "-fx-border-color: #E0E0E0;"))
         );
         card.getChildren().add(emailField);
 
@@ -106,10 +105,10 @@ public class MentisLoginPanel extends StackPane {
                         "-fx-font-size: 16px;"
         );
         passwordField.setOnMouseEntered(e ->
-                passwordField.setStyle(passwordField.getStyle() + "-fx-border-color: #588B71;")
+                passwordField.setStyle(passwordField.getStyle() + "-fx-border-color: #" + toHex(MentisLoginFrame.ACCENT_DARK_GREEN) + ";")
         );
         passwordField.setOnMouseExited(e ->
-                passwordField.setStyle(passwordField.getStyle().replace("-fx-border-color: #588B71;", "-fx-border-color: #E0E0E0;"))
+                passwordField.setStyle(passwordField.getStyle().replace("-fx-border-color: #" + toHex(MentisLoginFrame.ACCENT_DARK_GREEN) + ";", "-fx-border-color: #E0E0E0;"))
         );
 
         // ENTER key triggers login
@@ -119,7 +118,7 @@ public class MentisLoginPanel extends StackPane {
         // ===== Forgot Password Link =====
         forgotPasswordLink = new Hyperlink("Forgot Password?");
         forgotPasswordLink.setFont(Font.font("Arial", 14));
-        forgotPasswordLink.setTextFill(Color.web("#588B71"));
+        forgotPasswordLink.setTextFill(Color.web(toHex(MentisLoginFrame.ACCENT_DARK_GREEN)));
         forgotPasswordLink.setUnderline(true);
         forgotPasswordLink.setOnAction(e -> showForgotPasswordDialog());
         forgotPasswordLink.setStyle("-fx-cursor: hand;");
@@ -132,7 +131,7 @@ public class MentisLoginPanel extends StackPane {
         loginButton.setFont(Font.font("Arial", FontWeight.BOLD, 18));
         loginButton.setTextFill(Color.WHITE);
         loginButton.setStyle(
-                "-fx-background-color: #588B71;" +
+                "-fx-background-color: #" + toHex(MentisLoginFrame.ACCENT_DARK_GREEN) + ";" +
                         "-fx-background-radius: 15;" +
                         "-fx-cursor: hand;"
         );
@@ -140,14 +139,14 @@ public class MentisLoginPanel extends StackPane {
         // Button hover effect
         loginButton.setOnMouseEntered(e ->
                 loginButton.setStyle(
-                        "-fx-background-color: #629F89;" +
+                        "-fx-background-color: #" + toHex(MentisLoginFrame.ACCENT_DARK_GREEN.darker()) + ";" +
                                 "-fx-background-radius: 15;" +
                                 "-fx-cursor: hand;"
                 )
         );
         loginButton.setOnMouseExited(e ->
                 loginButton.setStyle(
-                        "-fx-background-color: #588B71;" +
+                        "-fx-background-color: #" + toHex(MentisLoginFrame.ACCENT_DARK_GREEN) + ";" +
                                 "-fx-background-radius: 15;" +
                                 "-fx-cursor: hand;"
                 )
@@ -180,17 +179,23 @@ public class MentisLoginPanel extends StackPane {
                                 "-fx-cursor: hand;"
                 )
         );
-
+        // ⭐ Optionnel : Ajoute le bouton Face ID si tu veux
+        // card.getChildren().add(faceLoginButton);
 
         // ===== Back Link =====
         backLink = new Hyperlink("← Back to Welcome");
         backLink.setFont(Font.font("Arial", 16));
-        backLink.setTextFill(Color.web("#588B71"));
+        backLink.setTextFill(Color.web(toHex(MentisLoginFrame.ACCENT_DARK_GREEN)));
         backLink.setOnAction(e -> parentApp.showWelcomePanel());
         backLink.setStyle("-fx-cursor: hand;");
         card.getChildren().add(backLink);
 
-        mainContainer.getChildren().add(card);
+        // ⭐ Centre la carte au milieu de l'écran
+        mainContainer.setCenter(card);
+
+        // ⭐ Ajoute un padding pour éviter que la carte touche les bords
+        BorderPane.setMargin(card, new Insets(50));
+
         getChildren().add(mainContainer);
     }
 
@@ -243,8 +248,6 @@ public class MentisLoginPanel extends StackPane {
         dialog.show();
     }
 
-
-
     private void setLoading(boolean loading) {
         loginButton.setDisable(loading);
         emailField.setDisable(loading);
@@ -265,5 +268,12 @@ public class MentisLoginPanel extends StackPane {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private String toHex(Color color) {
+        return String.format("%02x%02x%02x",
+                (int)(color.getRed() * 255),
+                (int)(color.getGreen() * 255),
+                (int)(color.getBlue() * 255));
     }
 }

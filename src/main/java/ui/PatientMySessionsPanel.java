@@ -16,9 +16,13 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import models.Session;
 import utils.QRCodeGenerator;
+import services.TranslationService;
+import services.TextToSpeechService;
+import services.VideoCallService; // ⭐ NEW IMPORT
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -27,6 +31,9 @@ public class PatientMySessionsPanel extends VBox {
     private MentisLoginFrame parentApp;
     private SessionController sessionController;
     private SessionReviewController reviewController;
+    private TranslationService translationService;
+    private TextToSpeechService ttsService;
+    private VideoCallService videoCallService; // ⭐ NEW SERVICE
     private VBox upcomingContainer;
     private VBox pastContainer;
     private ScrollPane mainScrollPane;
@@ -47,12 +54,18 @@ public class PatientMySessionsPanel extends VBox {
     private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
     private static final Color CARD_WHITE = Color.WHITE;
     private static final Color REVIEW_BUTTON_COLOR = Color.rgb(255, 193, 7);
-    private static final Color QR_BUTTON_COLOR = Color.rgb(155, 89, 182); // Purple for QR code
+    private static final Color QR_BUTTON_COLOR = Color.rgb(155, 89, 182);
+    private static final Color TRANSLATE_BUTTON_COLOR = Color.rgb(52, 152, 219);
+    private static final Color LISTEN_BUTTON_COLOR = Color.rgb(155, 89, 182);
+    private static final Color VIDEO_BUTTON_COLOR = Color.rgb(231, 76, 60); // ⭐ NEW COLOR
 
     public PatientMySessionsPanel(MentisLoginFrame parentApp, SessionController sessionController) {
         this.parentApp = parentApp;
         this.sessionController = sessionController;
         this.reviewController = new SessionReviewController();
+        this.translationService = new TranslationService();
+        this.ttsService = new TextToSpeechService();
+        this.videoCallService = new VideoCallService(); // ⭐ INITIALIZE
 
         setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
         setPadding(new Insets(30));
@@ -263,7 +276,7 @@ public class PatientMySessionsPanel extends VBox {
         return emptyBox;
     }
 
-    // ⭐ UPDATED: Added QR Code button to upcoming sessions
+    // ⭐ UPDATED: Added Video Call button
     private VBox createUpcomingSessionCard(Session session) {
         VBox card = new VBox(15);
         card.setStyle(
@@ -307,8 +320,9 @@ public class PatientMySessionsPanel extends VBox {
         detailsGrid.add(locationBox, 0, 1, 2, 1);
 
         // Third row: Status and buttons
-        HBox actionRow = new HBox(15);
+        HBox actionRow = new HBox(10);
         actionRow.setAlignment(Pos.CENTER_RIGHT);
+        actionRow.setPadding(new Insets(10, 0, 0, 0));
 
         Label statusLabel = new Label("● Reserved");
         statusLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
@@ -317,31 +331,62 @@ public class PatientMySessionsPanel extends VBox {
         Region spacer2 = new Region();
         HBox.setHgrow(spacer2, Priority.ALWAYS);
 
-        Button detailsButton = new Button("View Details");
-        detailsButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-        detailsButton.setTextFill(Color.web(toHex(TEXT_DARK)));
-        detailsButton.setStyle("-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + "; -fx-background-radius: 5; -fx-padding: 8 20; -fx-cursor: hand;");
-        detailsButton.setOnAction(e -> showSessionDetails(session));
+        // 🌐 Translate Button
+        Button translateButton = new Button("🌐 Translate");
+        translateButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        translateButton.setTextFill(Color.WHITE);
+        translateButton.setStyle("-fx-background-color: #" + toHex(TRANSLATE_BUTTON_COLOR) + "; -fx-background-radius: 5; -fx-padding: 8 12; -fx-cursor: hand;");
+        translateButton.setOnAction(e -> openTranslationDialog(session));
 
-        // ⭐ NEW: QR Code button
+        // 🔊 Listen Button
+        Button listenButton = new Button("🔊 Listen");
+        listenButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        listenButton.setTextFill(Color.WHITE);
+        listenButton.setStyle("-fx-background-color: #" + toHex(LISTEN_BUTTON_COLOR) + "; -fx-background-radius: 5; -fx-padding: 8 12; -fx-cursor: hand;");
+        listenButton.setOnAction(e -> openListenDialog(session));
+
+        // QR Code button
         Button qrButton = new Button("QR Code");
-        qrButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        qrButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
         qrButton.setTextFill(Color.WHITE);
-        qrButton.setStyle("-fx-background-color: #" + toHex(QR_BUTTON_COLOR) + "; -fx-background-radius: 5; -fx-padding: 8 20; -fx-cursor: hand;");
+        qrButton.setStyle("-fx-background-color: #" + toHex(QR_BUTTON_COLOR) + "; -fx-background-radius: 5; -fx-padding: 8 12; -fx-cursor: hand;");
         qrButton.setOnAction(e -> showQRCode(session));
+
+        // 📹 Video Call Button (NEW)
+        Button videoButton = new Button("📹 Video Call");
+        videoButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        videoButton.setTextFill(Color.WHITE);
+        videoButton.setStyle("-fx-background-color: #" + toHex(VIDEO_BUTTON_COLOR) + "; -fx-background-radius: 5; -fx-padding: 8 12; -fx-cursor: hand;");
+        videoButton.setOnAction(e -> startVideoCall(session));
+
+        // View Details button
+        Button detailsButton = new Button("View Details");
+        detailsButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        detailsButton.setTextFill(Color.web(toHex(TEXT_DARK)));
+        detailsButton.setStyle("-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + "; -fx-background-radius: 5; -fx-padding: 8 12; -fx-cursor: hand;");
+        detailsButton.setOnAction(e -> showSessionDetails(session));
 
         // Only show cancel button for future sessions
         if (session.getSessionDate().isAfter(LocalDate.now()) ||
                 session.getSessionDate().isEqual(LocalDate.now())) {
             Button cancelButton = new Button("Cancel");
-            cancelButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+            cancelButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
             cancelButton.setTextFill(Color.WHITE);
-            cancelButton.setStyle("-fx-background-color: #e74c3c; -fx-background-radius: 5; -fx-padding: 8 20; -fx-cursor: hand;");
+            cancelButton.setStyle("-fx-background-color: #e74c3c; -fx-background-radius: 5; -fx-padding: 8 12; -fx-cursor: hand;");
             cancelButton.setOnAction(e -> cancelReservation(session));
             actionRow.getChildren().add(cancelButton);
         }
 
-        actionRow.getChildren().addAll(statusLabel, spacer2, qrButton, detailsButton);
+        // Add all buttons to action row (including video button)
+        actionRow.getChildren().addAll(
+                statusLabel,
+                spacer2,
+                translateButton,
+                listenButton,
+                qrButton,
+                videoButton,  // ⭐ NEW BUTTON ADDED
+                detailsButton
+        );
 
         card.getChildren().addAll(titleRow, detailsGrid, actionRow);
         return card;
@@ -414,17 +459,195 @@ public class PatientMySessionsPanel extends VBox {
         return card;
     }
 
-    // ⭐ NEW: Method to show QR Code
+    // 🌐 Translation dialog
+    private void openTranslationDialog(Session session) {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Translate Session Details");
+
+        VBox content = new VBox(20);
+        content.setPadding(new Insets(30));
+        content.setAlignment(Pos.CENTER);
+        content.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+
+        Label titleLabel = new Label("Select Language");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 20));
+        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+
+        ComboBox<String> languageCombo = new ComboBox<>();
+        languageCombo.getItems().addAll(
+                "French", "Spanish", "German", "Italian", "Portuguese",
+                "Russian", "Japanese", "Chinese", "Arabic", "Hindi"
+        );
+        languageCombo.setValue("French");
+        languageCombo.setPrefWidth(200);
+
+        TextArea resultArea = new TextArea();
+        resultArea.setEditable(false);
+        resultArea.setWrapText(true);
+        resultArea.setPrefRowCount(8);
+        resultArea.setPromptText("Translated text will appear here...");
+
+        String originalText = String.format(
+                "Session: %s\nDate: %s\nTime: %s - %s\nLocation: %s\nType: %s",
+                session.getTitle(),
+                session.getSessionDate().format(dateFormatter),
+                session.getStartTime().format(timeFormatter),
+                session.getEndTime().format(timeFormatter),
+                session.getLocation(),
+                session.getSessionType()
+        );
+
+        Button translateButton = new Button("Translate");
+        translateButton.setStyle("-fx-background-color: #" + toHex(ACCENT_DARK_GREEN) + "; -fx-text-fill: white; -fx-padding: 10 20; -fx-background-radius: 5; -fx-cursor: hand;");
+        translateButton.setOnAction(e -> {
+            String targetLang = languageCombo.getValue();
+            String translated = translationService.translate(originalText, targetLang);
+            resultArea.setText(translated);
+        });
+
+        Button closeButton = new Button("Close");
+        closeButton.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-padding: 10 20; -fx-background-radius: 5; -fx-cursor: hand;");
+        closeButton.setOnAction(e -> dialog.close());
+
+        HBox buttonBox = new HBox(15, translateButton, closeButton);
+        buttonBox.setAlignment(Pos.CENTER);
+
+        content.getChildren().addAll(titleLabel, languageCombo, resultArea, buttonBox);
+
+        Scene scene = new Scene(content, 500, 400);
+        dialog.setScene(scene);
+        dialog.showAndWait();
+    }
+
+    // 🔊 Listen dialog
+    private void openListenDialog(Session session) {
+        String textToSpeak = String.format(
+                "Session: %s. Date: %s. Time: from %s to %s. Location: %s. Type: %s.",
+                session.getTitle(),
+                session.getSessionDate().format(dateFormatter),
+                session.getStartTime().format(timeFormatter),
+                session.getEndTime().format(timeFormatter),
+                session.getLocation(),
+                session.getSessionType()
+        );
+
+        Stage audioDialog = new Stage();
+        audioDialog.initModality(Modality.APPLICATION_MODAL);
+        audioDialog.setTitle("Listen to Session Details");
+
+        VBox content = new VBox(20);
+        content.setPadding(new Insets(30));
+        content.setAlignment(Pos.CENTER);
+        content.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+
+        Label titleLabel = new Label("🔊 Audio Player");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
+        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+
+        Label sessionLabel = new Label(session.getTitle());
+        sessionLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
+
+        ProgressIndicator playingIndicator = new ProgressIndicator();
+        playingIndicator.setPrefSize(60, 60);
+        playingIndicator.setVisible(false);
+
+        Label statusLabel = new Label("Ready to play");
+
+        Button playButton = new Button("▶️ Play");
+        playButton.setStyle("-fx-background-color: #" + toHex(ACCENT_DARK_GREEN) + "; -fx-text-fill: white; -fx-padding: 10 30; -fx-background-radius: 5; -fx-cursor: hand;");
+        playButton.setOnAction(e -> {
+            ttsService.speak(textToSpeak, "English");
+            statusLabel.setText("Speaking...");
+            playingIndicator.setVisible(true);
+        });
+
+        Button stopButton = new Button("⏹️ Stop");
+        stopButton.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-padding: 10 30; -fx-background-radius: 5; -fx-cursor: hand;");
+        stopButton.setOnAction(e -> {
+            ttsService.stop();
+            statusLabel.setText("Stopped");
+            playingIndicator.setVisible(false);
+        });
+
+        Button closeButton = new Button("Close");
+        closeButton.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-padding: 10 30; -fx-background-radius: 5; -fx-cursor: hand;");
+        closeButton.setOnAction(e -> {
+            ttsService.stop();
+            audioDialog.close();
+        });
+
+        HBox controlBox = new HBox(15, playButton, stopButton, closeButton);
+        controlBox.setAlignment(Pos.CENTER);
+
+        content.getChildren().addAll(titleLabel, sessionLabel, playingIndicator, statusLabel, controlBox);
+
+        Scene scene = new Scene(content, 400, 350);
+        audioDialog.setScene(scene);
+        audioDialog.showAndWait();
+
+        ttsService.stop();
+    }
+
+    // ⭐ NEW: Video Call Method
+    private void startVideoCall(Session session) {
+        // Check if session is online type
+        if (!session.getSessionType().equalsIgnoreCase("Online")) {
+            showAlert("Not Available", "Video calls are only available for online sessions.", Alert.AlertType.WARNING);
+            return;
+        }
+
+        // Check if it's time for the session
+        LocalDateTime sessionTime = LocalDateTime.of(session.getSessionDate(), session.getStartTime());
+        LocalDateTime now = LocalDateTime.now();
+
+        // Allow calls 15 minutes before until session end
+        if (now.isBefore(sessionTime.minusMinutes(15))) {
+            showAlert("Too Early", "Video call will be available 15 minutes before the session.\n" +
+                            "Session starts at: " + session.getStartTime().format(timeFormatter),
+                    Alert.AlertType.WARNING);
+            return;
+        }
+
+        if (now.isAfter(sessionTime.plusHours(1))) {
+            showAlert("Session Ended", "This session has already ended.", Alert.AlertType.WARNING);
+            return;
+        }
+
+        // Generate meeting link
+        String meetingLink = videoCallService.generateMeetingLink(
+                session.getSessionId(),
+                parentApp.getUserId(),
+                1 // You can replace 1 with actual psychologist ID if you have it
+        );
+
+        // Show confirmation dialog
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Start Video Call");
+        confirm.setHeaderText("Join video session for: " + session.getTitle());
+        confirm.setContentText(
+                "You will be redirected to Jitsi Meet in your browser.\n\n" +
+                        "📹 Make sure your camera is working\n" +
+                        "🎤 Check your microphone\n" +
+                        "🌐 Use Chrome or Firefox for best experience\n\n" +
+                        "Ready to join?"
+        );
+
+        confirm.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                videoCallService.joinMeeting(meetingLink);
+            }
+        });
+    }
+
+    // ⭐ QR Code method
     private void showQRCode(Session session) {
         try {
-            // Generate QR code
             byte[] qrBytes = QRCodeGenerator.getQRCodeBytes(session, parentApp.getUserId());
             if (qrBytes != null) {
-                // Convert to JavaFX Image
                 java.io.ByteArrayInputStream bis = new java.io.ByteArrayInputStream(qrBytes);
                 Image qrImage = new Image(bis);
 
-                // Show in dialog
                 Stage qrStage = new Stage();
                 qrStage.initModality(Modality.APPLICATION_MODAL);
                 qrStage.setTitle("QR Code - " + session.getTitle());
