@@ -508,16 +508,13 @@ public class Mentissignuppanel extends VBox {
 
     private void openFaceIDRegistration(int userId) {
         try {
-            // Assuming FaceIDDialog exists in your project
-            // If not, you may need to comment this out or implement it
-            // FaceIDDialog dialog = new FaceIDDialog(parentApp, true, userId);
-            // dialog.setOnHidden(e -> parentApp.showLoginPanel());
-            // dialog.show();
-
-            // For now, just go to login panel
-            parentApp.showLoginPanel();
+            // UNCOMMENT THIS - FaceIDDialog exists!
+            FaceIDDialog dialog = new FaceIDDialog(parentApp, true, userId);
+            dialog.setOnHidden(e -> parentApp.showLoginPanel());
+            dialog.show();
         } catch (Exception e) {
             e.printStackTrace();
+            showError("Face ID registration failed: " + e.getMessage());
             parentApp.showLoginPanel();
         }
     }
