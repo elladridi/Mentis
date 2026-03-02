@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.geometry.Insets?>
+
+<ScrollPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.mentalhealth.app.controllers.EventDetailsController"
+            fitToWidth="true"
+            styleClass="form-scroll-pane"
+            stylesheets="@../styles/mentis.css">
+
+    <VBox spacing="24" styleClass="content-area">
+        <padding>
+            <Insets top="32" right="40" bottom="32" left="40"/>
+        </padding>
+
+        <!-- Header Section -->
+        <HBox alignment="CENTER_LEFT" spacing="16">
+            <!-- Back Button -->
+            <Button fx:id="backBtn"
+                    text="← Back to Events"
+                    styleClass="btn-back"/>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <!-- Status Badge -->
+            <Label fx:id="statusBadge"
+                   text="UPCOMING"
+                   styleClass="status-badge"/>
+        </HBox>
+
+        <!-- Event Title Section -->
+        <VBox spacing="8">
+            <Label fx:id="eventTitle"
+                   text="Mental Health Workshop"
+                   styleClass="event-detail-title"
+                   wrapText="true"/>
+
+            <Label fx:id="eventSubtitle"
+                   text="Workshop · Mental Wellness"
+                   styleClass="event-subtitle"/>
+        </VBox>
+
+        <!-- Event Info Card -->
+        <VBox fx:id="infoCard"
+              styleClass="info-card-light"
+              spacing="16">
+
+            <Label text="📅 Event Details"
+                   styleClass="card-header"/>
+
+            <!-- Info Grid -->
+            <GridPane fx:id="infoGrid"
+                      hgap="24"
+                      vgap="16"
+                      styleClass="info-grid">
+
+                <!-- Row 1: Date & Time -->
+                <VBox spacing="4" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                    <Label text="Date" styleClass="info-block-label"/>
+                    <Label fx:id="dateLabel" text="March 15, 2024" styleClass="info-block-value"/>
+                </VBox>
+
+                <VBox spacing="4" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                    <Label text="Time" styleClass="info-block-label"/>
+                    <Label fx:id="timeLabel" text="10:00 AM - 12:00 PM" styleClass="info-block-value"/>
+                </VBox>
+
+                <VBox spacing="4" GridPane.columnIndex="2" GridPane.rowIndex="0">
+                    <Label text="Location" styleClass="info-block-label"/>
+                    <Label fx:id="locationLabel" text="Online" styleClass="info-block-value"/>
+                </VBox>
+
+                <!-- Row 2: Capacity & Price -->
+                <VBox spacing="4" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                    <Label text="Capacity" styleClass="info-block-label"/>
+                    <Label fx:id="capacityLabel" text="50 participants" styleClass="info-block-value"/>
+                </VBox>
+
+                <VBox spacing="4" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                    <Label text="Price" styleClass="info-block-label"/>
+                    <Label fx:id="priceLabel" text="$50.00" styleClass="price-amount"/>
+                </VBox>
+
+                <VBox spacing="4" GridPane.columnIndex="2" GridPane.rowIndex="1">
+                    <Label text="Organizer" styleClass="info-block-label"/>
+                    <Label fx:id="organizerLabel" text="Dr. Smith" styleClass="info-block-value"/>
+                </VBox>
+            </GridPane>
+
+            <!-- Event Description -->
+            <VBox spacing="8" styleClass="description-section">
+                <Label text="About This Event" styleClass="subsection-title"/>
+                <Label fx:id="eventDescription"
+                       text="Join us for an interactive workshop on mental wellness strategies..."
+                       wrapText="true"
+                       styleClass="description-text"/>
+            </VBox>
+        </VBox>
+
+        <!-- Registration Summary Card -->
+        <VBox fx:id="summaryCard" styleClass="summary-card" spacing="16">
+
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <Label text="🎟" styleClass="emoji-icon"/>
+                <Label text="Registration Overview" styleClass="card-header"/>
+            </HBox>
+
+            <!-- Stats Row -->
+            <HBox fx:id="summaryRow"
+                  alignment="CENTER_LEFT"
+                  spacing="24"
+                  styleClass="stats-row">
+
+                <!-- Total Registrations -->
+                <VBox styleClass="stat-box" alignment="CENTER" spacing="4">
+                    <Label fx:id="totalRegLabel" text="24" styleClass="stat-value"/>
+                    <Label text="Registered" styleClass="stat-label"/>
+                </VBox>
+
+                <!-- Confirmed -->
+                <VBox styleClass="stat-box" alignment="CENTER" spacing="4">
+                    <Label fx:id="confirmedLabel" text="20" styleClass="stat-value"/>
+                    <Label text="Confirmed" styleClass="stat-label"/>
+                </VBox>
+
+                <!-- Pending -->
+                <VBox styleClass="stat-box" alignment="CENTER" spacing="4">
+                    <Label fx:id="pendingLabel" text="4" styleClass="stat-value"/>
+                    <Label text="Pending" styleClass="stat-label"/>
+                </VBox>
+
+                <!-- Available -->
+                <VBox styleClass="stat-box" alignment="CENTER" spacing="4">
+                    <Label fx:id="availableLabel" text="26" styleClass="stat-value"/>
+                    <Label text="Available" styleClass="stat-label"/>
+                </VBox>
+            </HBox>
+
+            <!-- Add Registration Button -->
+            <Button fx:id="addRegBtn"
+                    text="+ Register Attendee"
+                    onAction="#handleAddRegistration"
+                    styleClass="btn-primary-mint"
+                    maxWidth="Infinity"/>
+        </VBox>
+
+        <!-- Registration List Card -->
+        <VBox fx:id="regListCard" styleClass="list-card" spacing="16">
+
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <Label text="📋" styleClass="emoji-icon"/>
+                <Label text="Registered Attendees" styleClass="card-header"/>
+
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <!-- Search Field -->
+                <TextField fx:id="searchField"
+                           promptText="Search attendees..."
+                           styleClass="search-field-small"
+                           prefWidth="220"/>
+            </HBox>
+
+            <!-- Registration List Container -->
+            <ScrollPane fitToWidth="true" styleClass="transparent-scroll" VBox.vgrow="ALWAYS">
+                <VBox fx:id="regListContainer"
+                      spacing="12"/>
+            </ScrollPane>
+
+            <!-- Empty State -->
+            <VBox fx:id="emptyState"
+                  alignment="CENTER"
+                  spacing="12"
+                  styleClass="empty-state"
+                  visible="false"
+                  managed="false">
+                <Label text="📭" styleClass="empty-icon"/>
+                <Label text="No registrations yet" styleClass="empty-title"/>
+                <Label text="Click 'Register Attendee' to add the first registration"
+                       styleClass="empty-subtitle"/>
+            </VBox>
+        </VBox>
+
+    </VBox>
+</ScrollPane>
