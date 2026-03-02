@@ -55,6 +55,8 @@ public class MentisLoginFrame extends Application {
     private String currentUserType = "";
     private int currentUserId = 0;
     private String currentUserName = "";
+    private String currentUserEmail = "";   // FROM EVENT CODE
+    private String currentUserPhone = "";   // FROM EVENT CODE
 
     // Controllers
     private AssessmentController assessmentController;
@@ -87,6 +89,9 @@ public class MentisLoginFrame extends Application {
     private RecommendationsPanel recommendationsPanel;
     private SimpleCalendarPanel simpleCalendarPanel; // YOURS
     private AnalyticsPanel analyticsPanel; // YOURS
+
+    // Event Panel - FROM EVENT CODE (created on demand)
+    private javafx.scene.layout.BorderPane eventPanel;
 
     private Label userInfoLabel;
 
@@ -136,7 +141,7 @@ public class MentisLoginFrame extends Application {
                 recommendationsPanel,
                 simpleCalendarPanel, // YOURS
                 analyticsPanel // YOURS
-                // ⚠️ CRITICAL: accessLogsPanel is NOT added here - created on demand!
+                // accessLogsPanel & eventPanel are added on demand
         );
 
         // Hide all panels initially
@@ -220,8 +225,9 @@ public class MentisLoginFrame extends Application {
         simpleCalendarPanel = new SimpleCalendarPanel(this); // YOURS
         analyticsPanel = new AnalyticsPanel(this); // YOURS
 
-        // ⚠️ CRITICAL: DO NOT create AccessLogsPanel here - create on demand!
+        // Dynamic panels - created on demand
         accessLogsPanel = null;
+        eventPanel = null; // FROM EVENT CODE
 
         System.out.println("All panels initialized successfully");
     }
@@ -230,7 +236,6 @@ public class MentisLoginFrame extends Application {
      * Hide EVERY panel properly!
      */
     private void hideAllPanels() {
-        // Hide ALL panels - no exceptions!
         if (welcomePanel != null) welcomePanel.setVisible(false);
         if (loginPanel != null) loginPanel.setVisible(false);
         if (signupPanel != null) signupPanel.setVisible(false);
@@ -251,6 +256,7 @@ public class MentisLoginFrame extends Application {
         if (recommendationsPanel != null) recommendationsPanel.setVisible(false);
         if (simpleCalendarPanel != null) simpleCalendarPanel.setVisible(false); // YOURS
         if (analyticsPanel != null) analyticsPanel.setVisible(false); // YOURS
+        if (eventPanel != null) eventPanel.setVisible(false); // FROM EVENT CODE
 
         currentVisiblePanel = null;
 
@@ -259,7 +265,6 @@ public class MentisLoginFrame extends Application {
 
     /**
      * Show ONLY one panel, hide all others
-     * This method also handles sidebar visibility and layout
      */
     private void showOnlyPanel(Node panelToShow) {
         hideAllPanels();
@@ -268,24 +273,20 @@ public class MentisLoginFrame extends Application {
             panelToShow.setVisible(true);
             currentVisiblePanel = panelToShow;
 
-            // List of panels that should be FULL WIDTH (no sidebar)
             boolean isFullWidthPanel =
                     panelToShow == welcomePanel ||
                             panelToShow == loginPanel ||
                             panelToShow == signupPanel;
 
             if (isFullWidthPanel) {
-                // Remove sidebar completely for full-width panels
                 mainContainer.setLeft(null);
-                // Content area takes full width
                 mainContainer.setCenter(contentArea);
-                System.out.println("  - FULL WIDTH MODE: " + panelToShow.getClass().getSimpleName() + " (sidebar removed)");
+                System.out.println("  - FULL WIDTH MODE: " + panelToShow.getClass().getSimpleName());
             } else {
-                // Add sidebar back for dashboard panels
                 mainContainer.setLeft(sidebar);
                 mainContainer.setCenter(contentArea);
                 sidebar.setVisible(true);
-                System.out.println("  - SIDEBAR MODE: " + panelToShow.getClass().getSimpleName() + " (sidebar visible)");
+                System.out.println("  - SIDEBAR MODE: " + panelToShow.getClass().getSimpleName());
             }
 
             System.out.println("  - Showing panel: " + panelToShow.getClass().getSimpleName());
@@ -366,20 +367,16 @@ public class MentisLoginFrame extends Application {
     }
 
     private void updateSidebarMenu() {
-        // Clear existing menu items
         sidebar.getChildren().removeIf(node ->
                 node instanceof Button || (node instanceof Separator && sidebar.getChildren().indexOf(node) > 2)
         );
 
-        // Add menu items based on user type
         addSidebarMenuItems();
 
-        // Add Access Logs button ONLY for admin
         if ("admin".equals(currentUserType)) {
             addSidebarButton("Access Logs", "ACCESS_LOGS");
         }
 
-        // Add logout button
         if (!currentUserType.isEmpty()) {
             VBox spacer = new VBox();
             VBox.setVgrow(spacer, Priority.ALWAYS);
@@ -393,7 +390,6 @@ public class MentisLoginFrame extends Application {
 
     private void addSidebarMenuItems() {
         if ("admin".equals(currentUserType)) {
-            // Admin menu items
             addSidebarButton("Dashboard", "ADMIN_DASHBOARD");
             addSidebarButton("Manage Sessions", "SESSION_ADMIN");
             addSidebarButton("Reservations", "RESERVATIONS");
@@ -405,10 +401,9 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Mood Tracking", "ADMIN_DASHBOARD");
             addSidebarButton("Wellbeing", "WELLBEING");
             addSidebarButton("Content", "CONTENT");
-            addSidebarButton("Event", "ADMIN_DASHBOARD");
+            addSidebarButton("Event", "EVENT"); // FROM EVENT CODE
 
         } else if ("psychologist".equals(currentUserType)) {
-            // Psychologist menu items
             addSidebarButton("Dashboard", "RESULTS");
             addSidebarButton("Manage Sessions", "SESSION_ADMIN");
             addSidebarButton("Reservations", "RESERVATIONS");
@@ -418,10 +413,9 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Mood Tracking", "RESULTS");
             addSidebarButton("Wellbeing", "WELLBEING");
             addSidebarButton("Content", "CONTENT");
-            addSidebarButton("Event", "RESULTS");
+            addSidebarButton("Event", "EVENT"); // FROM EVENT CODE
 
         } else if ("patient".equals(currentUserType)) {
-            // Patient menu items
             addSidebarButton("Dashboard", "PATIENT_DASHBOARD");
             addSidebarButton("Available Sessions", "PATIENT_AVAILABLE_SESSIONS");
             addSidebarButton("My Sessions", "PATIENT_MY_SESSIONS");
@@ -432,7 +426,7 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Mood Tracking", "PATIENT_DASHBOARD");
             addSidebarButton("Wellbeing", "WELLBEING");
             addSidebarButton("Content", "CONTENT");
-            addSidebarButton("Event", "PATIENT_DASHBOARD");
+            addSidebarButton("Event", "EVENT"); // FROM EVENT CODE
         }
     }
 
@@ -522,6 +516,9 @@ public class MentisLoginFrame extends Application {
             case "PATIENT":
                 showPatientTablePanel();
                 break;
+            case "EVENT": // FROM EVENT CODE
+                showEventPanel();
+                break;
             case "LOGOUT":
                 logout();
                 break;
@@ -554,23 +551,42 @@ public class MentisLoginFrame extends Application {
     }
 
     /**
+     * Event Panel - FROM EVENT CODE
+     * Recreated each time to get fresh data from EventController
+     */
+    public void showEventPanel() {
+        System.out.println("📌 Showing Event Panel");
+
+        // Remove old event panel if it exists
+        if (eventPanel != null) {
+            contentArea.getChildren().remove(eventPanel);
+        }
+
+        // Create fresh EventController and get its view
+        com.mentalhealth.app.controllers.EventController eventController =
+                new com.mentalhealth.app.controllers.EventController();
+        eventPanel = eventController.getView();
+
+        // Add to content area and show
+        contentArea.getChildren().add(eventPanel);
+        showOnlyPanel(eventPanel);
+    }
+
+    /**
      * Access Logs panel - CREATED ONCE, REUSED!
      */
     public void showAccessLogsPanel() {
         System.out.println("🔵 Showing Access Logs Panel");
 
         try {
-            // Set current user in ContentPathController
             contentPathController.setCurrentUser(currentUserId, currentUserType);
 
-            // Create panel ONLY ONCE!
             if (accessLogsPanel == null) {
                 accessLogsPanel = new AccessLogsPanel(this, contentPathController);
                 contentArea.getChildren().add(accessLogsPanel);
                 System.out.println("  - Created new AccessLogsPanel");
             }
 
-            // Show the panel
             showOnlyPanel(accessLogsPanel);
             accessLogsPanel.refreshData();
 
@@ -618,9 +634,6 @@ public class MentisLoginFrame extends Application {
         resultsPanel.refreshData();
     }
 
-    /**
-     * Content panel - ALREADY CREATED, JUST REUSE!
-     */
     public void showContentUploadPanel() {
         System.out.println("🔵 Showing Content Upload Panel");
         contentUploadPanel.setUserId(currentUserId);
@@ -717,6 +730,65 @@ public class MentisLoginFrame extends Application {
         this.currentUserId = userId;
         this.currentUserName = userName;
 
+        System.out.println("========== LOGIN DEBUG ==========");
+        System.out.println("UserType: " + userType);
+        System.out.println("UserId: " + userId);
+        System.out.println("UserName: " + userName);
+
+        // ===== FROM EVENT CODE: Fetch user email and phone from database =====
+        String userEmail = "";
+        String userPhone = "";
+
+        try {
+            java.sql.Connection conn = utils.MyDB.getInstance().getConnection();
+            if (conn != null) {
+                java.sql.PreparedStatement ps = conn.prepareStatement(
+                        "SELECT * FROM user WHERE id = ?");
+                ps.setInt(1, userId);
+                java.sql.ResultSet rs = ps.executeQuery();
+
+                if (rs.next()) {
+                    java.sql.ResultSetMetaData metaData = rs.getMetaData();
+                    System.out.println("Available columns in user table:");
+                    for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                        System.out.println("  - " + metaData.getColumnName(i));
+                    }
+
+                    try { userEmail = rs.getString("email"); }
+                    catch (Exception e) { System.err.println("Column 'email' not found"); }
+
+                    try { userPhone = rs.getString("phone"); }
+                    catch (Exception e) { System.err.println("Column 'phone' not found"); }
+
+                    System.out.println("Fetched email: '" + userEmail + "'");
+                    System.out.println("Fetched phone: '" + userPhone + "'");
+                }
+                rs.close();
+                ps.close();
+            } else {
+                System.err.println("Database connection is null!");
+            }
+        } catch (Exception e) {
+            System.err.println("Error fetching user details: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        // Store locally
+        this.currentUserEmail = userEmail;
+        this.currentUserPhone = userPhone;
+
+        // ===== FROM EVENT CODE: Populate UserSession for Events module =====
+        com.mentalhealth.app.utils.UserSession.getInstance().login(
+                userId, userName, userEmail, userPhone, userType);
+
+        System.out.println("========== UserSession populated ==========");
+        System.out.println("  UserId: " + com.mentalhealth.app.utils.UserSession.getInstance().getUserId());
+        System.out.println("  UserName: " + com.mentalhealth.app.utils.UserSession.getInstance().getUserName());
+        System.out.println("  UserEmail: " + com.mentalhealth.app.utils.UserSession.getInstance().getUserEmail());
+        System.out.println("  UserPhone: " + com.mentalhealth.app.utils.UserSession.getInstance().getUserPhone());
+        System.out.println("  UserType: " + com.mentalhealth.app.utils.UserSession.getInstance().getUserType());
+        System.out.println("==========================================");
+
         System.out.println("✅ User logged in: " + userName + " (" + this.currentUserType + ") ID: " + userId);
 
         userInfoLabel.setText(userName + " (" + userType + ")");
@@ -727,9 +799,16 @@ public class MentisLoginFrame extends Application {
         takeAssessmentPanel.setUserId(userId);
         resultsPanel.setUserId(userId);
 
-        // Reset AccessLogsPanel so it gets recreated with new user context
+        // Reset dynamic panels so they get recreated with new user context
         if (accessLogsPanel != null) {
+            contentArea.getChildren().remove(accessLogsPanel);
             accessLogsPanel = null;
+        }
+
+        // FROM EVENT CODE: Reset event panel on new login
+        if (eventPanel != null) {
+            contentArea.getChildren().remove(eventPanel);
+            eventPanel = null;
         }
 
         // Check for pending reminders after login
@@ -763,12 +842,11 @@ public class MentisLoginFrame extends Application {
             if (!reminders.isEmpty()) {
                 System.out.println("🔔 Found " + reminders.size() + " pending reminder(s)");
 
-                // Show reminders one by one
                 for (ReminderService.PendingReminder reminder : reminders) {
                     ReminderDialog dialog = new ReminderDialog(
                             this,
                             reminder,
-                            () -> checkPendingReminders() // Refresh after each confirmation
+                            () -> checkPendingReminders()
                     );
                     dialog.showAndWait();
                 }
@@ -786,7 +864,6 @@ public class MentisLoginFrame extends Application {
 
             while (true) {
                 try {
-                    // Check for sessions needing reminders every hour
                     List<Session> sessions = reminderService.getSessionsForReminder();
 
                     for (Session session : sessions) {
@@ -794,14 +871,12 @@ public class MentisLoginFrame extends Application {
                         System.out.println("✅ Reminder sent for session: " + session.getTitle());
                     }
 
-                    // Sleep for 1 hour
                     Thread.sleep(60 * 60 * 1000);
 
                 } catch (Exception e) {
                     System.err.println("❌ Reminder scheduler error: " + e.getMessage());
                     e.printStackTrace();
 
-                    // If error, wait 5 minutes before retrying
                     try {
                         Thread.sleep(5 * 60 * 1000);
                     } catch (InterruptedException ie) {
@@ -823,13 +898,27 @@ public class MentisLoginFrame extends Application {
     public void logout() {
         System.out.println("🔴 Logging out: " + currentUserName);
 
+        // FROM EVENT CODE: Clear Events module UserSession
+        com.mentalhealth.app.utils.UserSession.getInstance().logout();
+
         // Clear user data
         currentUserType = "";
         currentUserId = 0;
         currentUserName = "";
+        currentUserEmail = "";  // FROM EVENT CODE
+        currentUserPhone = "";  // FROM EVENT CODE
 
-        // Reset dynamic panels to force fresh state on next login
-        accessLogsPanel = null;
+        // Reset dynamic panels
+        if (accessLogsPanel != null) {
+            contentArea.getChildren().remove(accessLogsPanel);
+            accessLogsPanel = null;
+        }
+
+        // FROM EVENT CODE: Clean up event panel
+        if (eventPanel != null) {
+            contentArea.getChildren().remove(eventPanel);
+            eventPanel = null;
+        }
 
         // Update UI
         userInfoLabel.setText("Not logged in");
@@ -988,7 +1077,6 @@ public class MentisLoginFrame extends Application {
 
     @Override
     public void stop() {
-        // Clean up TTS resources when application closes
         try {
             services.LocalTTSService.shutdown();
             System.out.println("✅ TTS resources cleaned up");
@@ -1030,6 +1118,8 @@ public class MentisLoginFrame extends Application {
     public String getUserType() { return currentUserType; }
     public int getUserId() { return currentUserId; }
     public String getUserName() { return currentUserName; }
+    public String getUserEmail() { return currentUserEmail; }   // FROM EVENT CODE
+    public String getUserPhone() { return currentUserPhone; }   // FROM EVENT CODE
     public int getLoggedInUserId() { return currentUserId; }
 
     public static void main(String[] args) {
