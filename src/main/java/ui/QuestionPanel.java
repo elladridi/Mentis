@@ -2,6 +2,7 @@ package ui;
 
 import controller.AssessmentController;
 import controller.QuestionController;
+import ui.AIQuestionGeneratorDialog;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -96,14 +97,90 @@ public class QuestionPanel extends VBox {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
+        // Button container for ADD and AI Generate buttons
+        HBox buttonContainer = new HBox(10); // 10px spacing between buttons
+        buttonContainer.setAlignment(Pos.CENTER_RIGHT);
+
         // ADD button
         Button addButton = createAddButton();
         addButton.setOnAction(e -> showAddQuestionDialog());
 
-        titlePanel.getChildren().addAll(titleLeft, spacer, addButton);
+        // AI Generate button
+        Button aiGenerateBtn = createAIGenerateButton();
+
+        buttonContainer.getChildren().addAll(addButton, aiGenerateBtn);
+
+        titlePanel.getChildren().addAll(titleLeft, spacer, buttonContainer);
 
         headerContainer.getChildren().addAll(topRight, titlePanel);
         getChildren().add(headerContainer);
+    }
+
+    // Add this new method to create the AI Generate button
+    private Button createAIGenerateButton() {
+        Button aiGenerateBtn = new Button("🤖 GENERATE WITH AI");
+        aiGenerateBtn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        aiGenerateBtn.setTextFill(Color.WHITE);
+        aiGenerateBtn.setStyle(
+                "-fx-background-color: #425a3f;" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 12 25;" +
+                        "-fx-cursor: hand;"
+        );
+
+        // Hover effect
+        aiGenerateBtn.setOnMouseEntered(e -> aiGenerateBtn.setStyle(
+                "-fx-background-color: #273e1d;" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 12 25;" +
+                        "-fx-cursor: hand;"
+        ));
+
+        aiGenerateBtn.setOnMouseExited(e -> aiGenerateBtn.setStyle(
+                "-fx-background-color: #425a3f;" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 12 25;" +
+                        "-fx-cursor: hand;"
+        ));
+
+        aiGenerateBtn.setOnAction(e -> {
+            if (currentAssessmentId <= 0) {
+                showAlert("No Assessment Selected",
+                        "Please select an assessment first before generating questions.\n\n" +
+                                "Go back to the Assessment Panel and select a specific assessment.",
+                        Alert.AlertType.WARNING);
+                return;
+            }
+
+            // Find the selected assessment
+            Assessment selectedAssessment = null;
+            try {
+                if (assessments != null) {
+                    for (Assessment assessment : assessments) {
+                        if (assessment.getAssessmentId() == currentAssessmentId) {
+                            selectedAssessment = assessment;
+                            break;
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+
+            if (selectedAssessment == null) {
+                showAlert("Error", "Could not find the selected assessment.", Alert.AlertType.ERROR);
+                return;
+            }
+
+            // Open the AI Question Generator dialog
+            new AIQuestionGeneratorDialog(
+                    selectedAssessment,
+                    questionController,  // pass your existing QuestionController instance
+                    this::refreshData     // refresh method
+            ).show();
+        });
+
+        return aiGenerateBtn;
     }
 
     private Button createCancelButton() {

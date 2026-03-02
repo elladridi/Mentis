@@ -85,8 +85,8 @@ public class MentisLoginFrame extends Application {
     private MyReviewsPanel myReviewsPanel;
     private ReservationsPanel reservationsPanel;
     private RecommendationsPanel recommendationsPanel;
-    private SimpleCalendarPanel simpleCalendarPanel;
-    private AnalyticsPanel analyticsPanel; // ⭐ NEW: Analytics panel
+    private SimpleCalendarPanel simpleCalendarPanel; // YOURS
+    private AnalyticsPanel analyticsPanel; // YOURS
 
     private Label userInfoLabel;
 
@@ -105,9 +105,8 @@ public class MentisLoginFrame extends Application {
         // Main container with BorderPane
         mainContainer = new BorderPane();
 
-        // Create sidebar
+        // Create sidebar (initially not added to layout)
         sidebar = createSidebar();
-        sidebar.setVisible(false);
 
         // Create content area
         contentArea = new StackPane();
@@ -135,19 +134,18 @@ public class MentisLoginFrame extends Application {
                 myReviewsPanel,
                 reservationsPanel,
                 recommendationsPanel,
-                simpleCalendarPanel,
-                analyticsPanel // ⭐ ADDED: Analytics panel
+                simpleCalendarPanel, // YOURS
+                analyticsPanel // YOURS
                 // ⚠️ CRITICAL: accessLogsPanel is NOT added here - created on demand!
         );
 
         // Hide all panels initially
         hideAllPanels();
 
-        // Show welcome panel
+        // Show welcome panel (this will set the layout correctly)
         showWelcomePanel();
 
-        // Layout
-        mainContainer.setLeft(sidebar);
+        // Layout - initially set only the center (no sidebar)
         mainContainer.setCenter(contentArea);
 
         root.getChildren().add(mainContainer);
@@ -219,8 +217,8 @@ public class MentisLoginFrame extends Application {
         myReviewsPanel = new MyReviewsPanel(this, sessionReviewController);
         reservationsPanel = new ReservationsPanel(this, sessionController);
         recommendationsPanel = new RecommendationsPanel(this, sessionController);
-        simpleCalendarPanel = new SimpleCalendarPanel(this);
-        analyticsPanel = new AnalyticsPanel(this); // ⭐ NEW: Initialize analytics panel
+        simpleCalendarPanel = new SimpleCalendarPanel(this); // YOURS
+        analyticsPanel = new AnalyticsPanel(this); // YOURS
 
         // ⚠️ CRITICAL: DO NOT create AccessLogsPanel here - create on demand!
         accessLogsPanel = null;
@@ -232,9 +230,6 @@ public class MentisLoginFrame extends Application {
      * Hide EVERY panel properly!
      */
     private void hideAllPanels() {
-        // Hide sidebar
-        sidebar.setVisible(false);
-
         // Hide ALL panels - no exceptions!
         if (welcomePanel != null) welcomePanel.setVisible(false);
         if (loginPanel != null) loginPanel.setVisible(false);
@@ -254,8 +249,8 @@ public class MentisLoginFrame extends Application {
         if (myReviewsPanel != null) myReviewsPanel.setVisible(false);
         if (reservationsPanel != null) reservationsPanel.setVisible(false);
         if (recommendationsPanel != null) recommendationsPanel.setVisible(false);
-        if (simpleCalendarPanel != null) simpleCalendarPanel.setVisible(false);
-        if (analyticsPanel != null) analyticsPanel.setVisible(false); // ⭐ NEW: Hide analytics panel
+        if (simpleCalendarPanel != null) simpleCalendarPanel.setVisible(false); // YOURS
+        if (analyticsPanel != null) analyticsPanel.setVisible(false); // YOURS
 
         currentVisiblePanel = null;
 
@@ -264,13 +259,35 @@ public class MentisLoginFrame extends Application {
 
     /**
      * Show ONLY one panel, hide all others
+     * This method also handles sidebar visibility and layout
      */
     private void showOnlyPanel(Node panelToShow) {
         hideAllPanels();
+
         if (panelToShow != null) {
             panelToShow.setVisible(true);
             currentVisiblePanel = panelToShow;
-            sidebar.setVisible(true);
+
+            // List of panels that should be FULL WIDTH (no sidebar)
+            boolean isFullWidthPanel =
+                    panelToShow == welcomePanel ||
+                            panelToShow == loginPanel ||
+                            panelToShow == signupPanel;
+
+            if (isFullWidthPanel) {
+                // Remove sidebar completely for full-width panels
+                mainContainer.setLeft(null);
+                // Content area takes full width
+                mainContainer.setCenter(contentArea);
+                System.out.println("  - FULL WIDTH MODE: " + panelToShow.getClass().getSimpleName() + " (sidebar removed)");
+            } else {
+                // Add sidebar back for dashboard panels
+                mainContainer.setLeft(sidebar);
+                mainContainer.setCenter(contentArea);
+                sidebar.setVisible(true);
+                System.out.println("  - SIDEBAR MODE: " + panelToShow.getClass().getSimpleName() + " (sidebar visible)");
+            }
+
             System.out.println("  - Showing panel: " + panelToShow.getClass().getSimpleName());
         }
     }
@@ -380,8 +397,8 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Dashboard", "ADMIN_DASHBOARD");
             addSidebarButton("Manage Sessions", "SESSION_ADMIN");
             addSidebarButton("Reservations", "RESERVATIONS");
-            addSidebarButton("Session Calendar", "CALENDAR");
-            addSidebarButton("Analytics", "ANALYTICS"); // ⭐ NEW: Analytics for admin
+            addSidebarButton("Session Calendar", "CALENDAR"); // YOURS
+            addSidebarButton("Analytics", "ANALYTICS"); // YOURS
             addSidebarButton("Assessments", "ASSESSMENT");
             addSidebarButton("Psychologists", "PSYCHOLOGIST");
             addSidebarButton("Patients", "PATIENT");
@@ -395,8 +412,8 @@ public class MentisLoginFrame extends Application {
             addSidebarButton("Dashboard", "RESULTS");
             addSidebarButton("Manage Sessions", "SESSION_ADMIN");
             addSidebarButton("Reservations", "RESERVATIONS");
-            addSidebarButton("Session Calendar", "CALENDAR");
-            addSidebarButton("Analytics", "ANALYTICS"); // ⭐ NEW: Analytics for psychologists
+            addSidebarButton("Session Calendar", "CALENDAR"); // YOURS
+            addSidebarButton("Analytics", "ANALYTICS"); // YOURS
             addSidebarButton("Assessments", "RESULTS");
             addSidebarButton("Mood Tracking", "RESULTS");
             addSidebarButton("Wellbeing", "WELLBEING");
@@ -478,10 +495,10 @@ public class MentisLoginFrame extends Application {
             case "RESERVATIONS":
                 showReservationsPanel();
                 break;
-            case "CALENDAR":
+            case "CALENDAR": // YOURS
                 showSimpleCalendarPanel();
                 break;
-            case "ANALYTICS": // ⭐ NEW: Analytics navigation
+            case "ANALYTICS": // YOURS
                 showAnalyticsPanel();
                 break;
             case "PATIENT_AVAILABLE_SESSIONS":
@@ -518,19 +535,16 @@ public class MentisLoginFrame extends Application {
     public void showWelcomePanel() {
         System.out.println("🔵 Showing Welcome Panel");
         showOnlyPanel(welcomePanel);
-        sidebar.setVisible(false);
     }
 
     public void showLoginPanel() {
         System.out.println("🔵 Showing Login Panel");
         showOnlyPanel(loginPanel);
-        sidebar.setVisible(false);
     }
 
     public void showSignUpPanel() {
         System.out.println("🔵 Showing SignUp Panel");
         showOnlyPanel(signupPanel);
-        sidebar.setVisible(false);
     }
 
     public void showAdminDashboard() {
@@ -630,14 +644,13 @@ public class MentisLoginFrame extends Application {
         reservationsPanel.refreshData();
     }
 
-    public void showSimpleCalendarPanel() {
+    public void showSimpleCalendarPanel() { // YOURS
         System.out.println("🔵 Showing Simple Calendar Panel");
         showOnlyPanel(simpleCalendarPanel);
         simpleCalendarPanel.refreshData();
     }
 
-    // ⭐ NEW: Show Analytics Panel
-    public void showAnalyticsPanel() {
+    public void showAnalyticsPanel() { // YOURS
         System.out.println("🔵 Showing Analytics Panel");
         showOnlyPanel(analyticsPanel);
         analyticsPanel.refreshData();
@@ -708,7 +721,6 @@ public class MentisLoginFrame extends Application {
 
         userInfoLabel.setText(userName + " (" + userType + ")");
         updateSidebarMenu();
-        sidebar.setVisible(true);
 
         // Update user context in all relevant panels
         contentUploadPanel.setUserId(userId);
@@ -823,11 +835,10 @@ public class MentisLoginFrame extends Application {
         userInfoLabel.setText("Not logged in");
         updateSidebarMenu();
 
-        // Hide sidebar and show welcome panel
-        sidebar.setVisible(false);
-        showOnlyPanel(welcomePanel);
+        // Show welcome panel (this will remove sidebar)
+        showWelcomePanel();
 
-        System.out.println("✅ Logout complete - Welcome Panel shown, sidebar hidden");
+        System.out.println("✅ Logout complete - Welcome Panel shown, sidebar removed");
     }
 
     // ================= DIALOG METHODS =================
@@ -973,6 +984,18 @@ public class MentisLoginFrame extends Application {
                 System.out.println("Mock: cancelReservation() called - Session: " + sessionId + ", Patient: " + patientId);
             }
         };
+    }
+
+    @Override
+    public void stop() {
+        // Clean up TTS resources when application closes
+        try {
+            services.LocalTTSService.shutdown();
+            System.out.println("✅ TTS resources cleaned up");
+        } catch (Exception e) {
+            System.err.println("❌ Error cleaning up TTS: " + e.getMessage());
+        }
+        System.out.println("Application stopped");
     }
 
     private SessionReviewController createMockSessionReviewController() {

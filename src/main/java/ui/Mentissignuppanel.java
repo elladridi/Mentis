@@ -9,20 +9,25 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.scene.text.TextAlignment;
-import javafx.scene.Cursor;
+import javafx.stage.FileChooser;
+import javafx.concurrent.Task;
 import models.user;
 import services.userservice;
+import services.CVParserService;
+import services.CVSummarizationService;
+
+import java.io.File;
 
 public class Mentissignuppanel extends VBox {
 
-    // ⭐ Utilise les constantes de MentisLoginFrame
+    // ⭐ MERGED: Using both your constants and their structure
     private static final Color BG_COLOR = MentisLoginFrame.BACKGROUND_LIGHT;
     private static final Color PRIMARY = MentisLoginFrame.ACCENT_DARK_GREEN;
     private static final Color TEXT_GRAY = Color.GRAY;
     private static final Color TEXT_BLACK = Color.BLACK;
     private static final Color WHITE = Color.WHITE;
 
+    // Regular fields
     private RoundedTextField firstNameField;
     private RoundedTextField lastNameField;
     private RoundedTextField phoneField;
@@ -31,11 +36,26 @@ public class Mentissignuppanel extends VBox {
     private RoundedPasswordField passwordField;
     private ComboBox<String> typeComboBox;
     private RoundedButton signUpButton;
+    private CheckBox enableFaceIDCheckBox;
+
+    // CV Upload Section (Only for Psychologists)
+    private VBox cvUploadSection;
+    private Button uploadCVButton;
+    private Label cvStatusLabel;
+    private TextArea summaryArea;
+    private ProgressIndicator aiProgressIndicator;
+    private Label cvInfoLabel;
+
+    // Services
+    private CVParserService cvParser;
+    private CVSummarizationService cvSummarizer;
 
     private final MentisLoginFrame parentApp;
 
     public Mentissignuppanel(MentisLoginFrame parentApp) {
         this.parentApp = parentApp;
+        this.cvParser = new CVParserService();
+        this.cvSummarizer = new CVSummarizationService();
 
         setStyle("-fx-background-color: #" + toHex(BG_COLOR) + ";");
         setAlignment(Pos.CENTER);
@@ -46,17 +66,23 @@ public class Mentissignuppanel extends VBox {
     }
 
     private void initComponents() {
-        // Main container
         BorderPane mainContainer = new BorderPane();
         mainContainer.setStyle("-fx-background-color: #" + toHex(BG_COLOR) + ";");
 
-        // Header panel
+        // Header
         HBox headerPanel = createHeader();
         mainContainer.setTop(headerPanel);
 
         // Center content
+        ScrollPane scrollPane = new ScrollPane();
+        scrollPane.setStyle("-fx-background-color: transparent;");
+        scrollPane.setFitToWidth(true);
+        scrollPane.setBorder(null);
+
         VBox centerPanel = createCenterContent();
-        mainContainer.setCenter(centerPanel);
+        scrollPane.setContent(centerPanel);
+
+        mainContainer.setCenter(scrollPane);
 
         getChildren().add(mainContainer);
         VBox.setVgrow(mainContainer, Priority.ALWAYS);
@@ -66,12 +92,12 @@ public class Mentissignuppanel extends VBox {
         HBox header = new HBox();
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(20, 30, 20, 30));
-        header.setStyle("-fx-background-color: #" + toHex(BG_COLOR) + ";");
+        header.setStyle("-fx-background-color: transparent;");
 
         Label backLabel = new Label("← Back");
         backLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
         backLabel.setTextFill(Color.web(toHex(PRIMARY)));
-        backLabel.setCursor(Cursor.HAND);
+        backLabel.setCursor(javafx.scene.Cursor.HAND);
         backLabel.setOnMouseClicked(e -> parentApp.showWelcomePanel());
 
         header.getChildren().add(backLabel);
@@ -81,14 +107,13 @@ public class Mentissignuppanel extends VBox {
     private VBox createCenterContent() {
         VBox center = new VBox(20);
         center.setAlignment(Pos.CENTER);
-        center.setStyle("-fx-background-color: #" + toHex(BG_COLOR) + ";");
+        center.setStyle("-fx-background-color: transparent;");
         center.setPadding(new Insets(20, 50, 40, 50));
 
         // Title
         Label title = new Label("Create Account");
         title.setFont(Font.font("Arial", FontWeight.BOLD, 48));
         title.setTextFill(Color.web(toHex(PRIMARY)));
-        title.setTextAlignment(TextAlignment.CENTER);
 
         // Logo
         HBox logoContainer = loadLogo();
@@ -96,18 +121,7 @@ public class Mentissignuppanel extends VBox {
         // Form panel
         VBox formPanel = createFormPanel();
 
-        // Login link
-        Label loginLink = new Label("Already have an account? Login");
-        loginLink.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
-        loginLink.setTextFill(Color.web(toHex(PRIMARY)));
-        loginLink.setCursor(Cursor.HAND);
-        loginLink.setOnMouseClicked(e -> parentApp.showLoginPanel());
-        loginLink.setAlignment(Pos.CENTER);
-        loginLink.setMaxWidth(Double.MAX_VALUE);
-
-        center.getChildren().addAll(title, logoContainer, formPanel, loginLink);
-
-        // Set VGrow for form panel
+        center.getChildren().addAll(title, logoContainer, formPanel);
         VBox.setVgrow(formPanel, Priority.ALWAYS);
 
         return center;
@@ -116,42 +130,33 @@ public class Mentissignuppanel extends VBox {
     private HBox loadLogo() {
         HBox logoContainer = new HBox();
         logoContainer.setAlignment(Pos.CENTER);
-        logoContainer.setStyle("-fx-background-color: #" + toHex(BG_COLOR) + ";");
+        logoContainer.setStyle("-fx-background-color: transparent;");
 
         try {
             Image logo = new Image(getClass().getResourceAsStream("/resources/logo.png"));
             ImageView logoView = new ImageView(logo);
-            logoView.setFitWidth(140);
-            logoView.setFitHeight(140);
+            logoView.setFitWidth(100);
+            logoView.setFitHeight(100);
             logoView.setPreserveRatio(true);
             logoContainer.getChildren().add(logoView);
         } catch (Exception e) {
-            // Logo not found, skip
             System.err.println("Logo not found: " + e.getMessage());
         }
-
         return logoContainer;
     }
 
     private VBox createFormPanel() {
         VBox formPanel = new VBox(15);
         formPanel.setAlignment(Pos.CENTER);
-        formPanel.setStyle("-fx-background-color: #" + toHex(BG_COLOR) + ";");
-        formPanel.setPadding(new Insets(20, 50, 20, 50));
+        formPanel.setStyle("-fx-background-color: transparent;");
+        formPanel.setPadding(new Insets(20, 0, 20, 0));
         formPanel.setMaxWidth(900);
 
         // Row 1: First Name & Last Name
         HBox row1 = new HBox(20);
         row1.setAlignment(Pos.CENTER);
-
         firstNameField = createField("First Name");
-        firstNameField.setPrefWidth(300);
-        firstNameField.setPrefHeight(50);
-
         lastNameField = createField("Last Name");
-        lastNameField.setPrefWidth(300);
-        lastNameField.setPrefHeight(50);
-
         row1.getChildren().addAll(firstNameField, lastNameField);
         HBox.setHgrow(firstNameField, Priority.ALWAYS);
         HBox.setHgrow(lastNameField, Priority.ALWAYS);
@@ -159,15 +164,8 @@ public class Mentissignuppanel extends VBox {
         // Row 2: Phone & Date of Birth
         HBox row2 = new HBox(20);
         row2.setAlignment(Pos.CENTER);
-
         phoneField = createField("Phone");
-        phoneField.setPrefWidth(300);
-        phoneField.setPrefHeight(50);
-
         dobField = createField("YYYY-MM-DD");
-        dobField.setPrefWidth(300);
-        dobField.setPrefHeight(50);
-
         row2.getChildren().addAll(phoneField, dobField);
         HBox.setHgrow(phoneField, Priority.ALWAYS);
         HBox.setHgrow(dobField, Priority.ALWAYS);
@@ -180,52 +178,22 @@ public class Mentissignuppanel extends VBox {
         typeComboBox.getItems().addAll("Select Type", "Patient", "Psychologist", "Admin");
         typeComboBox.setValue("Select Type");
         typeComboBox.setPrefWidth(300);
-        typeComboBox.setPrefHeight(50);
+        typeComboBox.setPrefHeight(55);
         typeComboBox.setStyle(
                 "-fx-background-color: white;" +
-                        "-fx-background-radius: 25;" +
-                        "-fx-border-radius: 25;" +
-                        "-fx-padding: 5 15;" +
+                        "-fx-background-radius: 15;" +
+                        "-fx-border-radius: 15;" +
+                        "-fx-padding: 8 15;" +
                         "-fx-font-family: 'Arial';" +
                         "-fx-font-size: 16px;"
         );
 
-        // Style the popup list items with the same font
-        typeComboBox.setCellFactory(lv -> {
-            ListCell<String> cell = new ListCell<>() {
-                @Override
-                protected void updateItem(String item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || item == null) {
-                        setText(null);
-                    } else {
-                        setText(item);
-                        setFont(Font.font("Arial", 16));
-                        setStyle("-fx-padding: 8 15;");
-                    }
-                }
-            };
-            return cell;
-        });
-
-        // Also style the button cell (the selected item display)
-        typeComboBox.setButtonCell(new ListCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                } else {
-                    setText(item);
-                    setFont(Font.font("Arial", 16));
-                }
-            }
+        // Add listener for type selection - to show/hide CV section
+        typeComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            toggleCVSection("Psychologist".equals(newVal));
         });
 
         emailField = createField("Email");
-        emailField.setPrefWidth(300);
-        emailField.setPrefHeight(50);
-
         row3.getChildren().addAll(typeComboBox, emailField);
         HBox.setHgrow(typeComboBox, Priority.ALWAYS);
         HBox.setHgrow(emailField, Priority.ALWAYS);
@@ -233,39 +201,247 @@ public class Mentissignuppanel extends VBox {
         // Row 4: Password
         HBox row4 = new HBox();
         row4.setAlignment(Pos.CENTER);
-
         passwordField = new RoundedPasswordField();
         passwordField.setPrefWidth(620);
-        passwordField.setPrefHeight(50);
+        passwordField.setPrefHeight(55);
         passwordField.setPromptText("Password");
-        passwordField.setStyle(passwordField.getStyle() + "-fx-font-family: 'Arial'; -fx-font-size: 16px;");
-
         row4.getChildren().add(passwordField);
         HBox.setHgrow(passwordField, Priority.ALWAYS);
 
-        // Row 5: Sign Up Button
+        // ===== CV UPLOAD SECTION - ONLY FOR PSYCHOLOGISTS =====
+        cvUploadSection = createCVUploadSection();
+        cvUploadSection.setVisible(false); // Initially hidden
+        cvUploadSection.setManaged(false);
+
+        // Face ID Option
+        HBox rowFace = new HBox(10);
+        rowFace.setAlignment(Pos.CENTER_LEFT);
+        enableFaceIDCheckBox = new CheckBox("Enable Face ID for faster login");
+        enableFaceIDCheckBox.setFont(Font.font("Arial", 14));
+        enableFaceIDCheckBox.setTextFill(Color.web(toHex(PRIMARY.darker())));
+        Tooltip faceTooltip = new Tooltip("After registration, you can use your face to login");
+        enableFaceIDCheckBox.setTooltip(faceTooltip);
+        rowFace.getChildren().add(enableFaceIDCheckBox);
+
+        // Sign Up Button
         HBox row5 = new HBox();
         row5.setAlignment(Pos.CENTER);
         row5.setPadding(new Insets(20, 0, 10, 0));
-
         signUpButton = new RoundedButton("Sign Up");
         signUpButton.setPrefWidth(300);
         signUpButton.setPrefHeight(60);
-        signUpButton.setStyle(signUpButton.getStyle() + "-fx-font-family: 'Arial'; -fx-font-size: 18px; -fx-font-weight: bold;");
         signUpButton.setOnAction(e -> handleSignup());
-
         row5.getChildren().add(signUpButton);
 
-        formPanel.getChildren().addAll(row1, row2, row3, row4, row5);
+        // Login link
+        Label loginLink = new Label("Already have an account? Login");
+        loginLink.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
+        loginLink.setTextFill(Color.web(toHex(PRIMARY)));
+        loginLink.setCursor(javafx.scene.Cursor.HAND);
+        loginLink.setOnMouseClicked(e -> parentApp.showLoginPanel());
+        loginLink.setAlignment(Pos.CENTER);
+        loginLink.setMaxWidth(Double.MAX_VALUE);
+
+        formPanel.getChildren().addAll(
+                row1, row2, row3, row4,
+                cvUploadSection, // This will only show for psychologists
+                rowFace, row5, loginLink
+        );
 
         return formPanel;
+    }
+
+    /**
+     * Toggle CV section visibility based on user type
+     */
+    private void toggleCVSection(boolean show) {
+        cvUploadSection.setVisible(show);
+        cvUploadSection.setManaged(show);
+
+        if (show) {
+            // Clear any previous CV data when switching to psychologist
+            clearCVData();
+        }
+    }
+
+    /**
+     * Clear CV-related data
+     */
+    private void clearCVData() {
+        cvStatusLabel.setText("No file selected");
+        if (summaryArea != null) {
+            summaryArea.clear();
+            summaryArea.setVisible(false);
+            summaryArea.setManaged(false);
+        }
+    }
+
+    private VBox createCVUploadSection() {
+        VBox panel = new VBox(10);
+        panel.setStyle(
+                "-fx-background-color: #f0f8ff;" +
+                        "-fx-background-radius: 10;" +
+                        "-fx-border-radius: 10;" +
+                        "-fx-border-color: #" + toHex(PRIMARY) + ";" +
+                        "-fx-border-width: 2;" +
+                        "-fx-padding: 15;"
+        );
+
+        // Header with icon
+        HBox headerBox = new HBox(10);
+        headerBox.setAlignment(Pos.CENTER_LEFT);
+
+        Label iconLabel = new Label("📄");
+        iconLabel.setFont(Font.font("Arial", 24));
+
+        cvInfoLabel = new Label("Psychologist CV Upload (Optional)");
+        cvInfoLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        cvInfoLabel.setTextFill(Color.web(toHex(PRIMARY)));
+
+        headerBox.getChildren().addAll(iconLabel, cvInfoLabel);
+
+        // Description
+        Label descLabel = new Label("Upload your CV to auto-fill your professional information. You can still fill manually.");
+        descLabel.setFont(Font.font("Arial", 12));
+        descLabel.setTextFill(Color.GRAY);
+        descLabel.setWrapText(true);
+
+        // CV Upload Row
+        HBox cvUploadBox = new HBox(10);
+        cvUploadBox.setAlignment(Pos.CENTER_LEFT);
+
+        uploadCVButton = new Button("📄 Upload CV (PDF/DOCX)");
+        uploadCVButton.setStyle(
+                "-fx-background-color: #" + toHex(PRIMARY) + ";" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-size: 13px;" +
+                        "-fx-padding: 8 15;" +
+                        "-fx-background-radius: 8;"
+        );
+        uploadCVButton.setOnAction(e -> handleCVUpload());
+
+        cvStatusLabel = new Label("No file selected");
+        cvStatusLabel.setFont(Font.font("Arial", 11));
+        cvStatusLabel.setTextFill(Color.GRAY);
+
+        aiProgressIndicator = new ProgressIndicator();
+        aiProgressIndicator.setPrefSize(25, 25);
+        aiProgressIndicator.setVisible(false);
+
+        cvUploadBox.getChildren().addAll(uploadCVButton, cvStatusLabel, aiProgressIndicator);
+
+        // Summary area (initially hidden)
+        summaryArea = new TextArea();
+        summaryArea.setPrefRowCount(3);
+        summaryArea.setWrapText(true);
+        summaryArea.setPromptText("AI summary will appear here after upload...");
+        summaryArea.setEditable(true);
+        summaryArea.setVisible(false);
+        summaryArea.setManaged(false);
+
+        panel.getChildren().addAll(headerBox, descLabel, cvUploadBox, summaryArea);
+
+        return panel;
+    }
+
+    private void handleCVUpload() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Upload CV (Optional)");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("PDF Files", "*.pdf"),
+                new FileChooser.ExtensionFilter("Word Documents", "*.docx"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+
+        File selectedFile = fileChooser.showOpenDialog(getScene().getWindow());
+        if (selectedFile != null) {
+            cvStatusLabel.setText(selectedFile.getName());
+            processCV(selectedFile);
+        }
+    }
+
+    private void processCV(File cvFile) {
+        uploadCVButton.setDisable(true);
+        aiProgressIndicator.setVisible(true);
+        summaryArea.setVisible(true);
+        summaryArea.setManaged(true);
+        summaryArea.setText("⏳ Processing CV with AI... This may take a few seconds.");
+
+        Task<Void> processingTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                try {
+                    // Extract text from CV
+                    String cvText = cvParser.extractTextFromCV(cvFile);
+
+                    // Get AI summary
+                    CVSummarizationService.CVSummary summary = cvSummarizer.summarizeCV(cvText);
+
+                    // Update UI on JavaFX thread
+                    javafx.application.Platform.runLater(() -> {
+                        // Auto-fill the fields with extracted data
+                        if (!summary.getFirstname().isEmpty()) {
+                            firstNameField.setText(summary.getFirstname());
+                        }
+                        if (!summary.getLastname().isEmpty()) {
+                            lastNameField.setText(summary.getLastname());
+                        }
+                        if (!summary.getEmail().isEmpty()) {
+                            emailField.setText(summary.getEmail());
+                        }
+                        if (!summary.getPhone().isEmpty()) {
+                            phoneField.setText(summary.getPhone());
+                        }
+                        if (!summary.getDateofbirth().isEmpty()) {
+                            dobField.setText(summary.getDateofbirth());
+                        }
+
+                        // Create summary message
+                        StringBuilder extracted = new StringBuilder("✅ CV Processed!\n\n");
+                        extracted.append("Extracted Information:\n");
+                        extracted.append("• Name: ").append(summary.getFirstname()).append(" ").append(summary.getLastname()).append("\n");
+                        extracted.append("• Email: ").append(summary.getEmail().isEmpty() ? "Not found" : summary.getEmail()).append("\n");
+                        extracted.append("• Phone: ").append(summary.getPhone().isEmpty() ? "Not found" : summary.getPhone()).append("\n");
+                        extracted.append("• DOB: ").append(summary.getDateofbirth().isEmpty() ? "Not found" : summary.getDateofbirth()).append("\n\n");
+                        extracted.append("You can edit any field below:");
+
+                        summaryArea.setText(extracted.toString());
+
+                        cvStatusLabel.setText("✓ CV processed! Form auto-filled.");
+
+                        // Show success message
+                        if (!summary.getFirstname().isEmpty() || !summary.getLastname().isEmpty()) {
+                            showInfo("CV processed successfully! Form has been auto-filled. You can edit any information.");
+                        } else {
+                            showAlert("Warning",
+                                    "Could not extract much information from the CV. Please fill in the fields manually.",
+                                    Alert.AlertType.WARNING);
+                        }
+                    });
+
+                } catch (Exception e) {
+                    javafx.application.Platform.runLater(() -> {
+                        summaryArea.setText("❌ Error processing CV: " + e.getMessage() + "\n\nPlease fill the form manually.");
+                        showAlert("Error", "Failed to process CV: " + e.getMessage(), Alert.AlertType.ERROR);
+                    });
+                }
+
+                javafx.application.Platform.runLater(() -> {
+                    uploadCVButton.setDisable(false);
+                    aiProgressIndicator.setVisible(false);
+                });
+
+                return null;
+            }
+        };
+
+        new Thread(processingTask).start();
     }
 
     private RoundedTextField createField(String placeholder) {
         RoundedTextField field = new RoundedTextField();
         field.setPromptText(placeholder);
-        field.setStyle(field.getStyle() + "-fx-font-family: 'Arial'; -fx-font-size: 16px;");
-        field.setPrefHeight(50);
+        field.setPrefHeight(55);
         return field;
     }
 
@@ -279,16 +455,17 @@ public class Mentissignuppanel extends VBox {
         String email = emailField.getText().trim();
         String password = passwordField.getText();
         String type = typeComboBox.getValue();
+        boolean enableFaceID = enableFaceIDCheckBox.isSelected();
 
         // Validation
-        if (fn.isEmpty() || fn.equals("First Name") ||
-                ln.isEmpty() || ln.equals("Last Name") ||
-                phone.isEmpty() || phone.equals("Phone") ||
-                dob.isEmpty() || dob.equals("YYYY-MM-DD") ||
-                email.isEmpty() || email.equals("Email") ||
-                password.isEmpty() || password.equals("Password") ||
-                type == null || type.equals("Select Type")) {
+        if (type == null || type.equals("Select Type")) {
+            showError("Please select a user type");
+            signUpButton.setDisable(false);
+            return;
+        }
 
+        if (fn.isEmpty() || ln.isEmpty() || phone.isEmpty() ||
+                dob.isEmpty() || email.isEmpty() || password.isEmpty()) {
             showError("All fields are required");
             signUpButton.setDisable(false);
             return;
@@ -306,14 +483,42 @@ public class Mentissignuppanel extends VBox {
             return;
         }
 
+        // Create user object
         user u = new user(fn, ln, phone, dob, type, email, password);
 
+        // Register user
         if (userservice.registeruser(u)) {
             showSuccess("Account created successfully!");
-            parentApp.showLoginPanel();
+
+            if (enableFaceID) {
+                showInfo("Please register your face now for quick login");
+                user newUser = userservice.getuserByEmail(email);
+                if (newUser != null) {
+                    openFaceIDRegistration(newUser.getId());
+                }
+            } else {
+                parentApp.showLoginPanel();
+            }
+
         } else {
             showError("Registration failed");
             signUpButton.setDisable(false);
+        }
+    }
+
+    private void openFaceIDRegistration(int userId) {
+        try {
+            // Assuming FaceIDDialog exists in your project
+            // If not, you may need to comment this out or implement it
+            // FaceIDDialog dialog = new FaceIDDialog(parentApp, true, userId);
+            // dialog.setOnHidden(e -> parentApp.showLoginPanel());
+            // dialog.show();
+
+            // For now, just go to login panel
+            parentApp.showLoginPanel();
+        } catch (Exception e) {
+            e.printStackTrace();
+            parentApp.showLoginPanel();
         }
     }
 
@@ -323,6 +528,7 @@ public class Mentissignuppanel extends VBox {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+        signUpButton.setDisable(false);
     }
 
     private void showSuccess(String message) {
@@ -333,7 +539,22 @@ public class Mentissignuppanel extends VBox {
         alert.showAndWait();
     }
 
-    // ================= UTILITY =================
+    private void showInfo(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Information");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    private void showAlert(String title, String message, Alert.AlertType type) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
     private String toHex(Color color) {
         return String.format("%02x%02x%02x",
                 (int)(color.getRed() * 255),
@@ -342,37 +563,26 @@ public class Mentissignuppanel extends VBox {
     }
 
     // ================= CUSTOM UI COMPONENTS =================
-
     class RoundedButton extends Button {
         RoundedButton(String text) {
             super(text);
             setTextFill(Color.WHITE);
-            setCursor(Cursor.HAND);
-
-            // Apply rounded style
+            setCursor(javafx.scene.Cursor.HAND);
             setStyle(
                     "-fx-background-color: #" + toHex(PRIMARY) + ";" +
-                            "-fx-background-radius: 30;" +
-                            "-fx-border-radius: 30;" +
+                            "-fx-background-radius: 15;" +
                             "-fx-padding: 12 30;"
             );
-
-            // Hover effect
             setOnMouseEntered(e ->
                     setStyle(
                             "-fx-background-color: #" + toHex(PRIMARY.darker()) + ";" +
-                                    "-fx-background-radius: 30;" +
-                                    "-fx-border-radius: 30;" +
-                                    "-fx-padding: 12 30;"
+                                    "-fx-background-radius: 15;"
                     )
             );
-
             setOnMouseExited(e ->
                     setStyle(
                             "-fx-background-color: #" + toHex(PRIMARY) + ";" +
-                                    "-fx-background-radius: 30;" +
-                                    "-fx-border-radius: 30;" +
-                                    "-fx-padding: 12 30;"
+                                    "-fx-background-radius: 15;"
                     )
             );
         }
@@ -381,36 +591,33 @@ public class Mentissignuppanel extends VBox {
     class RoundedTextField extends TextField {
         RoundedTextField() {
             super();
-
-            // Apply rounded style
             setStyle(
                     "-fx-background-color: white;" +
-                            "-fx-background-radius: 25;" +
-                            "-fx-border-radius: 25;" +
+                            "-fx-background-radius: 15;" +
+                            "-fx-border-radius: 15;" +
+                            "-fx-border-color: transparent;" +
                             "-fx-padding: 12 20;" +
-                            "-fx-prompt-text-fill: #808080;"
+                            "-fx-prompt-text-fill: #808080;" +
+                            "-fx-font-family: 'Arial';" +
+                            "-fx-font-size: 16px;"
             );
-
-            // Add focus effect
             focusedProperty().addListener((obs, oldVal, newVal) -> {
                 if (newVal) {
                     setStyle(
                             "-fx-background-color: white;" +
-                                    "-fx-background-radius: 25;" +
-                                    "-fx-border-radius: 25;" +
+                                    "-fx-background-radius: 15;" +
+                                    "-fx-border-radius: 15;" +
                                     "-fx-border-color: #" + toHex(PRIMARY) + ";" +
                                     "-fx-border-width: 2;" +
-                                    "-fx-padding: 12 20;" +
-                                    "-fx-prompt-text-fill: #808080;"
+                                    "-fx-padding: 12 20;"
                     );
                 } else {
                     setStyle(
                             "-fx-background-color: white;" +
-                                    "-fx-background-radius: 25;" +
-                                    "-fx-border-radius: 25;" +
+                                    "-fx-background-radius: 15;" +
+                                    "-fx-border-radius: 15;" +
                                     "-fx-border-color: transparent;" +
-                                    "-fx-padding: 12 20;" +
-                                    "-fx-prompt-text-fill: #808080;"
+                                    "-fx-padding: 12 20;"
                     );
                 }
             });
@@ -420,36 +627,33 @@ public class Mentissignuppanel extends VBox {
     class RoundedPasswordField extends PasswordField {
         RoundedPasswordField() {
             super();
-
-            // Apply rounded style
             setStyle(
                     "-fx-background-color: white;" +
-                            "-fx-background-radius: 25;" +
-                            "-fx-border-radius: 25;" +
+                            "-fx-background-radius: 15;" +
+                            "-fx-border-radius: 15;" +
+                            "-fx-border-color: transparent;" +
                             "-fx-padding: 12 20;" +
-                            "-fx-prompt-text-fill: #808080;"
+                            "-fx-prompt-text-fill: #808080;" +
+                            "-fx-font-family: 'Arial';" +
+                            "-fx-font-size: 16px;"
             );
-
-            // Add focus effect
             focusedProperty().addListener((obs, oldVal, newVal) -> {
                 if (newVal) {
                     setStyle(
                             "-fx-background-color: white;" +
-                                    "-fx-background-radius: 25;" +
-                                    "-fx-border-radius: 25;" +
+                                    "-fx-background-radius: 15;" +
+                                    "-fx-border-radius: 15;" +
                                     "-fx-border-color: #" + toHex(PRIMARY) + ";" +
                                     "-fx-border-width: 2;" +
-                                    "-fx-padding: 12 20;" +
-                                    "-fx-prompt-text-fill: #808080;"
+                                    "-fx-padding: 12 20;"
                     );
                 } else {
                     setStyle(
                             "-fx-background-color: white;" +
-                                    "-fx-background-radius: 25;" +
-                                    "-fx-border-radius: 25;" +
+                                    "-fx-background-radius: 15;" +
+                                    "-fx-border-radius: 15;" +
                                     "-fx-border-color: transparent;" +
-                                    "-fx-padding: 12 20;" +
-                                    "-fx-prompt-text-fill: #808080;"
+                                    "-fx-padding: 12 20;"
                     );
                 }
             });

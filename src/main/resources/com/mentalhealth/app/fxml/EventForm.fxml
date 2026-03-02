@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<ScrollPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.mentalhealth.app.controllers.EventFormController"
+            fitToWidth="true"
+            styleClass="form-scroll-pane"
+            stylesheets="@../styles/mentis.css">
+
+    <VBox styleClass="form-container"
+          spacing="24"
+          alignment="TOP_CENTER">
+
+        <padding>
+            <Insets top="40" right="60" bottom="40" left="60"/>
+        </padding>
+
+        <!-- Form Header Card -->
+        <VBox styleClass="form-header-card" spacing="8" alignment="CENTER">
+            <Label text="📅" styleClass="form-emoji"/>
+            <Label fx:id="formTitle"
+                   text="Create New Event"
+                   styleClass="form-title"/>
+            <Label text="Fill in the details below to create your event"
+                   styleClass="form-subtitle"/>
+        </VBox>
+
+        <!-- Main Form Card -->
+        <VBox styleClass="form-card" spacing="24">
+
+            <!-- Section: Basic Information -->
+            <VBox spacing="16">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="📝" styleClass="section-emoji"/>
+                    <Label text="Basic Information" styleClass="form-section-title"/>
+                </HBox>
+
+                <!-- Title Field -->
+                <VBox spacing="6" styleClass="field-group">
+                    <HBox spacing="4" alignment="CENTER_LEFT">
+                        <Label text="Event Title" styleClass="field-label"/>
+                        <Label text="*" styleClass="required-marker"/>
+                    </HBox>
+                    <TextField fx:id="titleField"
+                               promptText="Enter event title..."
+                               styleClass="mint-text-field"/>
+                </VBox>
+
+                <!-- Description -->
+                <VBox spacing="6" styleClass="field-group">
+                    <Label text="Description" styleClass="field-label"/>
+                    <TextArea fx:id="descField"
+                              promptText="Describe your event..."
+                              styleClass="mint-text-area"
+                              wrapText="true"
+                              prefRowCount="4"/>
+                    <Label text="Brief description of what attendees can expect"
+                           styleClass="field-hint"/>
+                </VBox>
+
+                <!-- Event Type -->
+                <VBox spacing="6" styleClass="field-group">
+                    <Label text="Event Type" styleClass="field-label"/>
+                    <ComboBox fx:id="typeBox"
+                              promptText="Select type..."
+                              styleClass="mint-combo-box"
+                              maxWidth="Infinity"/>
+                </VBox>
+            </VBox>
+
+            <!-- Divider -->
+            <Separator styleClass="form-divider"/>
+
+            <!-- Section: Date & Time -->
+            <VBox spacing="16">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="🕐" styleClass="section-emoji"/>
+                    <Label text="Date &amp; Time" styleClass="form-section-title"/>
+                </HBox>
+
+                <HBox spacing="20">
+                    <!-- Date -->
+                    <VBox spacing="6" styleClass="field-group" HBox.hgrow="ALWAYS">
+                        <HBox spacing="4" alignment="CENTER_LEFT">
+                            <Label text="Date" styleClass="field-label"/>
+                            <Label text="*" styleClass="required-marker"/>
+                        </HBox>
+                        <DatePicker fx:id="datePicker"
+                                    promptText="Select date"
+                                    styleClass="mint-date-picker"
+                                    maxWidth="Infinity"/>
+                    </VBox>
+
+                    <!-- Time -->
+                    <VBox spacing="6" styleClass="field-group">
+                        <HBox spacing="4" alignment="CENTER_LEFT">
+                            <Label text="Time" styleClass="field-label"/>
+                            <Label text="*" styleClass="required-marker"/>
+                        </HBox>
+                        <HBox alignment="CENTER_LEFT" spacing="8" styleClass="time-picker-row">
+                            <ComboBox fx:id="hourBox"
+                                      promptText="HH"
+                                      styleClass="mint-combo-box-small"
+                                      prefWidth="80"/>
+                            <Label text=":" styleClass="time-separator"/>
+                            <ComboBox fx:id="minBox"
+                                      promptText="MM"
+                                      styleClass="mint-combo-box-small"
+                                      prefWidth="80"/>
+                        </HBox>
+                    </VBox>
+                </HBox>
+            </VBox>
+
+            <!-- Divider -->
+            <Separator styleClass="form-divider"/>
+
+            <!-- Section: Location & Capacity -->
+            <VBox spacing="16">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="📍" styleClass="section-emoji"/>
+                    <Label text="Location &amp; Capacity" styleClass="form-section-title"/>
+                </HBox>
+
+                <!-- Location -->
+                <VBox spacing="6" styleClass="field-group">
+                    <Label text="Location" styleClass="field-label"/>
+                    <HBox spacing="12">
+                        <TextField fx:id="locationField"
+                                   promptText="Enter venue or 'Online'"
+                                   styleClass="mint-text-field"
+                                   HBox.hgrow="ALWAYS"/>
+                        <Button text="📍 Online" styleClass="btn-pill-outline"/>
+                    </HBox>
+                </VBox>
+
+                <HBox spacing="20">
+                    <!-- Max Participants -->
+                    <VBox spacing="6" styleClass="field-group" HBox.hgrow="ALWAYS">
+                        <HBox spacing="4" alignment="CENTER_LEFT">
+                            <Label text="Max Participants" styleClass="field-label"/>
+                            <Label text="*" styleClass="required-marker"/>
+                        </HBox>
+                        <TextField fx:id="maxPartField"
+                                   promptText="e.g., 50"
+                                   styleClass="mint-text-field"/>
+                        <Label text="Leave empty for unlimited" styleClass="field-hint"/>
+                    </VBox>
+
+                    <!-- Price -->
+                    <VBox spacing="6" styleClass="field-group" HBox.hgrow="ALWAYS">
+                        <Label text="Price ($)" styleClass="field-label"/>
+                        <HBox styleClass="price-input-wrapper">
+                            <Label text="$" styleClass="price-prefix"/>
+                            <TextField fx:id="priceField"
+                                       promptText="0.00"
+                                       styleClass="mint-text-field-price"
+                                       HBox.hgrow="ALWAYS"/>
+                        </HBox>
+                        <Label text="Enter 0 for free events" styleClass="field-hint"/>
+                    </VBox>
+                </HBox>
+            </VBox>
+
+            <!-- Divider -->
+            <Separator styleClass="form-divider"/>
+
+            <!-- Section: Status -->
+            <VBox spacing="16">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="⚙️" styleClass="section-emoji"/>
+                    <Label text="Event Status" styleClass="form-section-title"/>
+                </HBox>
+
+                <VBox spacing="6" styleClass="field-group">
+                    <Label text="Status" styleClass="field-label"/>
+                    <ComboBox fx:id="statusBox"
+                              promptText="Select status..."
+                              styleClass="mint-combo-box"
+                              maxWidth="300"/>
+                </VBox>
+            </VBox>
+
+        </VBox>
+
+        <!-- Error Message Card -->
+        <HBox fx:id="errorContainer"
+              styleClass="error-card"
+              alignment="CENTER_LEFT"
+              spacing="12"
+              visible="false"
+              managed="false">
+            <Label text="⚠️" styleClass="error-icon"/>
+            <VBox spacing="2" HBox.hgrow="ALWAYS">
+                <Label text="Error" styleClass="error-title"/>
+                <Label fx:id="errorLabel"
+                       text=""
+                       styleClass="error-text"
+                       wrapText="true"/>
+            </VBox>
+            <Button text="✕"
+                    onAction="#hideError"
+                    styleClass="error-close-btn"/>
+        </HBox>
+
+        <!-- Action Buttons -->
+        <HBox alignment="CENTER" spacing="16" styleClass="form-actions">
+            <Button fx:id="cancelBtn"
+                    text="← Cancel"
+                    onAction="#handleCancel"
+                    styleClass="btn-secondary-outline"
+                    prefWidth="150"/>
+            <Button fx:id="saveBtn"
+                    text="Create Event ✓"
+                    onAction="#handleSave"
+                    styleClass="btn-primary-mint"
+                    prefWidth="180"/>
+        </HBox>
+
+        <!-- Footer Hint -->
+        <Label text="* Required fields" styleClass="footer-hint"/>
+
+    </VBox>
+</ScrollPane>

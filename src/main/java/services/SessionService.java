@@ -359,4 +359,28 @@ public class SessionService {
 
         return s;
     }
+
+    // Add this method to SessionService.java
+    public List<Session> getSessionsByPsychologist(int psychologistId) throws SQLException {
+        List<Session> list = new ArrayList<>();
+
+        // Assuming your sessions table has a psychologist_id field
+        // If not, you'll need to modify your database schema
+        String sql = "SELECT * FROM sessions WHERE psychologist_id = ? ORDER BY session_date DESC";
+
+        try {
+            PreparedStatement ps = cnx.prepareStatement(sql);
+            ps.setInt(1, psychologistId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                list.add(extractSessionFromResultSet(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error getting sessions for psychologist: " + e.getMessage());
+            throw e;
+        }
+
+        return list;
+    }
 }

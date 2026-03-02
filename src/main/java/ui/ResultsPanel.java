@@ -17,25 +17,33 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.scene.text.TextAlignment;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import models.AssessmentResult;
-
-import java.sql.SQLException;
+import javafx.scene.chart.*;
+import java.util.*;
 import java.text.SimpleDateFormat;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+import models.Session;
+import services.SessionService;
+import services.userservice;
+import services.AssessmentService;
 
 public class ResultsPanel extends VBox {
 
-    private MentisLoginFrame parentApp;  // FIXED: Changed from MentisLoginFrame to MentisLoginFrame
+    private MentisLoginFrame parentApp;
     private AssessmentResultController controller;
     private TableView<ResultModel> resultsTable;
     private ObservableList<ResultModel> resultData;
-    private TextField userIdField;
     private Label userTypeLabel;
-    private ComboBox<String> viewModeComboBox;
     private Label notificationLabel;
+
+    // Add service instances to fetch user and assessment data
+    private userservice userService;
+    private AssessmentService assessmentService;
 
     // Color constants
     private static final Color BACKGROUND_BEIGE = Color.rgb(243, 243, 243);
@@ -48,9 +56,11 @@ public class ResultsPanel extends VBox {
     private static final Color RISK_MEDIUM = Color.rgb(153, 102, 0);
     private static final Color RISK_LOW = Color.rgb(0, 128, 0);
 
-    public ResultsPanel(MentisLoginFrame parentApp, AssessmentResultController controller) {  // FIXED: Parameter type
+    public ResultsPanel(MentisLoginFrame parentApp, AssessmentResultController controller) {
         this.parentApp = parentApp;
         this.controller = controller;
+        this.userService = new userservice();
+        this.assessmentService = new AssessmentService();
 
         setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
         setPadding(new Insets(45, 50, 45, 50));
@@ -66,89 +76,49 @@ public class ResultsPanel extends VBox {
         BorderPane headerPanel = new BorderPane();
         headerPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
 
-        // Title
         Label titleLabel = new Label("Assessment Results");
         titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 42));
         titleLabel.setTextFill(Color.web(toHex(ACCENT_GREEN)));
 
-        // Top right panel
         HBox topRightPanel = new HBox(20);
         topRightPanel.setAlignment(Pos.CENTER_RIGHT);
         topRightPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
 
-        // User type indicator
         String userType = parentApp.getUserType();
-        userTypeLabel = new Label("User: " + userType.toUpperCase());
+        userTypeLabel = new Label(getUserTypeDisplay(userType));
         userTypeLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
         userTypeLabel.setTextFill(Color.web(toHex(ACCENT_GREEN)));
         userTypeLabel.setPadding(new Insets(0, 20, 0, 0));
 
-        // Assessment button - ONLY FOR ADMIN
+        // Admin gets the Assessment navigation link
         if ("admin".equals(userType)) {
             Button assessmentLink = createHeaderLink("Assessment");
-            // FIXED: Changed from showPanel to showAssessmentPanel
             assessmentLink.setOnAction(e -> parentApp.showAssessmentPanel());
-            topRightPanel.getChildren().add(assessmentLink);
-            topRightPanel.getChildren().add(createSpacer(20));
+            topRightPanel.getChildren().addAll(assessmentLink, createSpacer(20));
         }
 
-        // View mode dropdown (for admin/psychologist only)
-        viewModeComboBox = new ComboBox<>();
-        viewModeComboBox.getItems().addAll("My Results", "All Results", "Filter by User ID");
-        viewModeComboBox.setValue("My Results");
-        // FIXED: Removed setFont and added to CSS
-        viewModeComboBox.setVisible(false); // Initially hidden
-        viewModeComboBox.setPrefWidth(150);
-        viewModeComboBox.setStyle(
-                "-fx-font-family: 'Segoe UI';" +
-                        "-fx-font-size: 13px;"
-        );
-        viewModeComboBox.setOnAction(e -> onViewModeChanged());
-
-        // User ID field
-        userIdField = new TextField();
-        userIdField.setPromptText("Enter User ID");
-        userIdField.setStyle(
-                "-fx-font-family: 'Segoe UI';" +
-                        "-fx-font-size: 14px;" +
-                        "-fx-background-color: #" + toHex(ACCENT_LIGHT_GREEN) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-padding: 8 12;"
-        );
-        userIdField.setPrefWidth(120);
-        userIdField.setVisible(false);
-        userIdField.setOnAction(e -> refreshData());
-
-        // User ID label
-        Label userIdLabel = new Label("User ID:");
-        userIdLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
-        userIdLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-        userIdLabel.setVisible(false);
-
-        // Refresh button
         Button refreshButton = createRefreshButton();
 
-        // Add components to top right panel
-        topRightPanel.getChildren().add(userTypeLabel);
-
-        if ("admin".equals(userType) || "psychologist".equals(userType)) {
-            topRightPanel.getChildren().addAll(
-                    createSpacer(20),
-                    viewModeComboBox,
-                    createSpacer(10),
-                    userIdLabel,
-                    userIdField
-            );
+        if (!"Admin".equals(userType) && !"Psychologist".equals(userType)) {
+            Button progressBtn = createProgressButton();
+            topRightPanel.getChildren().addAll(userTypeLabel, createSpacer(10), progressBtn, createSpacer(10), refreshButton);
+        } else {
+            topRightPanel.getChildren().addAll(userTypeLabel, createSpacer(10), refreshButton);
         }
-
-        topRightPanel.getChildren().addAll(createSpacer(10), refreshButton);
 
         headerPanel.setLeft(titleLabel);
         headerPanel.setRight(topRightPanel);
 
         getChildren().add(headerPanel);
+    }
+
+    private String getUserTypeDisplay(String userType) {
+        switch (userType) {
+            case "Patient":      return "Patient - Your Results";
+            case "Psychologist": return "PSYCHOLOGIST - Your Patients' Results";
+            case "Admin":        return "ADMINISTRATOR - All Results";
+            default:             return "User: " + userType.toUpperCase();
+        }
     }
 
     private Button createHeaderLink(String text) {
@@ -160,24 +130,17 @@ public class ResultsPanel extends VBox {
                         "-fx-border-width: 0;" +
                         "-fx-cursor: hand;"
         );
-
-        // Hover effect with underline
-        link.setOnMouseEntered(e ->
-                link.setStyle(
-                        "-fx-background-color: transparent;" +
-                                "-fx-border-width: 0 0 2 0;" +
-                                "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
-                                "-fx-cursor: hand;"
-                )
-        );
-        link.setOnMouseExited(e ->
-                link.setStyle(
-                        "-fx-background-color: transparent;" +
-                                "-fx-border-width: 0;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
+        link.setOnMouseEntered(e -> link.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-border-width: 0 0 2 0;" +
+                        "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
+                        "-fx-cursor: hand;"
+        ));
+        link.setOnMouseExited(e -> link.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-border-width: 0;" +
+                        "-fx-cursor: hand;"
+        ));
         return link;
     }
 
@@ -191,26 +154,60 @@ public class ResultsPanel extends VBox {
                         "-fx-padding: 10 20;" +
                         "-fx-cursor: hand;"
         );
-
-        // Hover effect
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(ACCENT_GREEN.darker()) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 10 20;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(ACCENT_GREEN) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 10 20;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: #" + toHex(ACCENT_GREEN.darker()) + ";" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 10 20;" +
+                        "-fx-cursor: hand;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+                "-fx-background-color: #" + toHex(ACCENT_GREEN) + ";" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-padding: 10 20;" +
+                        "-fx-cursor: hand;"
+        ));
         button.setOnAction(e -> refreshData());
+        return button;
+    }
+
+    private Button createProgressButton() {
+        Button button = new Button("📈 My Progress");
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        button.setTextFill(Color.web(toHex(ACCENT_GREEN)));
+        button.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
+                        "-fx-border-width: 2;" +
+                        "-fx-background-radius: 5;" +
+                        "-fx-border-radius: 5;" +
+                        "-fx-padding: 10 20;" +
+                        "-fx-cursor: hand;"
+        );
+        button.setOnMouseEntered(e -> {
+            button.setStyle(
+                    "-fx-background-color: #" + toHex(ACCENT_GREEN) + ";" +
+                            "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
+                            "-fx-border-width: 2;" +
+                            "-fx-background-radius: 5;" +
+                            "-fx-border-radius: 5;" +
+                            "-fx-padding: 10 20;" +
+                            "-fx-cursor: hand;"
+            );
+            button.setTextFill(Color.WHITE);
+        });
+        button.setOnMouseExited(e -> {
+            button.setStyle(
+                    "-fx-background-color: white;" +
+                            "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
+                            "-fx-border-width: 2;" +
+                            "-fx-background-radius: 5;" +
+                            "-fx-border-radius: 5;" +
+                            "-fx-padding: 10 20;" +
+                            "-fx-cursor: hand;"
+            );
+            button.setTextFill(Color.web(toHex(ACCENT_GREEN)));
+        });
+        button.setOnAction(e -> showProgressDialog());
         return button;
     }
 
@@ -220,42 +217,16 @@ public class ResultsPanel extends VBox {
         return spacer;
     }
 
-    private void onViewModeChanged() {
-        String selected = viewModeComboBox.getValue();
-        if ("Filter by User ID".equals(selected)) {
-            userIdField.setVisible(true);
-            userIdField.requestFocus();
-
-            // Also show the User ID label
-            for (javafx.scene.Node node : ((HBox) userTypeLabel.getParent()).getChildren()) {
-                if (node instanceof Label && ((Label) node).getText().equals("User ID:")) {
-                    node.setVisible(true);
-                    break;
-                }
-            }
-        } else {
-            userIdField.setVisible(false);
-            userIdField.setText("");
-
-            // Hide the User ID label
-            for (javafx.scene.Node node : ((HBox) userTypeLabel.getParent()).getChildren()) {
-                if (node instanceof Label && ((Label) node).getText().equals("User ID:")) {
-                    node.setVisible(false);
-                    break;
-                }
-            }
-        }
-        refreshData();
-    }
+    // ═══════════════════════════════════════════════════════════════
+    //  TABLE - UPDATED TO SHOW NAMES INSTEAD OF IDs
+    // ═══════════════════════════════════════════════════════════════
 
     private void createTable() {
         resultsTable = new TableView<>();
         resultsTable.setStyle("-fx-background-color: white; -fx-border-color: #" + toHex(BORDER_LIGHT) + ";");
-        // FIXED: setRowHeight doesn't exist in JavaFX TableView
-        resultsTable.setFixedCellSize(50);  // Use setFixedCellSize instead
+        resultsTable.setFixedCellSize(50);
         resultsTable.setPlaceholder(new Label("No results found"));
 
-        // Alternating row colors
         resultsTable.setRowFactory(tv -> new TableRow<ResultModel>() {
             @Override
             protected void updateItem(ResultModel item, boolean empty) {
@@ -270,21 +241,46 @@ public class ResultsPanel extends VBox {
             }
         });
 
-        // Create columns
         TableColumn<ResultModel, Integer> idCol = new TableColumn<>("ID");
         idCol.setCellValueFactory(new PropertyValueFactory<>("resultId"));
         idCol.setPrefWidth(50);
         idCol.setStyle("-fx-alignment: CENTER;");
 
-        TableColumn<ResultModel, Integer> userIdCol = new TableColumn<>("User ID");
-        userIdCol.setCellValueFactory(new PropertyValueFactory<>("userId"));
-        userIdCol.setPrefWidth(80);
-        userIdCol.setStyle("-fx-alignment: CENTER;");
+        // REPLACED: User ID column with User Name column
+        TableColumn<ResultModel, String> userNameCol = new TableColumn<>("User Name");
+        userNameCol.setCellValueFactory(new PropertyValueFactory<>("userName"));
+        userNameCol.setPrefWidth(150);
+        userNameCol.setStyle("-fx-alignment: CENTER-LEFT;");
+        userNameCol.setCellFactory(col -> new TableCell<ResultModel, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+                }
+            }
+        });
 
-        TableColumn<ResultModel, Integer> assessmentIdCol = new TableColumn<>("Assessment ID");
-        assessmentIdCol.setCellValueFactory(new PropertyValueFactory<>("assessmentId"));
-        assessmentIdCol.setPrefWidth(110);
-        assessmentIdCol.setStyle("-fx-alignment: CENTER;");
+        // REPLACED: Assessment ID column with Assessment Title column
+        TableColumn<ResultModel, String> assessmentTitleCol = new TableColumn<>("Assessment");
+        assessmentTitleCol.setCellValueFactory(new PropertyValueFactory<>("assessmentTitle"));
+        assessmentTitleCol.setPrefWidth(200);
+        assessmentTitleCol.setStyle("-fx-alignment: CENTER-LEFT;");
+        assessmentTitleCol.setCellFactory(col -> new TableCell<ResultModel, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+                }
+            }
+        });
 
         TableColumn<ResultModel, Integer> scoreCol = new TableColumn<>("Score");
         scoreCol.setCellValueFactory(new PropertyValueFactory<>("totalScore"));
@@ -337,20 +333,18 @@ public class ResultsPanel extends VBox {
         actionCol.setCellFactory(col -> new ActionButtonCell());
         actionCol.setStyle("-fx-alignment: CENTER;");
 
-        resultsTable.getColumns().addAll(idCol, userIdCol, assessmentIdCol, scoreCol,
+        // Updated columns order - now showing names instead of IDs
+        resultsTable.getColumns().addAll(idCol, userNameCol, assessmentTitleCol, scoreCol,
                 riskCol, dateCol, sessionCol, actionCol);
 
-        // Style table header
-        resultsTable.getColumns().forEach(col -> {
-            col.setStyle(
-                    "-fx-background-color: white;" +
-                            "-fx-text-fill: #" + toHex(TEXT_DARK) + ";" +
-                            "-fx-font-size: 14px;" +
-                            "-fx-font-weight: bold;" +
-                            "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                            "-fx-border-width: 0 0 2 0;"
-            );
-        });
+        resultsTable.getColumns().forEach(col -> col.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-text-fill: #" + toHex(TEXT_DARK) + ";" +
+                        "-fx-font-size: 14px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
+                        "-fx-border-width: 0 0 2 0;"
+        ));
 
         VBox.setVgrow(resultsTable, Priority.ALWAYS);
         getChildren().add(resultsTable);
@@ -365,7 +359,10 @@ public class ResultsPanel extends VBox {
         getChildren().add(notificationLabel);
     }
 
-    // Action Button Cell
+    // ═══════════════════════════════════════════════════════════════
+    //  ACTION CELL
+    // ═══════════════════════════════════════════════════════════════
+
     class ActionButtonCell extends TableCell<ResultModel, Void> {
         private final Button viewButton;
 
@@ -381,7 +378,6 @@ public class ResultsPanel extends VBox {
                             "-fx-padding: 8 15;" +
                             "-fx-cursor: hand;"
             );
-
             viewButton.setOnAction(e -> {
                 ResultModel result = getTableView().getItems().get(getIndex());
                 viewResultDetails(result);
@@ -391,29 +387,32 @@ public class ResultsPanel extends VBox {
         @Override
         protected void updateItem(Void item, boolean empty) {
             super.updateItem(item, empty);
-            if (empty) {
-                setGraphic(null);
-            } else {
-                setGraphic(viewButton);
-            }
+            setGraphic(empty ? null : viewButton);
         }
     }
 
-    // Result Model for TableView
+    // ═══════════════════════════════════════════════════════════════
+    //  RESULT MODEL - UPDATED to include userName and assessmentTitle
+    // ═══════════════════════════════════════════════════════════════
+
     public static class ResultModel {
         private final SimpleIntegerProperty resultId;
-        private final SimpleIntegerProperty userId;
-        private final SimpleIntegerProperty assessmentId;
+        private final SimpleIntegerProperty userId; // Keep for reference
+        private final SimpleIntegerProperty assessmentId; // Keep for reference
+        private final SimpleStringProperty userName; // New field
+        private final SimpleStringProperty assessmentTitle; // New field
         private final SimpleIntegerProperty totalScore;
         private final SimpleStringProperty riskLevel;
         private final SimpleStringProperty takenAt;
         private final SimpleBooleanProperty suggestSession;
 
-        public ResultModel(int resultId, int userId, int assessmentId, int totalScore,
-                           String riskLevel, String takenAt, boolean suggestSession) {
+        public ResultModel(int resultId, int userId, int assessmentId, String userName, String assessmentTitle,
+                           int totalScore, String riskLevel, String takenAt, boolean suggestSession) {
             this.resultId = new SimpleIntegerProperty(resultId);
             this.userId = new SimpleIntegerProperty(userId);
             this.assessmentId = new SimpleIntegerProperty(assessmentId);
+            this.userName = new SimpleStringProperty(userName);
+            this.assessmentTitle = new SimpleStringProperty(assessmentTitle);
             this.totalScore = new SimpleIntegerProperty(totalScore);
             this.riskLevel = new SimpleStringProperty(riskLevel);
             this.takenAt = new SimpleStringProperty(takenAt);
@@ -423,66 +422,59 @@ public class ResultsPanel extends VBox {
         public int getResultId() { return resultId.get(); }
         public int getUserId() { return userId.get(); }
         public int getAssessmentId() { return assessmentId.get(); }
+        public String getUserName() { return userName.get(); }
+        public String getAssessmentTitle() { return assessmentTitle.get(); }
         public int getTotalScore() { return totalScore.get(); }
         public String getRiskLevel() { return riskLevel.get(); }
         public String getTakenAt() { return takenAt.get(); }
         public boolean isSuggestSession() { return suggestSession.get(); }
 
-        // Property getters for TableView
         public SimpleIntegerProperty resultIdProperty() { return resultId; }
         public SimpleIntegerProperty userIdProperty() { return userId; }
         public SimpleIntegerProperty assessmentIdProperty() { return assessmentId; }
+        public SimpleStringProperty userNameProperty() { return userName; }
+        public SimpleStringProperty assessmentTitleProperty() { return assessmentTitle; }
         public SimpleIntegerProperty totalScoreProperty() { return totalScore; }
         public SimpleStringProperty riskLevelProperty() { return riskLevel; }
         public SimpleStringProperty takenAtProperty() { return takenAt; }
         public SimpleBooleanProperty suggestSessionProperty() { return suggestSession; }
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  VIEW RESULT DETAILS - UPDATED to show names in dialog
+    // ═══════════════════════════════════════════════════════════════
+
     private void viewResultDetails(ResultModel resultModel) {
         try {
             String userType = parentApp.getUserType();
-            AssessmentResult result = null;
+            if ("patient".equals(userType) && resultModel.getUserId() != parentApp.getUserId()) {
+                showAlert("Access Denied", "You can only view your own results!", Alert.AlertType.ERROR);
+                return;
+            }
 
-            if ("patient".equals(userType)) {
-                // Patient can only view their own results
-                List<AssessmentResult> results = controller.getUserResults(parentApp.getUserId());
-                for (AssessmentResult r : results) {
-                    if (r.getResultId() == resultModel.getResultId() &&
-                            r.getUserId() == parentApp.getUserId()) {
-                        result = r;
-                        break;
-                    }
-                }
-            } else {
-                // Admin/Psychologist can view any result
-                List<AssessmentResult> allResults = controller.getAllResults();
-                for (AssessmentResult r : allResults) {
-                    if (r.getResultId() == resultModel.getResultId() &&
-                            r.getUserId() == resultModel.getUserId()) {
-                        result = r;
-                        break;
-                    }
+            AssessmentResult result = null;
+            for (AssessmentResult r : controller.getAllResults()) {
+                if (r.getResultId() == resultModel.getResultId()) {
+                    result = r;
+                    break;
                 }
             }
 
             if (result != null) {
-                showResultDialog(result);
+                showResultDialog(result, resultModel.getUserName(), resultModel.getAssessmentTitle());
             } else {
-                showAlert("Error",
-                        "Result not found or you don't have permission to view this result!",
-                        Alert.AlertType.ERROR);
+                showAlert("Error", "Result not found!", Alert.AlertType.ERROR);
             }
-
         } catch (Exception e) {
+            e.printStackTrace();
             showAlert("Error", "Error: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
-    private void showResultDialog(AssessmentResult result) {
+    // UPDATED to accept userName and assessmentTitle
+    private void showResultDialog(AssessmentResult result, String userName, String assessmentTitle) {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
-        // FIXED: Removed initOwner since getScene() doesn't exist in MentisLoginFrame
-        // dialog.initOwner(parentApp.getScene().getWindow());
         dialog.setTitle("Result Details");
         dialog.setMinWidth(500);
         dialog.setMinHeight(600);
@@ -493,36 +485,28 @@ public class ResultsPanel extends VBox {
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        // Title
         Label titleLabel = new Label("Result Details");
         titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
         titleLabel.setTextFill(Color.web(toHex(ACCENT_GREEN)));
 
-        Separator separator1 = new Separator();
-        separator1.setStyle("-fx-background-color: #" + toHex(BORDER_LIGHT) + ";");
-
-        // Details table
         GridPane detailsGrid = new GridPane();
         detailsGrid.setHgap(20);
         detailsGrid.setVgap(10);
         detailsGrid.setPadding(new Insets(15, 0, 15, 0));
 
-        addDetailRow(detailsGrid, 0, "Result ID:", String.valueOf(result.getResultId()));
-        addDetailRow(detailsGrid, 1, "User ID:", String.valueOf(result.getUserId()));
-        addDetailRow(detailsGrid, 2, "Assessment ID:", String.valueOf(result.getAssessmentId()));
-        addDetailRow(detailsGrid, 3, "Total Score:", String.valueOf(result.getTotalScore()));
+        addDetailRow(detailsGrid, 0, "Result ID:",     String.valueOf(result.getResultId()));
+        // Show user name instead of ID
+        addDetailRow(detailsGrid, 1, "User:",          userName + " (ID: " + result.getUserId() + ")");
+        // Show assessment title instead of ID
+        addDetailRow(detailsGrid, 2, "Assessment:",    assessmentTitle + " (ID: " + result.getAssessmentId() + ")");
+        addDetailRow(detailsGrid, 3, "Total Score:",   String.valueOf(result.getTotalScore()));
 
         Label riskValue = new Label(result.getRiskLevel());
         riskValue.setTextFill(getRiskColor(result.getRiskLevel()));
         riskValue.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
         addDetailRow(detailsGrid, 4, "Risk Level:", riskValue);
-
         addDetailRow(detailsGrid, 5, "Date Taken:", sdf.format(result.getTakenAt()));
 
-        Separator separator2 = new Separator();
-        separator2.setStyle("-fx-background-color: #" + toHex(BORDER_LIGHT) + ";");
-
-        // Interpretation
         Label interpretationLabel = new Label("Interpretation:");
         interpretationLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
         interpretationLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
@@ -531,10 +515,6 @@ public class ResultsPanel extends VBox {
         interpretationText.setWrapText(true);
         interpretationText.setFont(Font.font("Segoe UI", 13));
 
-        Separator separator3 = new Separator();
-        separator3.setStyle("-fx-background-color: #" + toHex(BORDER_LIGHT) + ";");
-
-        // Recommendations
         Label recLabel = new Label("Recommendations:");
         recLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
         recLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
@@ -543,16 +523,11 @@ public class ResultsPanel extends VBox {
         recText.setWrapText(true);
         recText.setFont(Font.font("Segoe UI", 13));
 
-        Separator separator4 = new Separator();
-        separator4.setStyle("-fx-background-color: #" + toHex(BORDER_LIGHT) + ";");
-
-        // Session suggested
         Label sessionLabel = new Label("Session Suggested: " + (result.isSuggestSession() ? "Yes" : "No"));
         sessionLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
         sessionLabel.setTextFill(result.isSuggestSession() ?
                 Color.web(toHex(RISK_HIGH)) : Color.web(toHex(RISK_LOW)));
 
-        // Close button
         Button closeButton = new Button("Close");
         closeButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
         closeButton.setTextFill(Color.WHITE);
@@ -569,9 +544,10 @@ public class ResultsPanel extends VBox {
         buttonBox.getChildren().add(closeButton);
 
         content.getChildren().addAll(
-                titleLabel, separator1, detailsGrid, separator2,
-                interpretationLabel, interpretationText, separator3,
-                recLabel, recText, separator4, sessionLabel, buttonBox
+                titleLabel, new Separator(), detailsGrid, new Separator(),
+                interpretationLabel, interpretationText, new Separator(),
+                recLabel, recText, new Separator(),
+                sessionLabel, buttonBox
         );
 
         ScrollPane scrollPane = new ScrollPane(content);
@@ -579,8 +555,7 @@ public class ResultsPanel extends VBox {
         scrollPane.setBorder(null);
         scrollPane.setStyle("-fx-background-color: white;");
 
-        Scene scene = new Scene(scrollPane, 500, 600);
-        dialog.setScene(scene);
+        dialog.setScene(new Scene(scrollPane, 500, 600));
         dialog.showAndWait();
     }
 
@@ -588,11 +563,9 @@ public class ResultsPanel extends VBox {
         Label lbl = new Label(label);
         lbl.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
         lbl.setTextFill(Color.web(toHex(TEXT_DARK)));
-
         Label val = new Label(value);
         val.setFont(Font.font("Segoe UI", 13));
         val.setTextFill(Color.web(toHex(TEXT_DARK)));
-
         grid.add(lbl, 0, row);
         grid.add(val, 1, row);
     }
@@ -601,98 +574,292 @@ public class ResultsPanel extends VBox {
         Label lbl = new Label(label);
         lbl.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
         lbl.setTextFill(Color.web(toHex(TEXT_DARK)));
-
         grid.add(lbl, 0, row);
         grid.add(valueNode, 1, row);
     }
 
     private Color getRiskColor(String risk) {
-        String lowerRisk = risk.toLowerCase();
-        if (lowerRisk.contains("high") || lowerRisk.contains("severe")) {
-            return RISK_HIGH;
-        } else if (lowerRisk.contains("moderate") || lowerRisk.contains("mild")) {
-            return RISK_MEDIUM;
-        } else {
-            return RISK_LOW;
+        String r = risk.toLowerCase();
+        if (r.contains("high") || r.contains("severe"))       return RISK_HIGH;
+        if (r.contains("moderate") || r.contains("mild"))     return RISK_MEDIUM;
+        return RISK_LOW;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  PROGRESS DIALOG
+    // ═══════════════════════════════════════════════════════════════
+
+    private void showProgressDialog() {
+        try {
+            List<AssessmentResult> results = controller.getUserResults(parentApp.getUserId());
+
+            Stage dialog = new Stage();
+            dialog.initModality(Modality.APPLICATION_MODAL);
+            dialog.setTitle("My Progress Dashboard");
+            dialog.setMinWidth(750);
+            dialog.setMinHeight(650);
+
+            VBox root = new VBox(20);
+            root.setStyle("-fx-background-color: #f3f3f3;");
+            root.setPadding(new Insets(30));
+
+            Label title = new Label("📈 Your Progress Dashboard");
+            title.setFont(Font.font("Segoe UI", FontWeight.BOLD, 28));
+            title.setTextFill(Color.web(toHex(ACCENT_GREEN)));
+
+            if (results == null || results.isEmpty()) {
+                Label empty = new Label("No assessment results yet. Take an assessment to start tracking!");
+                empty.setFont(Font.font("Segoe UI", 15));
+                empty.setTextFill(Color.GRAY);
+                root.getChildren().addAll(title, empty);
+            } else {
+                results.sort(Comparator.comparing(AssessmentResult::getTakenAt));
+                root.getChildren().addAll(
+                        title,
+                        buildStatsRow(results),
+                        buildScoreChart(results),
+                        buildRiskBreakdown(results)
+                );
+            }
+
+            Button closeBtn = new Button("Close");
+            closeBtn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+            closeBtn.setTextFill(Color.WHITE);
+            closeBtn.setStyle(
+                    "-fx-background-color: #" + toHex(ACCENT_GREEN) + ";" +
+                            "-fx-background-radius: 5;" +
+                            "-fx-padding: 12 30;" +
+                            "-fx-cursor: hand;"
+            );
+            closeBtn.setOnAction(e -> dialog.close());
+
+            HBox btnBox = new HBox(closeBtn);
+            btnBox.setAlignment(Pos.CENTER_RIGHT);
+            root.getChildren().add(btnBox);
+
+            ScrollPane scroll = new ScrollPane(root);
+            scroll.setFitToWidth(true);
+            scroll.setStyle("-fx-background-color: #f3f3f3;");
+
+            dialog.setScene(new Scene(scroll, 750, 650));
+            dialog.showAndWait();
+
+        } catch (Exception e) {
+            showAlert("Error", "Could not load progress: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
+    private HBox buildStatsRow(List<AssessmentResult> results) {
+        int total = results.size();
+        double avg = results.stream().mapToInt(AssessmentResult::getTotalScore).average().orElse(0);
+        int latest = results.get(results.size() - 1).getTotalScore();
+        long highRiskCount = results.stream()
+                .filter(r -> r.getRiskLevel().equalsIgnoreCase("high")
+                        || r.getRiskLevel().equalsIgnoreCase("severe"))
+                .count();
+
+        String trend = "";
+        if (results.size() >= 2) {
+            int prev = results.get(results.size() - 2).getTotalScore();
+            trend = latest > prev ? " ↑" : latest < prev ? " ↓" : " →";
+        }
+
+        HBox row = new HBox(15);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.getChildren().addAll(
+                statCard("Assessments Taken", String.valueOf(total), toHex(ACCENT_GREEN)),
+                statCard("Average Score", String.format("%.1f", avg), "5b7fa6"),
+                statCard("Latest Score", latest + trend, latest > avg ? "c0392b" : "27ae60"),
+                statCard("High Risk Count", String.valueOf(highRiskCount), highRiskCount > 0 ? "c0392b" : "27ae60")
+        );
+        return row;
+    }
+
+    private VBox statCard(String label, String value, String hexColor) {
+        VBox card = new VBox(6);
+        card.setAlignment(Pos.CENTER);
+        card.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-border-radius: 8;" +
+                        "-fx-background-radius: 8;" +
+                        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 6, 0, 0, 2);"
+        );
+        card.setPadding(new Insets(18, 22, 18, 22));
+        card.setPrefWidth(160);
+
+        Label val = new Label(value);
+        val.setFont(Font.font("Segoe UI", FontWeight.BOLD, 26));
+        val.setStyle("-fx-text-fill: #" + hexColor + ";");
+
+        Label lbl = new Label(label);
+        lbl.setFont(Font.font("Segoe UI", 12));
+        lbl.setTextFill(Color.GRAY);
+        lbl.setWrapText(true);
+        lbl.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+
+        card.getChildren().addAll(val, lbl);
+        return card;
+    }
+
+    private LineChart<String, Number> buildScoreChart(List<AssessmentResult> results) {
+        CategoryAxis xAxis = new CategoryAxis();
+        xAxis.setLabel("Date");
+
+        NumberAxis yAxis = new NumberAxis();
+        yAxis.setLabel("Total Score");
+        yAxis.setAutoRanging(true);
+
+        LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);
+        chart.setTitle("Score Over Time");
+        chart.setPrefHeight(280);
+        chart.setLegendVisible(false);
+        chart.setCreateSymbols(true);
+        chart.setAnimated(false);
+
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yy");
+
+        for (AssessmentResult r : results) {
+            series.getData().add(new XYChart.Data<>(sdf.format(r.getTakenAt()), r.getTotalScore()));
+        }
+
+        chart.getData().add(series);
+        chart.setStyle(
+                ".chart-series-line { -fx-stroke: #" + toHex(ACCENT_GREEN) + "; -fx-stroke-width: 2.5px; }" +
+                        ".chart-line-symbol { -fx-background-color: #" + toHex(ACCENT_GREEN) + ", white; }"
+        );
+        return chart;
+    }
+
+    private HBox buildRiskBreakdown(List<AssessmentResult> results) {
+        HBox container = new HBox(20);
+        container.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-border-radius: 8;" +
+                        "-fx-background-radius: 8;" +
+                        "-fx-padding: 20;"
+        );
+        container.setAlignment(Pos.CENTER_LEFT);
+
+        Label heading = new Label("Risk Level Breakdown:");
+        heading.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+        heading.setTextFill(Color.web(toHex(TEXT_DARK)));
+        container.getChildren().add(heading);
+
+        Map<String, Long> counts = new LinkedHashMap<>();
+        for (AssessmentResult r : results) {
+            counts.merge(r.getRiskLevel(), 1L, Long::sum);
+        }
+
+        Map<String, String> riskColors = new LinkedHashMap<>();
+        riskColors.put("Low",      "27ae60");
+        riskColors.put("Minimal",  "2ecc71");
+        riskColors.put("Mild",     "f39c12");
+        riskColors.put("Moderate", "e67e22");
+        riskColors.put("High",     "c0392b");
+        riskColors.put("Severe",   "922b21");
+
+        for (Map.Entry<String, Long> entry : counts.entrySet()) {
+            String color = riskColors.getOrDefault(entry.getKey(), "888888");
+            double pct = (entry.getValue() * 100.0) / results.size();
+
+            VBox chip = new VBox(4);
+            chip.setAlignment(Pos.CENTER);
+            chip.setStyle(
+                    "-fx-background-color: #" + color + "22;" +
+                            "-fx-border-color: #" + color + ";" +
+                            "-fx-border-radius: 8;" +
+                            "-fx-background-radius: 8;" +
+                            "-fx-padding: 10 16;"
+            );
+
+            Label riskLabel = new Label(entry.getKey());
+            riskLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+            riskLabel.setStyle("-fx-text-fill: #" + color + ";");
+
+            Label countLabel = new Label(entry.getValue() + "x  (" + (int) pct + "%)");
+            countLabel.setFont(Font.font("Segoe UI", 12));
+            countLabel.setStyle("-fx-text-fill: #" + color + ";");
+
+            chip.getChildren().addAll(riskLabel, countLabel);
+            container.getChildren().add(chip);
+        }
+
+        return container;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  DATA REFRESH - UPDATED to fetch user names and assessment titles
+    // ═══════════════════════════════════════════════════════════════
+
+    // Add this method to refreshData() to filter for psychologists
     public void refreshData() {
         clearTable();
 
         String userType = parentApp.getUserType();
         int loggedInUserId = parentApp.getUserId();
 
-        // Update UI based on user type
-        setupUIForUserType(userType);
-
         try {
-            List<AssessmentResult> results = null;
-            String notificationMessage = "";
+            List<AssessmentResult> results;
+            String displayMessage;
 
             if ("patient".equals(userType)) {
-                // Patient: always see only their own results
                 results = controller.getUserResults(loggedInUserId);
-                notificationMessage = "Showing your results (" +
-                        (results != null ? results.size() : 0) + " found)";
-
-            } else if ("admin".equals(userType) || "psychologist".equals(userType)) {
-                // Admin/Psychologist: based on view mode
-                String viewMode = viewModeComboBox.getValue();
-
-                if ("My Results".equals(viewMode)) {
-                    results = controller.getUserResults(loggedInUserId);
-                    notificationMessage = "Showing your results (" +
-                            (results != null ? results.size() : 0) + " found)";
-
-                } else if ("All Results".equals(viewMode)) {
-                    results = controller.getAllResults();
-                    notificationMessage = "Showing all results (" +
-                            (results != null ? results.size() : 0) + " found)";
-
-                } else if ("Filter by User ID".equals(viewMode)) {
-                    String userIdText = userIdField.getText().trim();
-                    if (!userIdText.isEmpty()) {
-                        try {
-                            int userId = Integer.parseInt(userIdText);
-                            results = controller.getUserResults(userId);
-                            notificationMessage = "Showing results for User ID: " + userId +
-                                    " (" + (results != null ? results.size() : 0) + " found)";
-                        } catch (NumberFormatException e) {
-                            showAlert("Invalid Input",
-                                    "Please enter a valid User ID number!",
-                                    Alert.AlertType.WARNING);
-                            return;
-                        }
-                    } else {
-                        results = controller.getAllResults();
-                        notificationMessage = "Showing all results (" +
-                                (results != null ? results.size() : 0) + " found)";
-                    }
-                }
+                displayMessage = "Showing your results";
+            } else if ("psychologist".equals(userType)) {
+                // For psychologists: only show results of patients who have sessions with them
+                results = getResultsForPsychologistPatients(loggedInUserId);
+                displayMessage = "Showing results of your patients";
+            } else {
+                results = controller.getAllResults();
+                displayMessage = "Showing all results";
             }
 
+            // Rest of the existing code remains the same...
             resultData = FXCollections.observableArrayList();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
             if (results != null && !results.isEmpty()) {
                 for (AssessmentResult result : results) {
-                    ResultModel model = new ResultModel(
+                    // Fetch user name
+                    String userName = "Unknown User";
+                    try {
+                        models.user user = userService.getuserById(result.getUserId());
+                        if (user != null) {
+                            userName = user.getFirstName() + " " + user.getLastName();
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error fetching user for ID " + result.getUserId() + ": " + e.getMessage());
+                    }
+
+                    // Fetch assessment title
+                    String assessmentTitle = "Unknown Assessment";
+                    try {
+                        models.Assessment assessment = assessmentService.getAssessmentById(result.getAssessmentId());
+                        if (assessment != null) {
+                            assessmentTitle = assessment.getTitle();
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error fetching assessment for ID " + result.getAssessmentId() + ": " + e.getMessage());
+                    }
+
+                    resultData.add(new ResultModel(
                             result.getResultId(),
                             result.getUserId(),
                             result.getAssessmentId(),
+                            userName,
+                            assessmentTitle,
                             result.getTotalScore(),
                             result.getRiskLevel(),
                             sdf.format(result.getTakenAt()),
                             result.isSuggestSession()
-                    );
-                    resultData.add(model);
+                    ));
                 }
                 resultsTable.setItems(resultData);
-                showNotification(notificationMessage, true);
+                showNotification(displayMessage + " (" + results.size() + " found)", true);
             } else {
                 resultsTable.setItems(FXCollections.observableArrayList());
-                showNotification(notificationMessage + " - No results found", false);
+                showNotification(displayMessage + " - No results found", false);
             }
 
         } catch (SQLException e) {
@@ -704,57 +871,47 @@ public class ResultsPanel extends VBox {
         }
     }
 
-    private void setupUIForUserType(String userType) {
-        if ("patient".equals(userType)) {
-            // Patients: simple view, no controls
-            viewModeComboBox.setVisible(false);
-            userIdField.setVisible(false);
+    // Add this new method to get results for psychologist's patients
+    private List<AssessmentResult> getResultsForPsychologistPatients(int psychologistId) throws SQLException {
+        List<AssessmentResult> filteredResults = new ArrayList<>();
 
-            // Hide User ID label
-            if (userTypeLabel.getParent() instanceof HBox) {
-                for (javafx.scene.Node node : ((HBox) userTypeLabel.getParent()).getChildren()) {
-                    if (node instanceof Label && ((Label) node).getText().equals("User ID:")) {
-                        node.setVisible(false);
-                        break;
-                    }
+        try {
+            // Get all results first
+            List<AssessmentResult> allResults = controller.getAllResults();
+
+            // Create SessionService to check patient sessions
+            SessionService sessionService = new SessionService();
+
+            // Get all sessions for this psychologist (assuming sessions have a psychologist_id field)
+            // You'll need to add this method to SessionService
+            List<Session> psychologistSessions = sessionService.getSessionsByPsychologist(psychologistId);
+
+            // Get unique patient IDs from these sessions
+            Set<Integer> patientIds = new HashSet<>();
+            for (Session session : psychologistSessions) {
+                if (session.getReservedBy() != null) {
+                    patientIds.add(session.getReservedBy());
                 }
             }
 
-            userTypeLabel.setText("Patient - Your Results");
-
-        } else if ("admin".equals(userType) || "psychologist".equals(userType)) {
-            // Admin/Psychologist: advanced controls
-            viewModeComboBox.setVisible(true);
-            userTypeLabel.setText(userType.toUpperCase());
-
-            // Show/hide user ID field based on selection
-            if (viewModeComboBox.getValue() != null &&
-                    viewModeComboBox.getValue().equals("Filter by User ID")) {
-                userIdField.setVisible(true);
-
-                // Show User ID label
-                if (userTypeLabel.getParent() instanceof HBox) {
-                    for (javafx.scene.Node node : ((HBox) userTypeLabel.getParent()).getChildren()) {
-                        if (node instanceof Label && ((Label) node).getText().equals("User ID:")) {
-                            node.setVisible(true);
-                            break;
-                        }
-                    }
-                }
-            } else {
-                userIdField.setVisible(false);
-
-                // Hide User ID label
-                if (userTypeLabel.getParent() instanceof HBox) {
-                    for (javafx.scene.Node node : ((HBox) userTypeLabel.getParent()).getChildren()) {
-                        if (node instanceof Label && ((Label) node).getText().equals("User ID:")) {
-                            node.setVisible(false);
-                            break;
-                        }
-                    }
+            // Filter results to only include patients in the set
+            for (AssessmentResult result : allResults) {
+                if (patientIds.contains(result.getUserId())) {
+                    filteredResults.add(result);
                 }
             }
+
+            System.out.println("Psychologist " + psychologistId + " can see results for " + patientIds.size() + " patients");
+            System.out.println("Filtered " + filteredResults.size() + " results out of " + allResults.size());
+
+        } catch (Exception e) {
+            System.err.println("Error filtering results for psychologist: " + e.getMessage());
+            e.printStackTrace();
+            // Return empty list on error
+            return new ArrayList<>();
         }
+
+        return filteredResults;
     }
 
     private void showNotification(String message, boolean isSuccess) {
@@ -763,69 +920,51 @@ public class ResultsPanel extends VBox {
                 Color.web(toHex(ACCENT_GREEN)) : Color.web(toHex(RISK_HIGH)));
         notificationLabel.setVisible(true);
 
-        // Auto-hide after 5 seconds
         new Thread(() -> {
             try {
                 Thread.sleep(5000);
                 Platform.runLater(() -> notificationLabel.setVisible(false));
             } catch (InterruptedException e) {
-                // Ignore
+                // ignore
             }
         }).start();
     }
 
     private void clearTable() {
-        if (resultData != null) {
-            resultData.clear();
-        }
-        if (resultsTable != null) {
-            resultsTable.setItems(FXCollections.observableArrayList());
-        }
+        if (resultData != null) resultData.clear();
+        if (resultsTable != null) resultsTable.setItems(FXCollections.observableArrayList());
     }
 
     public void setUserId(int userId) {
-        // This is called when panel is shown from patient dashboard
-        String userType = parentApp.getUserType();
-        if ("patient".equals(userType)) {
-            // Auto-refresh for patient
-            refreshData();
-        } else {
-            // For admin/psychologist, set the user ID field
-            userIdField.setText(String.valueOf(userId));
-            viewModeComboBox.setValue("Filter by User ID");
-            refreshData();
-        }
+        refreshData();
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  UTILITIES
+    // ═══════════════════════════════════════════════════════════════
 
     private void showAlert(String title, String content, Alert.AlertType type) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
-        // FIXED: Removed initOwner since getScene() doesn't exist in MentisLoginFrame
-        // alert.initOwner(parentApp.getScene().getWindow());
         alert.showAndWait();
     }
 
-    // ================= UTILITY =================
     private String toHex(Color color) {
         return String.format("%02x%02x%02x",
-                (int)(color.getRed() * 255),
+                (int)(color.getRed()   * 255),
                 (int)(color.getGreen() * 255),
-                (int)(color.getBlue() * 255));
+                (int)(color.getBlue()  * 255));
     }
 
-    // SimpleIntegerProperty wrapper
+    // These thin wrappers let ResultModel use the short import names
     public static class SimpleIntegerProperty extends javafx.beans.property.SimpleIntegerProperty {
         public SimpleIntegerProperty(int value) { super(value); }
     }
-
-    // SimpleStringProperty wrapper
     public static class SimpleStringProperty extends javafx.beans.property.SimpleStringProperty {
         public SimpleStringProperty(String value) { super(value); }
     }
-
-    // SimpleBooleanProperty wrapper
     public static class SimpleBooleanProperty extends javafx.beans.property.SimpleBooleanProperty {
         public SimpleBooleanProperty(boolean value) { super(value); }
     }

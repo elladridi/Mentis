@@ -8,11 +8,14 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
+import javafx.animation.Timeline;
+import javafx.animation.KeyFrame;
+import javafx.util.Duration;
 import models.ContentNode;
 import models.user;
 import services.userservice;
+import services.LocalTTSService;
 
 import java.io.File;
 import java.time.format.DateTimeFormatter;
@@ -21,9 +24,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import services.SummarizationService;
+
 /**
  * ContentUploadPanel - UI for uploading and managing PDF content.
- * ADDED: Patient View with PDF frame showing content
+ * FIXED: Admin table now visible with TTS buttons
  */
 public class ContentUploadPanel extends VBox {
 
@@ -42,6 +47,11 @@ public class ContentUploadPanel extends VBox {
     private static final Color SUCCESS_GREEN = Color.rgb(76, 175, 80);
     private static final Color WARNING_ORANGE = Color.rgb(255, 152, 0);
     private static final Color EDIT_BLUE = Color.rgb(52, 152, 219);
+    private static final Color CARD_BG = Color.rgb(255, 255, 255);
+    private static final Color CARD_BORDER = Color.rgb(220, 220, 220);
+    private static final Color CARD_HOVER = Color.rgb(245, 250, 248);
+    private static final Color TTS_BLUE = Color.rgb(52, 152, 219);
+    private static final Color TTS_STOP_RED = Color.rgb(231, 76, 60);
 
     // UI Components
     private TextField titleField;
@@ -59,20 +69,42 @@ public class ContentUploadPanel extends VBox {
     private List<user> allPatients;
     private ScrollPane mainScrollPane;
 
-    // NEW: For patient view
+    // TTS Components
+    private Button globalStopButton;
+    private boolean isPlaying = false;
+
+    // For patient card view
     private VBox patientViewContainer;
-    private Label patientContentTitle;
-    private Label patientContentDescription;
-    private WebView pdfWebView;
-    private Button backToLibraryBtn;
-    private ListView<ContentNode> patientContentList;
-    private ContentNode currentPatientViewingNode;
+    private GridPane patientCardsGrid;
+    private ScrollPane patientCardsScrollPane;
+    private Label patientViewTitle;
 
     // For edit functionality
     private ContentNode currentEditingNode = null;
     private Button updateButton;
     private Button cancelButton;
     private Label editingLabel;
+
+    private Label createSummaryBadge(ContentNode node) {
+        if (node.getDescription().length() > 200) {
+            String summary = SummarizationService.smartSummarize(node.getDescription(), 2);
+
+            Label summaryLabel = new Label("📋 " + summary);
+            summaryLabel.setFont(Font.font("Arial", 11));
+            summaryLabel.setTextFill(Color.web("#7f8c8d"));
+            summaryLabel.setWrapText(true);
+            summaryLabel.setMaxHeight(60);
+
+            Tooltip tooltip = new Tooltip(summary);
+            tooltip.setMaxWidth(300);
+            tooltip.setWrapText(true);
+            summaryLabel.setTooltip(tooltip);
+
+            return summaryLabel;
+        }
+        return null;
+    }
+
 
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
@@ -128,8 +160,8 @@ public class ContentUploadPanel extends VBox {
         contentBox.setPadding(new Insets(20, 40, 20, 40));
         contentBox.setStyle("-fx-background-color: #" + toHex(BACKGROUND_GREEN) + ";");
 
-        // Initialize patient view
-        createPatientView();
+        // Initialize patient card view
+        createPatientCardView();
 
         initializeUI(contentBox);
 
@@ -138,167 +170,283 @@ public class ContentUploadPanel extends VBox {
         VBox.setVgrow(mainScrollPane, Priority.ALWAYS);
     }
 
-    // NEW: Create patient view with PDF frame
-    private void createPatientView() {
-        patientViewContainer = new VBox(20);
-        patientViewContainer.setPadding(new Insets(20));
-        patientViewContainer.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-radius: 8; " +
+    // Create TTS toolbar for admin/psychologist
+    private HBox createTTSToolbar() {
+        HBox toolbar = new HBox(10);
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        toolbar.setPadding(new Insets(10));
+        toolbar.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-radius: 8; " +
                 "-fx-border-color: #" + toHex(ACCENT_GREEN_LIGHT) + "; -fx-border-width: 1;");
-        patientViewContainer.setVisible(false);
-        patientViewContainer.setManaged(false);
 
-        // Header with back button
-        HBox headerBox = new HBox();
-        headerBox.setAlignment(Pos.CENTER_LEFT);
-        headerBox.setPadding(new Insets(0, 0, 10, 0));
+        Label ttsLabel = new Label("🔊 Text-to-Speech:");
+        ttsLabel.setFont(Font.font("Arial", FontWeight.BOLD, 13));
 
-        backToLibraryBtn = new Button("← Back to Library");
-        backToLibraryBtn.setFont(Font.font("Arial", 14));
-        backToLibraryBtn.setTextFill(Color.web(toHex(ACCENT_GREEN)));
-        backToLibraryBtn.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-border-color: " + toHex(ACCENT_GREEN) + "; -fx-border-radius: 5; -fx-padding: 8 20;");
-        backToLibraryBtn.setOnAction(e -> showLibraryView());
+        Button demoBtn = new Button("▶️ Demo");
+        demoBtn.setStyle("-fx-background-color: #" + toHex(TTS_BLUE) + "; -fx-text-fill: white; -fx-padding: 8 16; -fx-cursor: hand; -fx-background-radius: 5;");
+        demoBtn.setOnAction(e -> {
+            String demoText = "Welcome to Mentis content management system. You can listen to any content by clicking the listen button.";
+            LocalTTSService.speakAsync(demoText, () -> {
+                System.out.println("✅ Demo playback finished");
+            });
+        });
 
-        Label viewTitle = new Label("Content Viewer");
-        viewTitle.setFont(Font.font("Arial", FontWeight.BOLD, 24));
-        viewTitle.setTextFill(Color.web(toHex(ACCENT_GREEN)));
+        globalStopButton = new Button("⏹️ Stop All");
+        globalStopButton.setStyle("-fx-background-color: #" + toHex(TTS_STOP_RED) + "; -fx-text-fill: white; -fx-padding: 8 16; -fx-cursor: hand; -fx-background-radius: 5;");
+        globalStopButton.setDisable(true);
+        globalStopButton.setOnAction(e -> {
+            LocalTTSService.stopSpeaking();
+            globalStopButton.setDisable(true);
+        });
+
+        // Update stop button state
+        Timeline timeline = new Timeline(new KeyFrame(Duration.millis(500), e -> {
+            boolean speaking = LocalTTSService.isSpeaking();
+            globalStopButton.setDisable(!speaking);
+        }));
+        timeline.setCycleCount(Timeline.INDEFINITE);
+        timeline.play();
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        headerBox.getChildren().addAll(backToLibraryBtn, spacer, viewTitle);
+        Label infoLabel = new Label("Local TTS - No internet required");
+        infoLabel.setFont(Font.font("Arial", 11));
+        infoLabel.setTextFill(Color.web(toHex(TEXT_GRAY)));
 
-        // Content title
-        patientContentTitle = new Label("Select content to view");
-        patientContentTitle.setFont(Font.font("Arial", FontWeight.BOLD, 20));
-        patientContentTitle.setTextFill(Color.web(toHex(TEXT_DARK)));
-        patientContentTitle.setWrapText(true);
+        toolbar.getChildren().addAll(ttsLabel, demoBtn, globalStopButton, spacer, infoLabel);
 
-        // Content description
-        patientContentDescription = new Label("");
-        patientContentDescription.setFont(Font.font("Arial", 14));
-        patientContentDescription.setTextFill(Color.web(toHex(TEXT_GRAY)));
-        patientContentDescription.setWrapText(true);
-        patientContentDescription.setPadding(new Insets(0, 0, 10, 0));
-
-        // PDF WebView
-        pdfWebView = new WebView();
-        pdfWebView.setPrefHeight(600);
-        pdfWebView.setStyle("-fx-border-color: #" + toHex(ACCENT_GREEN_LIGHT) + "; -fx-border-width: 1; -fx-border-radius: 5;");
-
-        // Content list on the side (for patient to select)
-        VBox listBox = new VBox(10);
-        listBox.setPrefWidth(300);
-        listBox.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-radius: 8; " +
-                "-fx-border-color: #" + toHex(ACCENT_GREEN_LIGHT) + "; -fx-border-width: 1; -fx-padding: 15;");
-
-        Label listTitle = new Label("Your Content");
-        listTitle.setFont(Font.font("Arial", FontWeight.BOLD, 16));
-        listTitle.setTextFill(Color.web(toHex(ACCENT_GREEN)));
-
-        patientContentList = new ListView<>();
-        patientContentList.setPrefHeight(500);
-        patientContentList.setCellFactory(param -> new ListCell<ContentNode>() {
-            @Override
-            protected void updateItem(ContentNode item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                } else {
-                    setText(item.getTitle());
-                    if (item.getPdfPath() != null && !item.getPdfPath().isEmpty()) {
-                        setStyle("-fx-font-weight: bold; -fx-text-fill: #" + toHex(ACCENT_GREEN) + ";");
-                    }
-                }
-            }
-        });
-
-        patientContentList.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 1 && !patientContentList.getSelectionModel().isEmpty()) {
-                ContentNode selected = patientContentList.getSelectionModel().getSelectedItem();
-                if (selected != null) {
-                    viewPatientContent(selected);
-                }
-            }
-        });
-
-        listBox.getChildren().addAll(listTitle, patientContentList);
-
-        // Main content area
-        VBox contentArea = new VBox(10);
-        contentArea.getChildren().addAll(patientContentTitle, patientContentDescription, pdfWebView);
-        VBox.setVgrow(pdfWebView, Priority.ALWAYS);
-
-        // Split view
-        HBox splitView = new HBox(20);
-        splitView.getChildren().addAll(listBox, contentArea);
-        HBox.setHgrow(contentArea, Priority.ALWAYS);
-
-        patientViewContainer.getChildren().addAll(headerBox, splitView);
+        return toolbar;
     }
 
-    // NEW: View content in patient mode
-    private void viewPatientContent(ContentNode node) {
-        currentPatientViewingNode = node;
+    // Create patient card view
+    private void createPatientCardView() {
+        patientViewContainer = new VBox(20);
+        patientViewContainer.setPadding(new Insets(20));
+        patientViewContainer.setStyle("-fx-background-color: #" + toHex(BACKGROUND_GREEN) + ";");
+        patientViewContainer.setVisible(false);
+        patientViewContainer.setManaged(false);
 
-        patientContentTitle.setText(node.getTitle());
-        patientContentDescription.setText(node.getDescription());
+        // Header
+        HBox headerBox = new HBox();
+        headerBox.setAlignment(Pos.CENTER_LEFT);
+        headerBox.setPadding(new Insets(0, 0, 20, 0));
 
-        if (node.getPdfPath() != null && !node.getPdfPath().isEmpty()) {
-            try {
-                File pdfFile = new File(node.getPdfPath());
-                if (pdfFile.exists()) {
-                    // Load PDF in WebView
-                    pdfWebView.getEngine().load(pdfFile.toURI().toString());
+        patientViewTitle = new Label("Your Content Library");
+        patientViewTitle.setFont(Font.font("Arial", FontWeight.BOLD, 28));
+        patientViewTitle.setTextFill(Color.web(toHex(ACCENT_GREEN)));
 
-                    // Log access
-                    if (currentUserId > 0) {
-                        controller.logAccess(currentUserId, node.getNodeId());
-                        System.out.println("✅ ACCESS LOGGED: User " + currentUserId + " viewed: " + node.getTitle());
-                    }
-                } else {
-                    pdfWebView.getEngine().loadContent("<html><body style='font-family: Arial; color: red; padding: 20px;'>" +
-                            "<h2>PDF File Not Found</h2>" +
-                            "<p>The PDF file for this content is missing.</p>" +
-                            "<p>Path: " + node.getPdfPath() + "</p></body></html>");
-                }
-            } catch (Exception e) {
-                pdfWebView.getEngine().loadContent("<html><body style='font-family: Arial; color: red; padding: 20px;'>" +
-                        "<h2>Error Loading PDF</h2>" +
-                        "<p>" + e.getMessage() + "</p></body></html>");
-                e.printStackTrace();
-            }
-        } else {
-            pdfWebView.getEngine().loadContent("<html><body style='font-family: Arial; color: gray; padding: 20px;'>" +
-                    "<h2>No PDF Available</h2>" +
-                    "<p>This content does not have an associated PDF file.</p></body></html>");
-        }
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        headerBox.getChildren().addAll(patientViewTitle, spacer);
+
+        // Cards grid - 2 columns
+        patientCardsGrid = new GridPane();
+        patientCardsGrid.setHgap(20);
+        patientCardsGrid.setVgap(20);
+        patientCardsGrid.setPadding(new Insets(10));
+        patientCardsGrid.setAlignment(Pos.TOP_CENTER);
+
+        patientCardsScrollPane = new ScrollPane(patientCardsGrid);
+        patientCardsScrollPane.setFitToWidth(true);
+        patientCardsScrollPane.setStyle("-fx-background-color: #" + toHex(BACKGROUND_GREEN) + "; -fx-background: #" + toHex(BACKGROUND_GREEN) + ";");
+        patientCardsScrollPane.setBorder(null);
+        patientCardsScrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        patientCardsScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+
+        patientViewContainer.getChildren().addAll(headerBox, patientCardsScrollPane);
+        VBox.setVgrow(patientCardsScrollPane, Priority.ALWAYS);
     }
 
-    // NEW: Switch to patient view
-    private void showPatientView() {
-        if (formSection != null) formSection.setVisible(false);
-        if (contentTable != null) contentTable.setVisible(false);
-        patientViewContainer.setVisible(true);
-        patientViewContainer.setManaged(true);
+    // Load patient content as cards
+    private void loadPatientCards() {
+        patientCardsGrid.getChildren().clear();
 
-        // Load patient's content into list
         try {
             List<ContentNode> patientContent = controller.getViewableContentNodes(null);
-            patientContentList.getItems().setAll(patientContent);
+
+            if (patientContent.isEmpty()) {
+                Label emptyLabel = new Label("No content available for you");
+                emptyLabel.setFont(Font.font("Arial", 18));
+                emptyLabel.setTextFill(Color.web(toHex(TEXT_GRAY)));
+                patientCardsGrid.add(emptyLabel, 0, 0, 2, 1);
+                GridPane.setHalignment(emptyLabel, javafx.geometry.HPos.CENTER);
+                return;
+            }
+
+            int col = 0;
+            int row = 0;
+
+            for (ContentNode node : patientContent) {
+                VBox card = createContentCard(node);
+                patientCardsGrid.add(card, col, row);
+
+                col++;
+                if (col >= 2) { // 2 cards per row
+                    col = 0;
+                    row++;
+                }
+            }
+
         } catch (Exception e) {
             showAlert("Error", "Failed to load content: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
-    // NEW: Switch back to library view
-    private void showLibraryView() {
-        patientViewContainer.setVisible(false);
-        patientViewContainer.setManaged(false);
-        if (formSection != null && ("admin".equalsIgnoreCase(currentUserRole) || "psychologist".equalsIgnoreCase(currentUserRole))) {
-            formSection.setVisible(true);
+    // Create individual content card with TTS buttons
+    private VBox createContentCard(ContentNode node) {
+        VBox card = new VBox(15);
+        card.setPadding(new Insets(20));
+        card.setPrefWidth(400);
+        card.setPrefHeight(320); // Increased height for TTS buttons
+        card.setStyle("-fx-background-color: #" + toHex(CARD_BG) + ";" +
+                "-fx-background-radius: 12;" +
+                "-fx-border-color: #" + toHex(CARD_BORDER) + ";" +
+                "-fx-border-radius: 12;" +
+                "-fx-border-width: 1;" +
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 2);");
+
+        // Hover effect
+        card.setOnMouseEntered(e ->
+                card.setStyle("-fx-background-color: #" + toHex(CARD_HOVER) + ";" +
+                        "-fx-background-radius: 12;" +
+                        "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
+                        "-fx-border-radius: 12;" +
+                        "-fx-border-width: 2;" +
+                        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);" +
+                        "-fx-cursor: hand;")
+        );
+
+        card.setOnMouseExited(e ->
+                card.setStyle("-fx-background-color: #" + toHex(CARD_BG) + ";" +
+                        "-fx-background-radius: 12;" +
+                        "-fx-border-color: #" + toHex(CARD_BORDER) + ";" +
+                        "-fx-border-radius: 12;" +
+                        "-fx-border-width: 1;" +
+                        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 2);")
+        );
+
+        // Click to directly open PDF
+        card.setOnMouseClicked(e -> openPdfDirectly(node));
+
+        // Header with PDF icon
+        HBox headerBox = new HBox();
+        headerBox.setAlignment(Pos.CENTER_LEFT);
+        headerBox.setSpacing(10);
+
+        Label iconLabel;
+        if (node.getPdfPath() != null && !node.getPdfPath().isEmpty()) {
+            iconLabel = new Label("📄");
+            iconLabel.setFont(Font.font("Arial", 24));
+            iconLabel.setTextFill(Color.web(toHex(SUCCESS_GREEN)));
+        } else {
+            iconLabel = new Label("📝");
+            iconLabel.setFont(Font.font("Arial", 24));
+            iconLabel.setTextFill(Color.web(toHex(TEXT_GRAY)));
         }
-        if (contentTable != null) contentTable.setVisible(true);
-        currentPatientViewingNode = null;
+
+        Label pdfStatusLabel;
+        if (node.getPdfPath() != null && !node.getPdfPath().isEmpty()) {
+            pdfStatusLabel = new Label("PDF Available");
+            pdfStatusLabel.setFont(Font.font("Arial", FontWeight.BOLD, 11));
+            pdfStatusLabel.setTextFill(Color.web(toHex(SUCCESS_GREEN)));
+            pdfStatusLabel.setStyle("-fx-background-color: #e8f5e9; -fx-background-radius: 10; -fx-padding: 4 10;");
+        } else {
+            pdfStatusLabel = new Label("No PDF");
+            pdfStatusLabel.setFont(Font.font("Arial", FontWeight.BOLD, 11));
+            pdfStatusLabel.setTextFill(Color.web(toHex(TEXT_GRAY)));
+            pdfStatusLabel.setStyle("-fx-background-color: #f0f0f0; -fx-background-radius: 10; -fx-padding: 4 10;");
+        }
+
+        Region headerSpacer = new Region();
+        HBox.setHgrow(headerSpacer, Priority.ALWAYS);
+
+        headerBox.getChildren().addAll(iconLabel, pdfStatusLabel, headerSpacer);
+
+        // Title
+        Label titleLabel = new Label(node.getTitle());
+        titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        titleLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        titleLabel.setWrapText(true);
+        titleLabel.setMaxHeight(60);
+
+        // Description (truncated to 100 chars)
+        String desc = node.getDescription();
+        if (desc.length() > 100) {
+            desc = desc.substring(0, 97) + "...";
+        }
+        Label descLabel = new Label(desc);
+        descLabel.setFont(Font.font("Arial", 13));
+        descLabel.setTextFill(Color.web(toHex(TEXT_GRAY)));
+        descLabel.setWrapText(true);
+        descLabel.setMaxHeight(80);
+        Label summaryBadge = createSummaryBadge(node);
+        if (summaryBadge != null) {
+            card.getChildren().add(4, summaryBadge); // Add before audioBox
+        }
+        // TTS Audio buttons
+        HBox audioBox = new HBox(10);
+        audioBox.setAlignment(Pos.CENTER_LEFT);
+        audioBox.setPadding(new Insets(5, 0, 5, 0));
+
+        Button listenBtn = new Button("🔊 Listen");
+        listenBtn.setStyle("-fx-background-color: #" + toHex(TTS_BLUE) + "; -fx-text-fill: white; -fx-padding: 6 12; -fx-cursor: hand; -fx-font-size: 11px; -fx-background-radius: 5;");
+        listenBtn.setOnAction(event -> {
+            event.consume();
+            String textToSpeak = "Title: " + node.getTitle() + ". summary " + node.getDescription();
+            LocalTTSService.speakAsync(textToSpeak, null);
+        });
+
+        Button stopBtn = new Button("⏹️");
+        stopBtn.setStyle("-fx-background-color: #" + toHex(TTS_STOP_RED) + "; -fx-text-fill: white; -fx-padding: 6 12; -fx-cursor: hand; -fx-font-size: 11px; -fx-background-radius: 5;");
+        stopBtn.setOnAction(event -> {
+            event.consume();
+            LocalTTSService.stopSpeaking();
+        });
+
+        audioBox.getChildren().addAll(listenBtn, stopBtn);
+
+        HBox footerBox = new HBox();
+        footerBox.setAlignment(Pos.CENTER_RIGHT);
+        footerBox.setPadding(new Insets(10, 0, 0, 0));
+
+        Label dateLabel = new Label("Added: " + node.getCreatedAt().format(DateTimeFormatter.ofPattern("MMM dd, yyyy")));
+        dateLabel.setFont(Font.font("Arial", 11));
+        dateLabel.setTextFill(Color.web(toHex(TEXT_GRAY)));
+
+        footerBox.getChildren().add(dateLabel);
+
+        card.getChildren().addAll(headerBox, titleLabel, descLabel, audioBox, footerBox);
+
+        return card;
+    }
+
+    private void openPdfDirectly(ContentNode node) {
+        if (node.getPdfPath() == null || node.getPdfPath().isEmpty()) {
+            showAlert("No PDF", "This content does not have an associated PDF file.", Alert.AlertType.INFORMATION);
+            return;
+        }
+
+        try {
+            File pdfFile = new File(node.getPdfPath());
+            if (pdfFile.exists()) {
+                if (currentUserId > 0) {
+                    controller.logAccess(currentUserId, node.getNodeId());
+                    System.out.println("✅ ACCESS LOGGED: User " + currentUserId + " opened: " + node.getTitle());
+                }
+
+                java.awt.Desktop.getDesktop().open(pdfFile);
+                System.out.println("📄 Opened PDF: " + pdfFile.getAbsolutePath());
+
+            } else {
+                System.err.println("❌ PDF file not found: " + pdfFile.getAbsolutePath());
+                showAlert("Error", "PDF file not found at:\n" + node.getPdfPath(), Alert.AlertType.ERROR);
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error opening PDF: " + e.getMessage());
+            e.printStackTrace();
+            showAlert("Error", "Could not open PDF: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
     }
 
     private void initializeUI(VBox container) {
@@ -325,33 +473,29 @@ public class ContentUploadPanel extends VBox {
 
         container.getChildren().add(new Separator());
 
-        // Form section - for Admin AND Psychologist
         formSection = createFormSection();
         formSection.setVisible(canCreate);
         formSection.setManaged(canCreate);
         container.getChildren().add(formSection);
 
-        // Patient view container
+        if (isAdmin) {
+            HBox ttsToolbar = createTTSToolbar();
+            container.getChildren().add(ttsToolbar);
+        }
+
         container.getChildren().add(patientViewContainer);
 
-        // Table section - for everyone, but patients will have a button to switch to patient view
-        VBox tableSection = createTableSection();
-        container.getChildren().add(tableSection);
-        VBox.setVgrow(tableSection, Priority.ALWAYS);
-
-        // Add patient view button for patients
         if (isPatient) {
-            Button patientViewBtn = new Button("📖 Open Content Viewer");
-            patientViewBtn.setStyle("-fx-background-color: #" + toHex(ACCENT_GREEN) + "; -fx-text-fill: white; " +
-                    "-fx-padding: 12 25; -fx-font-size: 14px; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 5;");
-            patientViewBtn.setOnAction(e -> showPatientView());
+            patientViewContainer.setVisible(true);
+            patientViewContainer.setManaged(true);
+            loadPatientCards();
+        } else {
+            patientViewContainer.setVisible(false);
+            patientViewContainer.setManaged(false);
 
-            HBox buttonBox = new HBox();
-            buttonBox.setAlignment(Pos.CENTER);
-            buttonBox.setPadding(new Insets(10, 0, 10, 0));
-            buttonBox.getChildren().add(patientViewBtn);
-
-            container.getChildren().add(buttonBox);
+            VBox tableSection = createTableSection();
+            container.getChildren().add(tableSection);
+            VBox.setVgrow(tableSection, Priority.ALWAYS);
         }
     }
 
@@ -374,7 +518,7 @@ public class ContentUploadPanel extends VBox {
                 roleText += " | Can delete own content";
             }
         } else if (isPatient) {
-            roleText += "View content in the Content Viewer";
+            roleText += "Click any card to open PDF directly | 🔊 Listen button to hear content";
         } else {
             roleText += "View only - Content assigned to you";
         }
@@ -694,7 +838,14 @@ public class ContentUploadPanel extends VBox {
 
             showAlert("Success", "Content updated successfully!", Alert.AlertType.INFORMATION);
             cancelEdit();
-            loadContentTable();
+
+            // Refresh appropriate view based on role
+            if ("patient".equalsIgnoreCase(currentUserRole)) {
+                loadPatientCards();
+            } else {
+                loadContentTable();
+            }
+
             updateHistoryButtons();
 
         } catch (SecurityException e) {
@@ -748,7 +899,7 @@ public class ContentUploadPanel extends VBox {
 
     private VBox createTableSection() {
         VBox section = new VBox(15);
-        section.setPadding(new Insets(20));
+        section.setPadding(new Insets(10));
         section.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-radius: 8; " +
                 "-fx-border-color: #" + toHex(ACCENT_GREEN_LIGHT) + "; -fx-border-width: 1;");
 
@@ -764,7 +915,6 @@ public class ContentUploadPanel extends VBox {
 
         VBox.setVgrow(contentTable, Priority.ALWAYS);
 
-        // Double-click to edit (if has permission) otherwise view PDF
         contentTable.setRowFactory(tv -> {
             TableRow<ContentNode> row = new TableRow<>();
             row.setOnMouseClicked(event -> {
@@ -773,7 +923,14 @@ public class ContentUploadPanel extends VBox {
                     if (canModify(node)) {
                         editContent(node);
                     } else if (node.getPdfPath() != null && !node.getPdfPath().isEmpty()) {
-                        viewPdfContent(node);
+                        try {
+                            controller.openPdfFile(node.getPdfPath());
+                            if (currentUserId > 0) {
+                                controller.logAccess(currentUserId, node.getNodeId());
+                            }
+                        } catch (Exception e) {
+                            showAlert("Error", "Could not open PDF: " + e.getMessage(), Alert.AlertType.ERROR);
+                        }
                     }
                 }
             });
@@ -795,6 +952,19 @@ public class ContentUploadPanel extends VBox {
         descCol.setPrefWidth(300);
         descCol.setMinWidth(200);
         descCol.setStyle("-fx-alignment: CENTER-LEFT;");
+
+        TableColumn<ContentNode, String> summaryCol = new TableColumn<>("Quick Summary");
+        summaryCol.setCellValueFactory(cellData -> {
+            String desc = cellData.getValue().getDescription();
+            if (desc.length() > 100) {
+                String summary = SummarizationService.smartSummarize(desc, 1);
+                return new javafx.beans.property.SimpleStringProperty(summary);
+            }
+            return new javafx.beans.property.SimpleStringProperty(desc);
+        });
+        summaryCol.setPrefWidth(250);
+        summaryCol.setMinWidth(200);
+        summaryCol.setStyle("-fx-alignment: CENTER-LEFT;");
 
         TableColumn<ContentNode, String> pdfCol = new TableColumn<>("PDF");
         pdfCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(
@@ -833,22 +1003,37 @@ public class ContentUploadPanel extends VBox {
 
         // Actions column with buttons
         TableColumn<ContentNode, Void> actionCol = new TableColumn<>("Actions");
-        actionCol.setPrefWidth(250);
-        actionCol.setMinWidth(200);
+        actionCol.setPrefWidth(300);
+        actionCol.setMinWidth(280);
         actionCol.setCellFactory(col -> new TableCell<ContentNode, Void>() {
             private final Button viewBtn = new Button("View PDF");
+            private final Button listenBtn = new Button("🔊 Listen");
             private final Button editBtn = new Button("Edit");
             private final Button deleteBtn = new Button("Delete");
             private final HBox pane = new HBox(8);
 
             {
-                viewBtn.setStyle("-fx-background-color: #" + toHex(ACCENT_GREEN_LIGHT) + "; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 10; -fx-background-radius: 3;");
+                viewBtn.setStyle("-fx-background-color: #" + toHex(ACCENT_GREEN_LIGHT) + "; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 8; -fx-background-radius: 3;");
                 viewBtn.setOnAction(e -> {
                     ContentNode node = getTableView().getItems().get(getIndex());
-                    viewPdfContent(node);
+                    try {
+                        controller.openPdfFile(node.getPdfPath());
+                        if (currentUserId > 0) {
+                            controller.logAccess(currentUserId, node.getNodeId());
+                        }
+                    } catch (Exception ex) {
+                        showAlert("Error", "Could not open PDF: " + ex.getMessage(), Alert.AlertType.ERROR);
+                    }
                 });
 
-                editBtn.setStyle("-fx-background-color: #" + toHex(EDIT_BLUE) + "; -fx-text-fill: white; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 10; -fx-background-radius: 3;");
+                listenBtn.setStyle("-fx-background-color: #" + toHex(TTS_BLUE) + "; -fx-text-fill: white; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 8; -fx-background-radius: 3;");
+                listenBtn.setOnAction(e -> {
+                    ContentNode node = getTableView().getItems().get(getIndex());
+                    String textToSpeak = "Title: " + node.getTitle() + ". " + node.getDescription();
+                    LocalTTSService.speakAsync(textToSpeak, null);
+                });
+
+                editBtn.setStyle("-fx-background-color: #" + toHex(EDIT_BLUE) + "; -fx-text-fill: white; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 8; -fx-background-radius: 3;");
                 editBtn.setOnAction(e -> {
                     ContentNode node = getTableView().getItems().get(getIndex());
                     if (canModify(node)) {
@@ -858,15 +1043,15 @@ public class ContentUploadPanel extends VBox {
                     }
                 });
 
-                deleteBtn.setStyle("-fx-background-color: #" + toHex(ERROR_RED) + "; -fx-text-fill: white; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 10; -fx-background-radius: 3;");
+                deleteBtn.setStyle("-fx-background-color: #" + toHex(ERROR_RED) + "; -fx-text-fill: white; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 8; -fx-background-radius: 3;");
                 deleteBtn.setOnAction(e -> {
                     ContentNode node = getTableView().getItems().get(getIndex());
                     deleteContentNode(node);
                 });
 
                 pane.setAlignment(Pos.CENTER);
-                pane.getChildren().addAll(viewBtn, editBtn, deleteBtn);
-                pane.setSpacing(8);
+                pane.getChildren().addAll(viewBtn, listenBtn, editBtn, deleteBtn);
+                pane.setSpacing(5);
             }
 
             @Override
@@ -891,18 +1076,24 @@ public class ContentUploadPanel extends VBox {
                     viewBtn.setVisible(hasPdf);
                     viewBtn.setManaged(hasPdf);
 
+                    // Listen button always visible for all content
+                    listenBtn.setVisible(true);
+                    listenBtn.setManaged(true);
+
                     setGraphic(pane);
                 }
             }
         });
 
         contentTable.getColumns().addAll(titleCol, descCol, pdfCol, assignedCol, createdByCol, dateCol, actionCol);
+
+        contentTable.getColumns().add(2, summaryCol);
+
         contentTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         section.getChildren().addAll(sectionTitle, contentTable);
         return section;
     }
-
     private String getUsernameById(int userId) {
         try {
             user u = userservice.getuserById(userId);
@@ -913,18 +1104,6 @@ public class ContentUploadPanel extends VBox {
             // Ignore
         }
         return "User " + userId;
-    }
-
-    private void viewPdfContent(ContentNode node) {
-        try {
-            if (currentUserId > 0 && node != null) {
-                controller.logAccess(currentUserId, node.getNodeId());
-                System.out.println("✅ ACCESS LOGGED: User " + currentUserId + " viewed: " + node.getTitle());
-            }
-            controller.openPdfFile(node.getPdfPath());
-        } catch (Exception e) {
-            showAlert("Error", "Could not open PDF: " + e.getMessage(), Alert.AlertType.ERROR);
-        }
     }
 
     private void deleteContentNode(ContentNode node) {
@@ -942,7 +1121,13 @@ public class ContentUploadPanel extends VBox {
                     cancelEdit();
                 }
 
-                loadContentTable();
+                // Refresh appropriate view based on role
+                if ("patient".equalsIgnoreCase(currentUserRole)) {
+                    loadPatientCards();
+                } else {
+                    loadContentTable();
+                }
+
                 updateHistoryButtons();
             } catch (SecurityException e) {
                 showAlert("Access Denied", e.getMessage(), Alert.AlertType.ERROR);
@@ -1000,7 +1185,14 @@ public class ContentUploadPanel extends VBox {
             if (nodeId > 0) {
                 showAlert("Success", "Content created successfully!\nAssigned to: " + assignedUserIds.size() + " patients", Alert.AlertType.INFORMATION);
                 resetForm();
-                loadContentTable();
+
+                // Refresh appropriate view based on role
+                if ("patient".equalsIgnoreCase(currentUserRole)) {
+                    loadPatientCards();
+                } else {
+                    loadContentTable();
+                }
+
                 updateHistoryButtons();
             }
         } catch (SecurityException e) {
@@ -1029,7 +1221,14 @@ public class ContentUploadPanel extends VBox {
     private void performUndo() {
         if (controller.canUndo()) {
             controller.undo();
-            loadContentTable();
+
+            // Refresh appropriate view based on role
+            if ("patient".equalsIgnoreCase(currentUserRole)) {
+                loadPatientCards();
+            } else {
+                loadContentTable();
+            }
+
             updateHistoryButtons();
             showAlert("Undo Successful", controller.getRedoDescription(), Alert.AlertType.INFORMATION);
         }
@@ -1038,7 +1237,14 @@ public class ContentUploadPanel extends VBox {
     private void performRedo() {
         if (controller.canRedo()) {
             controller.redo();
-            loadContentTable();
+
+            // Refresh appropriate view based on role
+            if ("patient".equalsIgnoreCase(currentUserRole)) {
+                loadPatientCards();
+            } else {
+                loadContentTable();
+            }
+
             updateHistoryButtons();
             showAlert("Redo Successful", controller.getUndoDescription(), Alert.AlertType.INFORMATION);
         }
@@ -1056,6 +1262,7 @@ public class ContentUploadPanel extends VBox {
             List<ContentNode> content = controller.getViewableContentNodes(null);
             if (content != null) {
                 contentTable.getItems().setAll(content);
+                System.out.println("✅ Loaded " + content.size() + " content items for admin/psychologist");
             }
         } catch (Exception e) {
             showAlert("Error", "Failed to load content: " + e.getMessage(), Alert.AlertType.ERROR);
@@ -1091,16 +1298,29 @@ public class ContentUploadPanel extends VBox {
             patientAssignmentCombo.setItems(javafx.collections.FXCollections.observableArrayList(allPatients));
         }
 
-        loadContentTable();
+        // Update view based on user role
+        if ("patient".equalsIgnoreCase(currentUserRole)) {
+            patientViewContainer.setVisible(true);
+            patientViewContainer.setManaged(true);
+            if (contentTable != null) {
+                contentTable.setVisible(false);
+                contentTable.setManaged(false);
+            }
+            loadPatientCards();
+            System.out.println("✅ Patient view: showing cards");
+        } else {
+            patientViewContainer.setVisible(false);
+            patientViewContainer.setManaged(false);
+            contentTable.setVisible(true);
+            contentTable.setManaged(true);
+            loadContentTable();
+            System.out.println("✅ Admin view: showing table with " + contentTable.getItems().size() + " items");
+        }
+
         updateHistoryButtons();
 
         if (currentEditingNode != null) {
             cancelEdit();
-        }
-
-        // If patient, make sure patient view is initialized but hidden
-        if ("patient".equalsIgnoreCase(currentUserRole)) {
-            // Patient view will be shown when they click the button
         }
     }
 
@@ -1130,13 +1350,17 @@ public class ContentUploadPanel extends VBox {
 
     private String toHex(Color color) {
         return String.format("%02x%02x%02x",
-                (int)(color.getRed() * 255),
-                (int)(color.getGreen() * 255),
-                (int)(color.getBlue() * 255));
+                (int) (color.getRed() * 255),
+                (int) (color.getGreen() * 255),
+                (int) (color.getBlue() * 255));
     }
 
     public void refreshData() {
-        loadContentTable();
+        if ("patient".equalsIgnoreCase(currentUserRole)) {
+            loadPatientCards();
+        } else {
+            loadContentTable();
+        }
         updateHistoryButtons();
     }
 
