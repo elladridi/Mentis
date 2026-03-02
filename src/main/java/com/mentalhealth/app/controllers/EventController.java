@@ -2,9 +2,11 @@ package com.mentalhealth.app.controllers;
 
 import com.mentalhealth.app.models.Event;
 import com.mentalhealth.app.models.EventRegistration;
+import com.mentalhealth.app.utils.UserSession;
 import com.mentalhealth.app.views.ComponentFactory;
 import com.mentalhealth.app.views.EventFormView;
 import com.mentalhealth.app.views.EventListView;
+import com.mentalhealth.app.views.StatisticsView;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -19,6 +21,11 @@ public class EventController {
     private BorderPane mainContent;
     private FlowPane eventsGrid;
     private RegistrationController registrationController;
+    private final UserSession session = UserSession.getInstance();
+
+    // Tab buttons
+    private Button eventsTabBtn;
+    private Button statisticsTabBtn;
 
     public BorderPane getView() {
         mainContent = new BorderPane();
@@ -29,18 +36,120 @@ public class EventController {
         return mainContent;
     }
 
-    // =================== LIST (READ ALL) ===================
+    // =================== TAB BAR ===================
 
-    private void showEventsList() {
-        VBox container = new VBox(20);
+    private HBox buildTabBar() {
+        HBox tabBar = new HBox(0);
+        tabBar.setAlignment(Pos.CENTER_LEFT);
+        tabBar.setPadding(new Insets(0, 0, 20, 0));
+
+        eventsTabBtn = createTabButton("📌 Events", true);
+
+        tabBar.getChildren().add(eventsTabBtn);
+
+        eventsTabBtn.setOnAction(e -> {
+            setActiveTab(eventsTabBtn);
+            showEventsList();
+        });
+
+        // Only admin and psychologist can see statistics
+        if (session.canManageEvents()) {
+            statisticsTabBtn = createTabButton("📊 Statistics", false);
+            statisticsTabBtn.setOnAction(e -> {
+                setActiveTab(statisticsTabBtn);
+                showStatistics();
+            });
+            tabBar.getChildren().add(statisticsTabBtn);
+        }
+
+        return tabBar;
+    }
+
+    private Button createTabButton(String text, boolean isActive) {
+        Button btn = new Button(text);
+        btn.setPrefHeight(40);
+        btn.setPadding(new Insets(10, 25, 10, 25));
+        btn.setStyle(isActive ? activeTabStyle() : inactiveTabStyle());
+
+        btn.setOnMouseEntered(e -> {
+            if (!btn.getStyle().equals(activeTabStyle())) {
+                btn.setStyle(hoverTabStyle());
+            }
+        });
+        btn.setOnMouseExited(e -> {
+            if (!btn.getStyle().equals(activeTabStyle())) {
+                btn.setStyle(inactiveTabStyle());
+            }
+        });
+
+        return btn;
+    }
+
+    private void setActiveTab(Button activeBtn) {
+        eventsTabBtn.setStyle(inactiveTabStyle());
+        if (statisticsTabBtn != null) statisticsTabBtn.setStyle(inactiveTabStyle());
+        activeBtn.setStyle(activeTabStyle());
+    }
+
+    private String activeTabStyle() {
+        return "-fx-background-color: #2F5D52; -fx-text-fill: #FFFFFF;" +
+                "-fx-font-size: 14px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 10 10 0 0; -fx-cursor: hand;" +
+                "-fx-border-color: #2F5D52; -fx-border-width: 0 0 3 0;";
+    }
+
+    private String inactiveTabStyle() {
+        return "-fx-background-color: #F1F6F4; -fx-text-fill: #6B7280;" +
+                "-fx-font-size: 14px; -fx-background-radius: 10 10 0 0;" +
+                "-fx-cursor: hand; -fx-border-color: #DDE5E2; -fx-border-width: 0 0 1 0;";
+    }
+
+    private String hoverTabStyle() {
+        return "-fx-background-color: #E8F0ED; -fx-text-fill: #2F5D52;" +
+                "-fx-font-size: 14px; -fx-background-radius: 10 10 0 0;" +
+                "-fx-cursor: hand; -fx-border-color: #9BC7B5; -fx-border-width: 0 0 2 0;";
+    }
+
+    // =================== STATISTICS VIEW ===================
+
+    private void showStatistics() {
+        VBox container = new VBox(0);
         container.setPadding(new Insets(30));
         container.setStyle("-fx-background-color: #FFFFFF;");
 
-        HBox header = new HBox(20);
-        header.setAlignment(Pos.CENTER_LEFT);
         Label title = ComponentFactory.pageTitle("📌 Events Management");
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox tabBar = buildTabBar();
+        setActiveTab(statisticsTabBtn);
+
+        StatisticsView statisticsView = new StatisticsView();
+        ScrollPane statsContent = statisticsView.buildStatisticsView();
+        statsContent.setPadding(new Insets(0));
+        VBox.setVgrow(statsContent, Priority.ALWAYS);
+
+        container.getChildren().addAll(title, tabBar, statsContent);
+        mainContent.setCenter(container);
+        mainContent.setRight(null);
+    }
+
+    // =================== LIST (READ ALL) ===================
+
+    private void showEventsList() {
+        VBox container = new VBox(0);
+        container.setPadding(new Insets(30));
+        container.setStyle("-fx-background-color: #FFFFFF;");
+
+        // Page title - different for patients
+        String titleText = session.isPatient() ? "📌 Browse Events" : "📌 Events Management";
+        Label title = ComponentFactory.pageTitle(titleText);
+
+        HBox tabBar = buildTabBar();
+        setActiveTab(eventsTabBtn);
+
+        // Controls row
+        HBox controls = new HBox(20);
+        controls.setAlignment(Pos.CENTER_LEFT);
+        controls.setPadding(new Insets(0, 0, 20, 0));
 
         TextField searchField = ComponentFactory.styledTextField("🔍 Search events...");
         searchField.setPrefWidth(250);
@@ -58,14 +167,27 @@ public class EventController {
                 "-fx-background-color: #F1F6F4; -fx-font-size: 13px; -fx-background-radius: 10;" +
                         "-fx-border-color: #DDE5E2; -fx-border-radius: 10;");
 
-        Button addBtn = ComponentFactory.styledButton("+ Add Event", "#9BC7B5");
-        addBtn.setOnAction(e -> showAddForm());
-        header.getChildren().addAll(title, spacer, searchField, filterType, addBtn);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox stats = listView.buildStatsBar(
-                Event.count(), Event.totalParticipants(),
-                EventRegistration.totalCount(), EventRegistration.totalRevenue());
+        controls.getChildren().addAll(searchField, filterType, spacer);
 
+        // Only admin and psychologist can add events
+        if (session.canManageEvents()) {
+            Button addBtn = ComponentFactory.styledButton("+ Add Event", "#9BC7B5");
+            addBtn.setOnAction(e -> showAddForm());
+            controls.getChildren().add(addBtn);
+        }
+
+        // Stats bar - only for admin/psychologist
+        HBox stats = null;
+        if (session.canManageEvents()) {
+            stats = listView.buildStatsBar(
+                    Event.count(), Event.totalParticipants(),
+                    EventRegistration.totalCount(), EventRegistration.totalRevenue());
+        }
+
+        // Events grid
         eventsGrid = new FlowPane(20, 20);
         eventsGrid.setPadding(new Insets(10, 0, 0, 0));
 
@@ -78,17 +200,18 @@ public class EventController {
 
         loadCards(null, null);
 
+        // Search and filter listeners
         searchField.textProperty().addListener((obs, o, n) ->
                 loadCards(n.isEmpty() ? null : n,
-                        filterType.getValue().equals("All Types") ?
-                                null : filterType.getValue()));
+                        filterType.getValue().equals("All Types") ? null : filterType.getValue()));
         filterType.setOnAction(e ->
-                loadCards(searchField.getText().isEmpty() ?
-                                null : searchField.getText(),
-                        filterType.getValue().equals("All Types") ?
-                                null : filterType.getValue()));
+                loadCards(searchField.getText().isEmpty() ? null : searchField.getText(),
+                        filterType.getValue().equals("All Types") ? null : filterType.getValue()));
 
-        container.getChildren().addAll(header, stats, scrollPane);
+        container.getChildren().addAll(title, tabBar, controls);
+        if (stats != null) container.getChildren().add(stats);
+        container.getChildren().add(scrollPane);
+
         mainContent.setCenter(container);
         mainContent.setRight(null);
     }
@@ -114,11 +237,22 @@ public class EventController {
             int regCount = EventRegistration.countByEvent(event.getId());
             double revenue = EventRegistration.revenueByEvent(event.getId());
 
-            VBox card = listView.buildCard(event, regCount, revenue,
-                    () -> registrationController.showEventDetail(event),
-                    () -> showEditForm(event),
-                    () -> handleDelete(event),
-                    () -> registrationController.showRegistrationPanel(event));
+            VBox card;
+            if (session.isPatient()) {
+                // Patient view - simplified card with Register button only
+                card = listView.buildCard(event, regCount, revenue,
+                        () -> registrationController.showEventDetail(event),
+                        null,  // no edit
+                        null,  // no delete
+                        () -> registrationController.showPatientQuickRegister(event));
+            } else {
+                // Admin/Psychologist view - full CRUD
+                card = listView.buildCard(event, regCount, revenue,
+                        () -> registrationController.showEventDetail(event),
+                        () -> showEditForm(event),
+                        () -> handleDelete(event),
+                        () -> registrationController.showRegistrationPanel(event));
+            }
             eventsGrid.getChildren().add(card);
         }
     }
@@ -126,6 +260,8 @@ public class EventController {
     // =================== ADD (CREATE) ===================
 
     private void showAddForm() {
+        if (!session.canManageEvents()) return;
+
         EventFormView formView = new EventFormView();
         VBox form = formView.buildForm(null,
                 () -> {
@@ -147,6 +283,8 @@ public class EventController {
     // =================== EDIT (UPDATE) ===================
 
     private void showEditForm(Event event) {
+        if (!session.canManageEvents()) return;
+
         EventFormView formView = new EventFormView();
         VBox form = formView.buildForm(event,
                 () -> {
@@ -168,11 +306,12 @@ public class EventController {
     // =================== DELETE ===================
 
     private void handleDelete(Event event) {
+        if (!session.canManageEvents()) return;
+
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Delete Event");
         confirm.setHeaderText("Delete \"" + event.getTitle() + "\"?");
-        confirm.setContentText(
-                "This will also delete all registrations for this event.");
+        confirm.setContentText("This will also delete all registrations for this event.");
         Optional<ButtonType> result = confirm.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
             event.delete();

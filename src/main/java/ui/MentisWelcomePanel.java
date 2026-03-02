@@ -21,7 +21,8 @@ import javafx.scene.Cursor;
 
 public class MentisWelcomePanel extends VBox {
 
-    private static final Color BG_COLOR = Color.rgb(216, 228, 222);
+    // ⭐ Utilise la même couleur que le reste de l'application
+    private static final Color BG_COLOR = MentisLoginFrame.BACKGROUND_LIGHT;
     private static final Color PRIMARY = Color.rgb(88, 139, 113);
     private static final Color TEXT_DARK = Color.rgb(35, 35, 35);
     private static final Color TEXT_LIGHT = Color.rgb(90, 90, 90);

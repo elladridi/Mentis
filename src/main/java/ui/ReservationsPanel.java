@@ -19,7 +19,10 @@ public class ReservationsPanel extends VBox {
     private MentisLoginFrame parentApp;
     private SessionController sessionController;
     private TableView<Session> reservationsTable;
+    private SimpleCalendarPanel calendarPanel; // ⭐ NEW: Calendar panel
     private Label userInfoLabel;
+    private Button toggleViewButton;
+    private boolean isTableView = true; // ⭐ Track current view
 
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
@@ -45,6 +48,7 @@ public class ReservationsPanel extends VBox {
 
         createHeader();
         createTable();
+        createCalendarPanel(); // ⭐ NEW: Initialize calendar panel
         refreshData();
     }
 
@@ -67,11 +71,18 @@ public class ReservationsPanel extends VBox {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
+        // ⭐ NEW: Toggle View Button
+        toggleViewButton = new Button("📅 Switch to Calendar View");
+        toggleViewButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        toggleViewButton.setTextFill(Color.WHITE);
+        toggleViewButton.setStyle("-fx-background-color: #" + toHex(ACCENT_DARK_GREEN) + "; -fx-background-radius: 5; -fx-padding: 10 20; -fx-cursor: hand;");
+        toggleViewButton.setOnAction(e -> toggleView());
+
         userInfoLabel = new Label(parentApp.getUserName() + " (" + parentApp.getUserType() + ")");
         userInfoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
         userInfoLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
 
-        headerBox.getChildren().addAll(titleBox, spacer, userInfoLabel);
+        headerBox.getChildren().addAll(titleBox, spacer, toggleViewButton, userInfoLabel);
         getChildren().add(headerBox);
     }
 
@@ -162,6 +173,37 @@ public class ReservationsPanel extends VBox {
 
         VBox.setVgrow(reservationsTable, Priority.ALWAYS);
         getChildren().add(reservationsTable);
+    }
+
+    // ⭐ NEW: Create calendar panel
+    private void createCalendarPanel() {
+        calendarPanel = new SimpleCalendarPanel(parentApp);
+        calendarPanel.setVisible(false); // Hidden by default
+        calendarPanel.setManaged(false);
+        getChildren().add(calendarPanel);
+    }
+
+    // ⭐ NEW: Toggle between table and calendar views
+    private void toggleView() {
+        isTableView = !isTableView;
+
+        if (isTableView) {
+            // Show table, hide calendar
+            reservationsTable.setVisible(true);
+            reservationsTable.setManaged(true);
+            calendarPanel.setVisible(false);
+            calendarPanel.setManaged(false);
+            toggleViewButton.setText("📅 Switch to Calendar View");
+            refreshData(); // Refresh table data
+        } else {
+            // Show calendar, hide table
+            reservationsTable.setVisible(false);
+            reservationsTable.setManaged(false);
+            calendarPanel.setVisible(true);
+            calendarPanel.setManaged(true);
+            calendarPanel.refreshData(); // Refresh calendar data
+            toggleViewButton.setText("📋 Switch to Table View");
+        }
     }
 
     public void refreshData() {

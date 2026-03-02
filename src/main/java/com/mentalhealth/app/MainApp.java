@@ -103,10 +103,15 @@ public class MainApp extends Application {
                 "-fx-font-weight: bold; -fx-padding: 0 0 10 10;");
         sidebar.getChildren().add(menuTitle);
 
+        // Removed Statistics from here - it's now inside Events
         String[][] items = {
-                {"📊", "Dashboard"}, {"📅", "Bookings"},
-                {"📝", "Assessments"}, {"😊", "Mood Tracker"},
-                {"📚", "Content"}, {"📌", "Events"}, {"⚙️", "Settings"}
+                {"📊", "Dashboard"},
+                {"📅", "Bookings"},
+                {"📝", "Assessments"},
+                {"😊", "Mood Tracker"},
+                {"📚", "Content"},
+                {"📌", "Events"},
+                {"⚙️", "Settings"}
         };
 
         for (String[] item : items) {
@@ -115,8 +120,11 @@ public class MainApp extends Application {
             btn.setOnAction(e -> {
                 activeMenu = item[1];
                 refreshMenuStyles();
-                if (item[1].equals("Events")) loadEventsView();
-                else loadPlaceholder(item[0] + " " + item[1]);
+                if (item[1].equals("Events")) {
+                    loadEventsView();
+                } else {
+                    loadPlaceholder(item[0] + " " + item[1]);
+                }
             });
             sidebar.getChildren().add(btn);
         }
@@ -206,7 +214,11 @@ public class MainApp extends Application {
     }
 
     @Override
-    public void stop() { DatabaseConnection.closeConnection(); }
+    public void stop() {
+        DatabaseConnection.closeConnection();
+    }
 
-    public static void main(String[] args) { launch(args); }
+    public static void main(String[] args) {
+        launch(args);
+    }
 }
