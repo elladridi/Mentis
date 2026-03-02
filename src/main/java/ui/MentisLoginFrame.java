@@ -7,6 +7,7 @@ import controller.ContentPathController;
 import controller.QuestionController;
 import controller.SessionController;
 import controller.SessionReviewController;
+import services.RememberMeService;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -60,6 +61,9 @@ public class MentisLoginFrame extends Application {
     private SessionController sessionController;
     private SessionReviewController sessionReviewController;
 
+    // ===== ADD THIS: Remember Me Service =====
+    private RememberMeService rememberMeService;
+
     // Panels - ALL panels are created ONCE and REUSED!
     private MentisWelcomePanel welcomePanel;
     private MentisLoginPanel loginPanel;
@@ -91,6 +95,9 @@ public class MentisLoginFrame extends Application {
     public void start(Stage primaryStage) {
         // Initialize controllers
         initializeControllers();
+
+        // ===== Initialize Remember Me Service =====
+        rememberMeService = new RememberMeService();
 
         // Create root layout
         root = new StackPane();
@@ -148,6 +155,9 @@ public class MentisLoginFrame extends Application {
         primaryStage.setTitle("Mentis - Mental Health Companion");
         primaryStage.setScene(scene);
         primaryStage.show();
+
+        // ===== Check for remembered user after UI is shown =====
+        checkRememberedUser();
     }
 
     private void initializeControllers() {
@@ -177,6 +187,41 @@ public class MentisLoginFrame extends Application {
             showAlert(Alert.AlertType.WARNING,
                     "Warning - Test Mode",
                     "Database connection failed. Using test mode.\nYou can test navigation but data won't be saved.\nError: " + e.getMessage());
+        }
+    }
+
+    // ===== NEW: Check for remembered user =====
+    private void checkRememberedUser() {
+        RememberMeService.RememberMeToken token = rememberMeService.getRememberedUser();
+
+        if (token != null && !token.isExpired()) {
+            System.out.println("🔍 Found remembered user: " + token.getEmail());
+
+            // Small delay to ensure UI is ready
+            Platform.runLater(() -> {
+                // Show login panel with loading indicator
+                showLoginPanel();
+
+                // Auto-login without password
+                new Thread(() -> {
+                    models.user loggedUser = services.userservice.getuserByEmail(token.getEmail());
+
+                    Platform.runLater(() -> {
+                        if (loggedUser != null) {
+                            System.out.println("✅ Auto-login successful for: " + token.getEmail());
+                            login(
+                                    loggedUser.getType(),
+                                    loggedUser.getId(),
+                                    loggedUser.getFirstName() + " " + loggedUser.getLastName()
+                            );
+                        } else {
+                            System.out.println("❌ Auto-login failed, clearing token");
+                            rememberMeService.clearRememberMe();
+                            showLoginPanel();
+                        }
+                    });
+                }).start();
+            });
         }
     }
 
@@ -716,22 +761,26 @@ public class MentisLoginFrame extends Application {
     public void logout() {
         System.out.println("🔴 Logging out: " + currentUserName);
 
+        // Clear Remember Me token
+        if (rememberMeService != null) {
+            rememberMeService.clearRememberMe();
+        }
+
         // Clear user data
         currentUserType = "";
         currentUserId = 0;
         currentUserName = "";
 
-        // Reset dynamic panels to force fresh state on next login
+        // Reset dynamic panels
         accessLogsPanel = null;
 
         // Update UI
         userInfoLabel.setText("Not logged in");
         updateSidebarMenu();
 
-        // Show welcome panel (this will remove sidebar)
         showWelcomePanel();
 
-        System.out.println("✅ Logout complete - Welcome Panel shown, sidebar removed");
+        System.out.println("✅ Logout complete");
     }
 
     // ================= DIALOG METHODS =================
@@ -890,6 +939,7 @@ public class MentisLoginFrame extends Application {
         }
         System.out.println("Application stopped");
     }
+
     private SessionReviewController createMockSessionReviewController() {
         return new SessionReviewController() {
             @Override

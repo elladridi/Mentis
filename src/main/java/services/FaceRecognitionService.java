@@ -30,12 +30,14 @@ public class FaceRecognitionService {
     }
 
     public FaceRecognitionService() {
-        // Load face detection cascade
-        String cascadePath = "src/main/resources/haarcascade_frontalface_default.xml";
+        // Try multiple paths for the cascade file
+        String cascadePath = findCascadeFile();
         faceDetector = new CascadeClassifier(cascadePath);
 
         if (faceDetector.empty()) {
-            System.err.println("❌ Failed to load cascade classifier!");
+            System.err.println("❌ Failed to load cascade classifier! Face detection will not work.");
+        } else {
+            System.out.println("✅ Cascade classifier loaded successfully");
         }
 
         // Create face data directory if not exists
@@ -43,6 +45,34 @@ public class FaceRecognitionService {
 
         // Load existing faces
         loadExistingFaces();
+    }
+
+    private String findCascadeFile() {
+        // Try different possible locations
+        String[] possiblePaths = {
+                "src/main/resources/haarcascade_frontalface_default.xml",
+                "resources/haarcascade_frontalface_default.xml",
+                "haarcascade_frontalface_default.xml",
+                "/haarcascade_frontalface_default.xml"
+        };
+
+        // Try file system paths
+        for (String path : possiblePaths) {
+            File file = new File(path);
+            if (file.exists()) {
+                System.out.println("✅ Found cascade file at: " + file.getAbsolutePath());
+                return file.getAbsolutePath();
+            }
+        }
+
+        // Try classpath resource
+        java.net.URL resource = getClass().getResource("/haarcascade_frontalface_default.xml");
+        if (resource != null) {
+            System.out.println("✅ Found cascade file in classpath: " + resource.getPath());
+            return resource.getPath();
+        }
+
+        return "src/main/resources/haarcascade_frontalface_default.xml"; // default path
     }
 
     private void loadExistingFaces() {
