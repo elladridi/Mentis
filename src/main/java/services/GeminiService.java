@@ -129,6 +129,83 @@ public class GeminiService {
         throw new Exception("Groq API error: HTTP " + response.statusCode() + " - " + response.body());
     }
 
+    /**
+     * NEW METHOD: Moderate a review to check for inappropriate content
+     * @param reviewText The review text to check
+     * @return JSON string with moderation results
+     */
+    public static String moderateReview(String reviewText) throws Exception {
+        String prompt = String.format(
+                "You are a content moderator for a mental health app. " +
+                        "Analyze this review and determine if it contains ANY offensive, insulting, " +
+                        "harmful, inappropriate, or disrespectful language.\n\n" +
+                        "Review: \"%s\"\n\n" +
+                        "Respond with a JSON object containing these EXACT fields (no other text):\n" +
+                        "{\n" +
+                        "  \"isAppropriate\": true/false,\n" +
+                        "  \"confidence\": 0.0-1.0,\n" +
+                        "  \"reason\": \"brief explanation\",\n" +
+                        "  \"filteredVersion\": \"the same review but with offensive words replaced by [removed]\",\n" +
+                        "  \"containsProfanity\": true/false,\n" +
+                        "  \"containsHateSpeech\": true/false,\n" +
+                        "  \"containsHarassment\": true/false\n" +
+                        "}",
+                reviewText.replace("\"", "\\\"")
+        );
+
+        String jsonRequest = "{"
+                + "\"model\": \"llama-3.3-70b-versatile\","
+                + "\"messages\": ["
+                + "{\"role\": \"system\", \"content\": \"You are a content moderator. Return ONLY valid JSON, no other text.\"},"
+                + "{\"role\": \"user\", \"content\": \"" + escapeJson(prompt) + "\"}"
+                + "],"
+                + "\"max_tokens\": 500,"
+                + "\"temperature\": 0.1" // Low temperature for consistent results
+                + "}";
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(GROQ_URL))
+                .header("Authorization", "Bearer " + GROQ_API_KEY)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonRequest))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 200) {
+            String body = response.body();
+
+            // Extract content from Groq response
+            int start = body.indexOf("\"content\":\"") + 11;
+            if (start == 10) {
+                start = body.indexOf("\"content\": \"") + 12;
+            }
+
+            int end = body.indexOf("\"", start + 1);
+            while (end < body.length()) {
+                if (body.charAt(end) == '"' && body.charAt(end - 1) != '\\') {
+                    if (end + 1 < body.length() && (body.charAt(end + 1) == ',' || body.charAt(end + 1) == '}')) {
+                        break;
+                    }
+                }
+                end++;
+                if (end >= body.length()) {
+                    end = body.indexOf("\"},\"logprobs\"");
+                    break;
+                }
+            }
+
+            if (start > 10 && end > start) {
+                String content = body.substring(start, end);
+                return content.replace("\\n", "\n").replace("\\\"", "\"");
+            }
+        }
+
+        // Return a default approved response if API fails
+        return "{\"isAppropriate\": true, \"confidence\": 1.0, \"reason\": \"API unavailable, auto-approved\", \"filteredVersion\": \"" + escapeJson(reviewText) + "\", \"containsProfanity\": false, \"containsHateSpeech\": false, \"containsHarassment\": false}";
+    }
+
     private static String escapeJson(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\")

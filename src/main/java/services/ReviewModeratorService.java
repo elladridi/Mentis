@@ -33,13 +33,32 @@ public class ReviewModeratorService {
             );
 
             String aiResponse = geminiService.getGoalAdvice(prompt);
+
+            // If AI response is null or contains null, APPROVE (don't block users)
+            if (aiResponse == null || aiResponse.contains("null") || aiResponse.isEmpty()) {
+                return createApprovedResult(reviewText, "AI service unavailable, review approved");
+            }
+
             return parseAIResponse(aiResponse, reviewText);
 
         } catch (Exception e) {
             e.printStackTrace();
-            // If AI fails, do basic checks
-            return fallbackModeration(reviewText);
+            // If AI fails, APPROVE (don't block users)
+            return createApprovedResult(reviewText, "AI service error, review approved");
         }
+    }
+
+    private ModerationResult createApprovedResult(String reviewText, String reason) {
+        ModerationResult result = new ModerationResult();
+        result.setOriginalText(reviewText);
+        result.setAppropriate(true);
+        result.setFilteredVersion(reviewText);
+        result.setReason(reason);
+        result.setContainsProfanity(false);
+        result.setContainsHateSpeech(false);
+        result.setContainsHarassment(false);
+        result.setConfidence(1.0);
+        return result;
     }
 
     private ModerationResult parseAIResponse(String aiResponse, String originalText) {
@@ -47,11 +66,28 @@ public class ReviewModeratorService {
         result.setOriginalText(originalText);
 
         try {
-            // Simple JSON parsing (you might want to use a proper JSON parser)
+            // Check if the review is appropriate
             if (aiResponse.contains("\"isAppropriate\": true")) {
                 result.setAppropriate(true);
                 result.setFilteredVersion(originalText);
-                result.setReason("Review is respectful and appropriate");
+
+                // Try to extract reason if available
+                if (aiResponse.contains("\"reason\": \"")) {
+                    int start = aiResponse.indexOf("\"reason\": \"") + 11;
+                    int end = aiResponse.indexOf("\"", start);
+                    if (start > 11 && end > start) {
+                        result.setReason(aiResponse.substring(start, end));
+                    } else {
+                        result.setReason("Review is respectful and appropriate");
+                    }
+                } else {
+                    result.setReason("Review is respectful and appropriate");
+                }
+
+                result.setContainsProfanity(false);
+                result.setContainsHateSpeech(false);
+                result.setContainsHarassment(false);
+
             } else if (aiResponse.contains("\"isAppropriate\": false")) {
                 result.setAppropriate(false);
 
@@ -72,7 +108,11 @@ public class ReviewModeratorService {
                 if (aiResponse.contains("\"reason\": \"")) {
                     int start = aiResponse.indexOf("\"reason\": \"") + 11;
                     int end = aiResponse.indexOf("\"", start);
-                    result.setReason(aiResponse.substring(start, end));
+                    if (start > 11 && end > start) {
+                        result.setReason(aiResponse.substring(start, end));
+                    } else {
+                        result.setReason("Review contains inappropriate content");
+                    }
                 } else {
                     result.setReason("Review contains inappropriate content");
                 }
@@ -81,40 +121,15 @@ public class ReviewModeratorService {
                 result.setContainsProfanity(aiResponse.contains("\"containsProfanity\": true"));
                 result.setContainsHateSpeech(aiResponse.contains("\"containsHateSpeech\": true"));
                 result.setContainsHarassment(aiResponse.contains("\"containsHarassment\": true"));
+            } else {
+                // If we can't determine, default to APPROVED
+                return createApprovedResult(originalText, "Could not determine content, review approved");
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-            result.setAppropriate(false);
-            result.setFilteredVersion("[Review could not be processed]");
-            result.setReason("Error analyzing review content");
-        }
-
-        return result;
-    }
-
-    private ModerationResult fallbackModeration(String text) {
-        ModerationResult result = new ModerationResult();
-        result.setOriginalText(text);
-        result.setAppropriate(true); // Default to true
-        result.setFilteredVersion(text);
-        result.setReason("Processed with basic filtering");
-        result.setContainsProfanity(false);
-        result.setContainsHateSpeech(false);
-        result.setContainsHarassment(false);
-
-        // Basic check for common offensive words (just as fallback)
-        String lowerText = text.toLowerCase();
-        String[] commonOffensive = {"stupid", "idiot", "dumb", "hate", "terrible", "awful"};
-
-        for (String word : commonOffensive) {
-            if (lowerText.contains(word)) {
-                result.setAppropriate(false);
-                result.setFilteredVersion("[Review contains inappropriate language]");
-                result.setReason("Review contains potentially offensive language");
-                result.setContainsProfanity(true);
-                break;
-            }
+            // If ANY error occurs, APPROVE the review
+            return createApprovedResult(originalText, "Error parsing AI response, review approved");
         }
 
         return result;
