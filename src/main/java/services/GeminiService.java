@@ -7,12 +7,12 @@ import java.net.http.HttpResponse;
 
 public class GeminiService {
     // Use Groq instead of Gemini since Gemini model is not found
-    private static final String GROQ_API_KEY = "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";
+    private static final String GROQ_API_KEY = "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";
     private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
     public static String getGoalAdvice(String goal) throws Exception {
         String jsonRequest = "{"
-                + "\"model\": \"llama-3.3-70b-versatile\","
+                + "\"model\": \"llama-3.3-70b-versatile\n\","
                 + "\"messages\": [{\"role\": \"user\", \"content\": \"Donne un conseil court pour : " + goal + "\"}],"
                 + "\"max_tokens\": 100"
                 + "}";

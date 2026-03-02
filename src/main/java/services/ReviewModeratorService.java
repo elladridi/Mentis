@@ -2,10 +2,10 @@ package services;
 
 public class ReviewModeratorService {
 
-    private GeminiService geminiService;
+    // No need for geminiService instance variable
 
     public ReviewModeratorService() {
-        this.geminiService = new GeminiService();
+        // Empty constructor
     }
 
     /**
@@ -15,24 +15,10 @@ public class ReviewModeratorService {
      */
     public ModerationResult moderateReview(String reviewText) {
         try {
-            String prompt = String.format(
-                    "You are a content moderator for a mental health app called Mentis. " +
-                            "Analyze this review and determine if it contains ANY offensive, insulting, " +
-                            "harmful, inappropriate, or disrespectful language.\n\n" +
-                            "Review: \"%s\"\n\n" +
-                            "Respond with a JSON object containing these fields:\n" +
-                            "1. 'isAppropriate': true/false (true if review is respectful and acceptable)\n" +
-                            "2. 'confidence': number between 0 and 1\n" +
-                            "3. 'reason': short explanation (max 50 words)\n" +
-                            "4. 'filteredVersion': the same review but with offensive words replaced by [removed]\n" +
-                            "5. 'containsProfanity': true/false\n" +
-                            "6. 'containsHateSpeech': true/false\n" +
-                            "7. 'containsHarassment': true/false\n\n" +
-                            "Return ONLY the JSON object, no other text.",
-                    reviewText.replace("\"", "\\\"")
-            );
+            // ⭐ FIXED: Call the static method directly
+            String aiResponse = GeminiService.moderateReview(reviewText);
 
-            String aiResponse = geminiService.getGoalAdvice(prompt);
+            System.out.println("🔍 AI Response: " + aiResponse); // Debug log
 
             // If AI response is null or contains null, APPROVE (don't block users)
             if (aiResponse == null || aiResponse.contains("null") || aiResponse.isEmpty()) {
@@ -57,7 +43,6 @@ public class ReviewModeratorService {
         result.setContainsProfanity(false);
         result.setContainsHateSpeech(false);
         result.setContainsHarassment(false);
-        result.setConfidence(1.0);
         return result;
     }
 
