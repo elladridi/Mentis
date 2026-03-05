@@ -35,7 +35,11 @@ The JavaFX interface interacts with the Java backend, which processes user reque
 
 ## Contributors
 - Ella Dridi
-- Team Members
+- Arij Bouhlila
+- Maram Hamdi
+- Omar Kammoun
+- Zina Ben Othmen
+- Ahmed Zekri
 
 ## Academic Context
 Developed at Esprit School of Engineering – Tunisia  
