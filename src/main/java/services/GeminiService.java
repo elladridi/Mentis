@@ -7,7 +7,7 @@ import java.net.http.HttpResponse;
 
 public class GeminiService {
     // Use Groq instead of Gemini since Gemini model is not found
-    private static final String GROQ_API_KEY = "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";
+    private static final String GROQ_API_KEY = "your_api_key_here";
     private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
     public static String getGoalAdvice(String goal) throws Exception {
