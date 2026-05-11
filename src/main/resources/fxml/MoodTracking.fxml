@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<BorderPane prefHeight="700.0" prefWidth="1200.0" style="-fx-background-color: #F4F9F4;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.MoodController">
+    <left>
+        <VBox spacing="10.0" style="-fx-background-color: #ffffff; -fx-border-color: #4CAF50; -fx-border-width: 0 2 0 0; -fx-pref-width: 250;">
+            <padding><Insets bottom="20.0" left="15.0" right="15.0" top="30.0" /></padding>
+            <children>
+                <Text style="-fx-fill: #4CAF50; -fx-font-size: 26; -fx-font-weight: bold;" text="Mentis" />
+                <Separator opacity="0.5" />
+                <Button maxWidth="Infinity" onAction="#backToHome" style="-fx-background-color: transparent; -fx-text-fill: #2c3e50; -fx-alignment: CENTER_LEFT;" text="🏠 Dashboard" />
+                <Button maxWidth="Infinity" style="-fx-background-color: #E8F5E9; -fx-text-fill: #4CAF50; -fx-alignment: CENTER_LEFT; -fx-font-weight: bold; -fx-background-radius: 10;" text="📊 Mood tracking" />
+                <Region VBox.vgrow="ALWAYS" />
+            </children>
+        </VBox>
+    </left>
+    <center>
+        <StackPane fx:id="mainContainer" style="-fx-padding: 20;">
+            <children>
+                <HBox spacing="20">
+                    <children>
+                        <VBox spacing="20" HBox.hgrow="ALWAYS">
+                            <Label text="MENTIS - Mood Tracking" style="-fx-font-size: 28; -fx-text-fill: #2E7D32; -fx-font-weight: bold;" />
+                            <VBox spacing="15" prefWidth="320" style="-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-border-color: #4CAF50; -fx-border-radius: 20; -fx-border-width: 1;">
+                                <children>
+                                    <Label text="Comment te sens-tu ?" style="-fx-font-weight: bold; -fx-text-fill: #2E7D32;" />
+                                    <TextField fx:id="inputFeeling" promptText="Ex: Super bien !" style="-fx-background-radius: 8;" />
+                                    <ComboBox fx:id="comboEmoji" promptText="Choisir un Emoji" maxWidth="Infinity" style="-fx-background-radius: 8;" />
+                                    <TextField fx:id="inputNote" promptText="Une petite note..." style="-fx-background-radius: 8;" />
+                                    <VBox spacing="10" style="-fx-padding: 10 0 0 0;">
+                                        <Button onAction="#handleSave" maxWidth="Infinity" text="Sauvegarder ✨" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand;" />
+                                        <HBox spacing="10">
+                                            <Button onAction="#handleUpdate" HBox.hgrow="ALWAYS" maxWidth="Infinity" text="Modifier" style="-fx-background-radius: 8;" />
+                                            <Button onAction="#handleDelete" HBox.hgrow="ALWAYS" maxWidth="Infinity" text="Supprimer" style="-fx-background-color: #FFEBEE; -fx-text-fill: #c0392b; -fx-background-radius: 8;" />
+                                        </HBox>
+                                    </VBox>
+                                    <Separator />
+                                    <Button onAction="#openReflect" maxWidth="Infinity" text="📓 Réflexion Quotidienne" style="-fx-background-color: #E3F2FD; -fx-text-fill: #1976D2; -fx-font-weight: bold; -fx-background-radius: 10;" />
+                                </children>
+                            </VBox>
+                            <TableView fx:id="tableMoods" onMouseClicked="#loadSelectedMood" VBox.vgrow="ALWAYS" style="-fx-background-radius: 15; -fx-border-radius: 15; -fx-border-color: #E0E0E0; -fx-border-width: 1;">
+                                <columns>
+                                    <TableColumn fx:id="colFeeling" prefWidth="120" text="Feeling" />
+                                    <TableColumn fx:id="colNote" prefWidth="180" text="Note" />
+                                    <TableColumn fx:id="colDate" prefWidth="150" text="Date" />
+                                </columns>
+                            </TableView>
+                        </VBox>
+                        <VBox spacing="15" prefWidth="400" style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-border-color: #4CAF50; -fx-border-radius: 20; -fx-border-width: 1;">
+                            <children>
+                                <Label text="Mentis Art Lab" textFill="#4CAF50" style="-fx-font-weight: bold; -fx-font-size: 24;"/>
+                                <Separator />
+                                <StackPane prefHeight="300" style="-fx-background-color: #1a1a2e; -fx-background-radius: 15;">
+                                    <children>
+                                        <ImageView fx:id="moodImageView" fitHeight="280" fitWidth="280" pickOnBounds="true" preserveRatio="true" />
+                                    </children>
+                                </StackPane>
+                                <VBox spacing="5" alignment="CENTER">
+                                    <Label text="Analyse Artistique" style="-fx-font-weight: bold; -fx-font-size: 16;"/>
+                                    <Label fx:id="artDescriptionLabel" text="Générez votre art pour voir l'analyse..." style="-fx-text-fill: #555; -fx-font-style: italic;"/>
+                                    <Button fx:id="btnGenerateArt" onAction="#handleGenerateArt" text="Générer Art ✨" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-padding: 10 20 10 20; -fx-cursor: hand;" />
+                                </VBox>
+                            </children>
+                        </VBox>
+                    </children>
+                </HBox>
+            </children>
+        </StackPane>
+    </center>
+</BorderPane>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Scanner - Mentis</title>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        body { margin: 0; background: #1a1a2e; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        #container { position: relative; width: 640px; height: 480px; }
+        video, canvas { position: absolute; border-radius: 15px; width: 640px; height: 480px; }
+        #status { position: absolute; top: -60px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #4ecca3; width: 100%; text-align: center; }
+        #result-box { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: #4ecca3; color: #1a1a2e; padding: 15px 30px; border-radius: 50px; font-size: 24px; font-weight: bold; z-index: 100; }
+    </style>
+</head>
+<body>
+<div id="container">
+    <div id="status">Vérification de l'IA...</div>
+    <video id="video" autoplay muted playsinline></video>
+    <div id="result-box">CHARGEMENT...</div>
+</div>
+<script>
+    const video = document.getElementById('video');
+    const status = document.getElementById('status');
+    const resultBox = document.getElementById('result-box');
+    async function init() {
+        try {
+            status.innerText = "1. Chargement des modèles (Patientez...)";
+            const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+            await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+            await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+            status.innerText = "2. Modèles chargés ! Allumage caméra...";
+            const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                status.innerText = "3. SYSTÈME ACTIF - SOURIEZ !";
+                resultBox.innerText = "PRÊT";
+                detect();
+            };
+        } catch (err) {
+            status.innerText = "ERREUR : " + err.message;
+            resultBox.innerText = "PANNE";
+            resultBox.style.background = "red";
+        }
+    }
+    async function detect() {
+        const canvas = faceapi.createCanvasFromMedia(video);
+        document.getElementById('container').append(canvas);
+        const displaySize = { width: 640, height: 480 };
+        faceapi.matchDimensions(canvas, displaySize);
+        setInterval(async () => {
+            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions();
+            if (detections && detections.length > 0) {
+                const expressions = detections[0].expressions;
+                const sorted = Object.entries(expressions).sort((a, b) => b[1] - a[1]);
+                resultBox.innerText = "HUMEUR : " + sorted[0][0].toUpperCase();
+                resultBox.style.background = "#4ecca3";
+                const resized = faceapi.resizeResults(detections, displaySize);
+                canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+                faceapi.draw.drawDetections(canvas, resized);
+            } else {
+                resultBox.innerText = "VISAGE NON DÉTECTÉ";
+                resultBox.style.background = "orange";
+            }
+        }, 200);
+    }
+    init();
+</script>
+</body>
+</html>

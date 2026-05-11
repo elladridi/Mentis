@@ -15,6 +15,12 @@
                 <Button maxWidth="Infinity" style="-fx-background-color: #E8F5E9; -fx-text-fill: #4CAF50; -fx-alignment: CENTER_LEFT; -fx-font-size: 14; -fx-font-weight: bold; -fx-background-radius: 10;" text="🏠 Dashboard" />
                 <Button maxWidth="Infinity" onAction="#goToMood" style="-fx-background-color: transparent; -fx-text-fill: #2c3e50; -fx-alignment: CENTER_LEFT;" text="📊 Mood tracking" />
                 <Button maxWidth="Infinity" onAction="#goToGoals" style="-fx-background-color: transparent; -fx-text-fill: #2c3e50; -fx-alignment: CENTER_LEFT;" text="🎯 Goal Tracking" />
+                <Separator opacity="0.3" />
+                <Text style="-fx-fill: #7f8c8d; -fx-font-size: 12; -fx-font-weight: bold;" text="MENTIS TOOLS" />
+                <Button maxWidth="Infinity" onAction="#handleAIScanner" style="-fx-background-color: transparent; -fx-text-fill: #2c3e50; -fx-alignment: CENTER_LEFT;" text="🤖 AI Scanner" />
+                <Button maxWidth="Infinity" onAction="#handleMoodCharts" style="-fx-background-color: transparent; -fx-text-fill: #2c3e50; -fx-alignment: CENTER_LEFT;" text="📈 Mood Charts" />
+                <Button maxWidth="Infinity" onAction="#handleReflect" style="-fx-background-color: transparent; -fx-text-fill: #2c3e50; -fx-alignment: CENTER_LEFT;" text="🧘 Reflectyy" />
+                <Button maxWidth="Infinity" onAction="#handleQuotas" style="-fx-background-color: transparent; -fx-text-fill: #2c3e50; -fx-alignment: CENTER_LEFT;" text="💡 Daily Quotas" />
                 <Region VBox.vgrow="ALWAYS" />
                 <Button maxWidth="Infinity" onAction="#handleLogout" style="-fx-background-color: #FFEBEE; -fx-text-fill: #c0392b; -fx-background-radius: 10;" text="🚪 Déconnexion" />
             </children>
