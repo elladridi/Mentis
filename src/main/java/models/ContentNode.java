@@ -17,6 +17,7 @@ public class ContentNode {
     private String description;
     private String pdfPath;           // File path for uploaded PDF
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private int createdBy;            // User ID who created this content
     private Integer parentNodeId;     // NULL if root, otherwise parent node ID
     private String assignedUsers;     // JSON string: "[1,2,3]" - users who can view this content
@@ -70,6 +71,9 @@ public class ContentNode {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     public int getCreatedBy() { return createdBy; }
     public void setCreatedBy(int createdBy) { this.createdBy = createdBy; }
@@ -163,6 +167,7 @@ public class ContentNode {
                 ", title='" + title + '\'' +
                 ", createdBy=" + createdBy +
                 ", parentNodeId=" + parentNodeId +
+                ", updatedAt=" + updatedAt +
                 ", assignedUsers=" + assignedUsers +
                 '}';
     }

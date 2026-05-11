@@ -70,8 +70,10 @@ public class UpdateContentNodeCommand implements Command {
         copy.setDescription(node.getDescription());
         copy.setPdfPath(node.getPdfPath());
         copy.setCreatedAt(node.getCreatedAt());
+        copy.setUpdatedAt(node.getUpdatedAt());
         copy.setCreatedBy(node.getCreatedBy());
         copy.setParentNodeId(node.getParentNodeId());
+        copy.setAssignedUsers(node.getAssignedUsers());
         return copy;
     }
 }

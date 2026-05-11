@@ -147,6 +147,7 @@ public class ContentNodeController {
             newNode.setDescription(description);
             newNode.setCreatedBy(oldNode.getCreatedBy());
             newNode.setCreatedAt(oldNode.getCreatedAt());
+            newNode.setUpdatedAt(java.time.LocalDateTime.now());
             newNode.setParentNodeId(parentNodeId);
 
             // ⭐⭐⭐ FIX: Update assigned users ⭐⭐⭐

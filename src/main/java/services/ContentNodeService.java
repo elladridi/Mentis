@@ -24,16 +24,22 @@ public class ContentNodeService {
      * @return nodeId of created node, or -1 if failed
      */
     public int createContentNode(ContentNode node) throws SQLException {
-        String sql = "INSERT INTO content_node (title, description, pdf_path, created_by, parent_node_id, assigned_users) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO content_node (title, description, pdf_path, created_at, updated_at, created_by, parent_node_id, assigned_users) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+        if (node.getCreatedAt() == null) {
+            node.setCreatedAt(java.time.LocalDateTime.now());
+        }
 
         PreparedStatement ps = cnx.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
         ps.setString(1, node.getTitle());
         ps.setString(2, node.getDescription());
         ps.setString(3, node.getPdfPath());
-        ps.setInt(4, node.getCreatedBy());
-        ps.setObject(5, node.getParentNodeId(), Types.INTEGER);
-        ps.setString(6, node.getAssignedUsers() != null ? node.getAssignedUsers() : "[]");
+        ps.setTimestamp(4, Timestamp.valueOf(node.getCreatedAt()));
+        ps.setTimestamp(5, node.getUpdatedAt() != null ? Timestamp.valueOf(node.getUpdatedAt()) : null);
+        ps.setInt(6, node.getCreatedBy());
+        ps.setObject(7, node.getParentNodeId(), Types.INTEGER);
+        ps.setString(8, node.getAssignedUsers() != null ? node.getAssignedUsers() : "[]");
 
         int affectedRows = ps.executeUpdate();
 
@@ -149,7 +155,11 @@ public class ContentNodeService {
      */
     public void updateContentNode(ContentNode node) throws SQLException {
         String sql = "UPDATE content_node SET title = ?, description = ?, pdf_path = ?, " +
-                "parent_node_id = ?, assigned_users = ? WHERE node_id = ?";
+                "parent_node_id = ?, assigned_users = ?, updated_at = ? WHERE node_id = ?";
+
+        if (node.getUpdatedAt() == null) {
+            node.setUpdatedAt(java.time.LocalDateTime.now());
+        }
 
         PreparedStatement ps = cnx.prepareStatement(sql);
         ps.setString(1, node.getTitle());
@@ -157,7 +167,8 @@ public class ContentNodeService {
         ps.setString(3, node.getPdfPath());
         ps.setObject(4, node.getParentNodeId(), Types.INTEGER);
         ps.setString(5, node.getAssignedUsers() != null ? node.getAssignedUsers() : "[]");
-        ps.setInt(6, node.getNodeId());
+        ps.setTimestamp(6, Timestamp.valueOf(node.getUpdatedAt()));
+        ps.setInt(7, node.getNodeId());
 
         ps.executeUpdate();
     }
@@ -236,6 +247,8 @@ public class ContentNodeService {
         node.setDescription(rs.getString("description"));
         node.setPdfPath(rs.getString("pdf_path"));
         node.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+        Timestamp updatedAt = rs.getTimestamp("updated_at");
+        node.setUpdatedAt(updatedAt != null ? updatedAt.toLocalDateTime() : null);
         node.setCreatedBy(rs.getInt("created_by"));
 
         Integer parentId = rs.getInt("parent_node_id");
