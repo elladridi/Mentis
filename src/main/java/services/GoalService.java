@@ -1,8 +1,9 @@
 package services;
 
 import models.Goal;
-import utils.MyDB;
+import utils.z.MyDBMentis;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,29 +12,36 @@ public class GoalService {
 
     public GoalService() {
         // On récupère la connexion via le Singleton MyDB
-        cnx = MyDB.getInstance().getConnection();
+        cnx = MyDBMentis.getInstance().getConnection();
+    }
+
+    private Connection getConnection() {
+        if (cnx == null) {
+            cnx = MyDBMentis.getInstance().getConnection();
+        }
+        return cnx;
     }
 
     // CREATE : Ajouter un objectif
     public void ajouter(Goal g) throws SQLException {
-        String sql = "INSERT INTO goal(description, deadline, progress, status) VALUES (?, ?, ?, ?)";
-        PreparedStatement ps = cnx.prepareStatement(sql);
-        ps.setString(1, g.getDescription());
-        ps.setDate(2, Date.valueOf(g.getDeadline()));
-        ps.setInt(3, g.getProgress());
-        ps.setString(4, g.getStatus());
+        String sql = "INSERT INTO goal (title, description, deadline, is_completed, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, 1, NOW(), NOW())";
+        PreparedStatement ps = getConnection().prepareStatement(sql);
+        ps.setString(1, g.getDescription()); // Mapping description to title
+        ps.setString(2, ""); // Empty description
+        ps.setDate(3, Date.valueOf(g.getDeadline()));
+        ps.setInt(4, g.getProgress() > 0 ? 1 : 0); // is_completed (0 or 1)
         ps.executeUpdate();
         System.out.println("Objectif ajouté !");
     }
 
     // UPDATE : Modifier un objectif existant
     public void modifier(Goal g) throws SQLException {
-        String sql = "UPDATE goal SET description=?, deadline=?, progress=?, status=? WHERE id=?";
-        PreparedStatement ps = cnx.prepareStatement(sql);
+        String sql = "UPDATE goal SET title=?, description=?, deadline=?, is_completed=?, updated_at=NOW() WHERE id=?";
+        PreparedStatement ps = getConnection().prepareStatement(sql);
         ps.setString(1, g.getDescription());
-        ps.setDate(2, Date.valueOf(g.getDeadline()));
-        ps.setInt(3, g.getProgress());
-        ps.setString(4, g.getStatus());
+        ps.setString(2, "");
+        ps.setDate(3, Date.valueOf(g.getDeadline()));
+        ps.setInt(4, g.getProgress() > 0 ? 1 : 0);
         ps.setInt(5, g.getId());
         ps.executeUpdate();
         System.out.println("Objectif mis à jour !");
@@ -42,7 +50,7 @@ public class GoalService {
     // DELETE : Supprimer un objectif par son ID
     public void supprimer(int id) throws SQLException {
         String sql = "DELETE FROM goal WHERE id = ?";
-        PreparedStatement ps = cnx.prepareStatement(sql);
+        PreparedStatement ps = getConnection().prepareStatement(sql);
         ps.setInt(1, id);
         ps.executeUpdate();
         System.out.println("Objectif supprimé !");
@@ -51,17 +59,17 @@ public class GoalService {
     // READ : Récupérer tous les objectifs
     public List<Goal> recupererTout() throws SQLException {
         List<Goal> objectifs = new ArrayList<>();
-        String sql = "SELECT * FROM goal";
-        Statement st = cnx.createStatement();
+        String sql = "SELECT * FROM goal ORDER BY deadline ASC";
+        Statement st = getConnection().createStatement();
         ResultSet rs = st.executeQuery(sql);
 
         while (rs.next()) {
             Goal g = new Goal();
             g.setId(rs.getInt("id"));
-            g.setDescription(rs.getString("description"));
+            g.setDescription(rs.getString("title")); // Reading title into description
             g.setDeadline(rs.getDate("deadline").toLocalDate());
-            g.setProgress(rs.getInt("progress"));
-            g.setStatus(rs.getString("status"));
+            g.setProgress(rs.getInt("is_completed"));
+            g.setStatus(g.getProgress() > 0 ? "Terminé" : "En cours");
             objectifs.add(g);
         }
         return objectifs;

@@ -1,5 +1,6 @@
 package services;
 
+import utils.z.AppConfig;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -7,12 +8,12 @@ import java.net.http.HttpResponse;
 
 public class GeminiService {
     // Use Groq instead of Gemini since Gemini model is not found
-    private static final String GROQ_API_KEY = "your_api_key_here";
+    private static final String GROQ_API_KEY = AppConfig.groqApiKey();
     private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
     public static String getGoalAdvice(String goal) throws Exception {
         String jsonRequest = "{"
-                + "\"model\": \"llama-3.3-70b-versatile\n\","
+                + "\"model\": \"llama-3.3-70b-versatile\","
                 + "\"messages\": [{\"role\": \"user\", \"content\": \"Donne un conseil court pour : " + goal + "\"}],"
                 + "\"max_tokens\": 100"
                 + "}";
@@ -37,7 +38,11 @@ public class GeminiService {
             String advice = body.substring(start, end);
             return advice.replace("\\n", "\n");
         }
-        return "Erreur du serveur (Status " + response.statusCode() + ")";
+        
+        if (response.statusCode() == 401) {
+            return "Erreur d'authentification (Status 401) : Ta clé MENTIS_GROQ_API_KEY est invalide ou absente dans AppConfig.";
+        }
+        return "Erreur du serveur (Status " + response.statusCode() + ") : " + response.body();
     }
 
     public static String generateContent(String prompt) throws Exception {

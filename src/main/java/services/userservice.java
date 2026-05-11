@@ -1,7 +1,7 @@
 package services;
 
 import models.user;
-import utils.DatabaseConnection;
+import utils.z.DatabaseConnectionMentis;
 
 import java.sql.*;
 import java.security.MessageDigest;
@@ -25,7 +25,7 @@ public class userservice {
         String sql = "INSERT INTO `user` (firstname, lastname, phone, dateofbirth, type, email, password) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             System.out.println("DEBUG: Attempting to register user...");
@@ -55,7 +55,7 @@ public class userservice {
 
         String sql = "SELECT * FROM `user` WHERE email = ?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, email);
@@ -91,7 +91,7 @@ public class userservice {
 
         String sql = "SELECT COUNT(*) FROM `user` WHERE email = ?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, email);
@@ -110,7 +110,7 @@ public class userservice {
 
         String sql = "SELECT * FROM `user` WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, id);
@@ -142,7 +142,7 @@ public class userservice {
 
         String sql = "UPDATE `user` SET firstname=?, lastname=?, phone=?, dateofbirth=?, type=?, email=? WHERE id=?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, user.getFirstName());
@@ -166,7 +166,7 @@ public class userservice {
 
         String sql = "DELETE FROM `user` WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, id);
@@ -220,7 +220,7 @@ public class userservice {
         ResultSet rs = null;
 
         try {
-            conn = DatabaseConnection.getConnection();
+            conn = DatabaseConnectionMentis.getConnection();
             stmt = conn.prepareStatement(sql);
             stmt.setString(1, email);
 
@@ -253,7 +253,7 @@ public class userservice {
 
         String sql = "UPDATE user SET password=? WHERE email=?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, hashPassword(newPassword));
@@ -281,7 +281,7 @@ public class userservice {
 
         System.out.println("🔍 Fetching patients from database...");
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             ResultSet rs = stmt.executeQuery();
@@ -320,7 +320,7 @@ public class userservice {
     public static boolean saveFaceData(int userId, String facePath) {
         String sql = "UPDATE `user` SET face_data = ?, face_enabled = TRUE WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, facePath);
@@ -343,7 +343,7 @@ public class userservice {
     public static boolean hasFaceEnabled(int userId) {
         String sql = "SELECT face_enabled FROM `user` WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, userId);
@@ -363,7 +363,7 @@ public class userservice {
     public static String getFaceDataPath(int userId) {
         String sql = "SELECT face_data FROM `user` WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, userId);
@@ -386,7 +386,7 @@ public class userservice {
     public static boolean disableFaceID(int userId) {
         String sql = "UPDATE `user` SET face_enabled = FALSE WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, userId);
@@ -404,7 +404,7 @@ public class userservice {
     public static boolean setFaceEnabled(int userId, boolean enabled) {
         String sql = "UPDATE `user` SET face_enabled = ? WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setBoolean(1, enabled);
