@@ -2,7 +2,6 @@ package ui;
 
 import controller.AssessmentController;
 import controller.QuestionController;
-import ui.AIQuestionGeneratorDialog;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -21,7 +20,7 @@ import java.util.List;
 
 public class QuestionPanel extends VBox {
 
-    private MentisLoginFrame parentApp;  // FIXED: Changed from MentisLoginFrame to MentisLoginFrame
+    private MentisLoginFrame parentApp;
     private QuestionController questionController;
     private AssessmentController assessmentController;
     private TableView<QuestionModel> questionTable;
@@ -29,130 +28,251 @@ public class QuestionPanel extends VBox {
     private List<Assessment> assessments;
     private int currentAssessmentId = -1;
 
-    // UI Components that need to be updated
-    private Label assessmentTitleLabel;
     private Label assessmentTypeLabel;
     private Label assessmentNameLabel;
 
-    // Color constants
-    private static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
-    private static final Color CARD_WHITE = Color.WHITE;
-    private static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
-    private static final Color BUTTON_LIGHT_GREEN = Color.rgb(160, 200, 180);
-    private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
-    private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
-    private static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
 
-    public QuestionPanel(MentisLoginFrame parentApp, QuestionController questionController,  // FIXED: Parameter type
+    // Symfony-like colors and helpers
+    private static final Color PAGE_BG = Color.web("#F8F9FA");
+    private static final Color SOFT_GREEN = Color.web("#F1F8E9");
+    private static final Color EMERALD = Color.web("#50C878");
+    private static final Color EMERALD_DARK = Color.web("#2E7D32");
+    private static final Color EMERALD_MID = Color.web("#3A9B5E");
+    private static final Color INK = Color.web("#1A3C34");
+    private static final Color MUTED = Color.web("#6C757D");
+    private static final Color LINE = Color.web("#E9ECEF");
+    private static final Color DANGER = Color.web("#E74C3C");
+    private static final Color WARNING = Color.web("#F39C12");
+
+    private String css(Color color) {
+        return "#" + toHex(color);
+    }
+
+    private String gradient(Color left, Color right) {
+        return "linear-gradient(to bottom right, " + css(left) + ", " + css(right) + ")";
+    }
+
+    private String softShadow() {
+        return "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 18, 0, 0, 8);";
+    }
+
+    private String cardStyle() {
+        return "-fx-background-color: white;" +
+                "-fx-background-radius: 24;" +
+                "-fx-border-radius: 24;" +
+                "-fx-border-color: transparent;" +
+                softShadow();
+    }
+
+    private String pillInputStyle() {
+        return "-fx-background-color: white;" +
+                "-fx-background-radius: 999;" +
+                "-fx-border-radius: 999;" +
+                "-fx-border-color: " + css(EMERALD) + ";" +
+                "-fx-border-width: 2;" +
+                "-fx-padding: 10 18;" +
+                "-fx-font-family: 'Segoe UI';" +
+                "-fx-font-size: 14px;";
+    }
+
+    private Button primaryButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        button.setTextFill(Color.WHITE);
+        button.setStyle(
+                "-fx-background-color: " + gradient(EMERALD, EMERALD_MID) + ";" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-padding: 11 26;" +
+                        "-fx-cursor: hand;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(80,200,120,0.30), 16, 0, 0, 7);"
+        );
+        button.setOnMouseEntered(e -> {
+            if (!button.isDisable()) {
+                button.setStyle(
+                        "-fx-background-color: " + gradient(EMERALD, EMERALD_DARK) + ";" +
+                                "-fx-background-radius: 999;" +
+                                "-fx-padding: 11 26;" +
+                                "-fx-cursor: hand;" +
+                                "-fx-translate-y: -2;" +
+                                "-fx-effect: dropshadow(gaussian, rgba(80,200,120,0.45), 22, 0, 0, 9);"
+                );
+            }
+        });
+        button.setOnMouseExited(e -> {
+            if (!button.isDisable()) {
+                button.setStyle(
+                        "-fx-background-color: " + gradient(EMERALD, EMERALD_MID) + ";" +
+                                "-fx-background-radius: 999;" +
+                                "-fx-padding: 11 26;" +
+                                "-fx-cursor: hand;" +
+                                "-fx-effect: dropshadow(gaussian, rgba(80,200,120,0.30), 16, 0, 0, 7);"
+                );
+            }
+        });
+        return button;
+    }
+
+    private Button outlineButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        button.setTextFill(MUTED);
+        button.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-border-radius: 999;" +
+                        "-fx-border-color: #CED4DA;" +
+                        "-fx-border-width: 1.5;" +
+                        "-fx-padding: 10 24;" +
+                        "-fx-cursor: hand;"
+        );
+        button.setOnMouseEntered(e -> {
+            if (!button.isDisable()) {
+                button.setTextFill(EMERALD_DARK);
+                button.setStyle(
+                        "-fx-background-color: #F1F8E9;" +
+                                "-fx-background-radius: 999;" +
+                                "-fx-border-radius: 999;" +
+                                "-fx-border-color: " + css(EMERALD) + ";" +
+                                "-fx-border-width: 1.5;" +
+                                "-fx-padding: 10 24;" +
+                                "-fx-cursor: hand;"
+                );
+            }
+        });
+        button.setOnMouseExited(e -> {
+            if (!button.isDisable()) {
+                button.setTextFill(MUTED);
+                button.setStyle(
+                        "-fx-background-color: white;" +
+                                "-fx-background-radius: 999;" +
+                                "-fx-border-radius: 999;" +
+                                "-fx-border-color: #CED4DA;" +
+                                "-fx-border-width: 1.5;" +
+                                "-fx-padding: 10 24;" +
+                                "-fx-cursor: hand;"
+                );
+            }
+        });
+        return button;
+    }
+
+    private Label badge(String text, Color bg, Color fg) {
+        Label label = new Label(text == null ? "N/A" : text);
+        label.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        label.setTextFill(fg);
+        label.setPadding(new Insets(6, 13, 6, 13));
+        label.setStyle("-fx-background-color: " + css(bg) + "; -fx-background-radius: 999;");
+        return label;
+    }
+
+    private void styleTable(TableView<QuestionModel> table) {
+
+        table.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 24;" +
+                        "-fx-border-radius: 24;" +
+                        "-fx-border-color: transparent;" +
+                        softShadow()
+        );
+
+        table.setFixedCellSize(68);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        table.setRowFactory(tv -> new TableRow<QuestionModel>() {
+
+            @Override
+            protected void updateItem(QuestionModel item, boolean empty) {
+
+                super.updateItem(item, empty);
+
+                if (empty || item == null) {
+
+                    setStyle("-fx-background-color: transparent;");
+
+                } else {
+
+                    if (getIndex() % 2 == 0) {
+
+                        setStyle("-fx-background-color: white;");
+
+                    } else {
+
+                        setStyle("-fx-background-color: #FBFCFC;");
+
+                    }
+                }
+            }
+        });
+    }
+
+    public QuestionPanel(MentisLoginFrame parentApp, QuestionController questionController,
                          AssessmentController assessmentController) {
         this.parentApp = parentApp;
         this.questionController = questionController;
         this.assessmentController = assessmentController;
 
-        setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        setPadding(new Insets(40, 50, 40, 50));
-        setSpacing(30);
+        setStyle("-fx-background-color: " + css(PAGE_BG) + ";");
+        setPadding(new Insets(44, 56, 44, 56));
+        setSpacing(28);
 
         createHeader();
         createTable();
     }
 
     private void createHeader() {
-        VBox headerContainer = new VBox(20);
-        headerContainer.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        VBox headerContainer = new VBox(22);
+        headerContainer.setStyle("-fx-background-color: transparent;");
 
-        // Top right - CANCEL button
-        HBox topRight = new HBox();
-        topRight.setAlignment(Pos.CENTER_RIGHT);
-        topRight.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-
-        Button cancelButton = createCancelButton();
-        topRight.getChildren().add(cancelButton);
-
-        // Title section
         HBox titlePanel = new HBox();
         titlePanel.setAlignment(Pos.CENTER_LEFT);
-        titlePanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        titlePanel.setPadding(new Insets(20, 0, 0, 0));
 
-        // Left side titles
-        VBox titleLeft = new VBox(5);
-        titleLeft.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        VBox titleLeft = new VBox(4);
 
-        Label mainTitle = new Label("Manage questions for Assessment");
-        mainTitle.setFont(Font.font("Segoe UI", FontWeight.BOLD, 32));
-        mainTitle.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        Label mainTitle = new Label("❔ Manage Questions");
+        mainTitle.setFont(Font.font("Segoe UI", FontWeight.BOLD, 40));
+        mainTitle.setTextFill(EMERALD_DARK);
 
         assessmentNameLabel = new Label("All Assessments");
-        assessmentNameLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 28));
-        assessmentNameLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        assessmentNameLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
+        assessmentNameLabel.setTextFill(INK);
 
         assessmentTypeLabel = new Label("Viewing all questions");
-        assessmentTypeLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 16));
-        assessmentTypeLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
+        assessmentTypeLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 15));
+        assessmentTypeLabel.setTextFill(MUTED);
 
         titleLeft.getChildren().addAll(mainTitle, assessmentNameLabel, assessmentTypeLabel);
 
-        // Spacer
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // Button container for ADD and AI Generate buttons
-        HBox buttonContainer = new HBox(10); // 10px spacing between buttons
+        HBox buttonContainer = new HBox(10);
         buttonContainer.setAlignment(Pos.CENTER_RIGHT);
 
-        // ADD button
-        Button addButton = createAddButton();
-        addButton.setOnAction(e -> showAddQuestionDialog());
+        Button backButton = outlineButton("← Back");
+        backButton.setOnAction(e -> parentApp.showAssessmentPanel());
 
-        // AI Generate button
         Button aiGenerateBtn = createAIGenerateButton();
 
-        buttonContainer.getChildren().addAll(addButton, aiGenerateBtn);
+        Button addButton = primaryButton("➕ Add Question");
+        addButton.setOnAction(e -> showAddQuestionDialog());
+
+        buttonContainer.getChildren().addAll(backButton, aiGenerateBtn, addButton);
 
         titlePanel.getChildren().addAll(titleLeft, spacer, buttonContainer);
-
-        headerContainer.getChildren().addAll(topRight, titlePanel);
+        headerContainer.getChildren().add(titlePanel);
         getChildren().add(headerContainer);
     }
 
-    // Add this new method to create the AI Generate button
     private Button createAIGenerateButton() {
-        Button aiGenerateBtn = new Button("🤖 GENERATE WITH AI");
-        aiGenerateBtn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-        aiGenerateBtn.setTextFill(Color.WHITE);
-        aiGenerateBtn.setStyle(
-                "-fx-background-color: #425a3f;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 12 25;" +
-                        "-fx-cursor: hand;"
-        );
-
-        // Hover effect
-        aiGenerateBtn.setOnMouseEntered(e -> aiGenerateBtn.setStyle(
-                "-fx-background-color: #273e1d;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 12 25;" +
-                        "-fx-cursor: hand;"
-        ));
-
-        aiGenerateBtn.setOnMouseExited(e -> aiGenerateBtn.setStyle(
-                "-fx-background-color: #425a3f;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 12 25;" +
-                        "-fx-cursor: hand;"
-        ));
-
+        Button aiGenerateBtn = primaryButton("🤖 Generate with AI");
         aiGenerateBtn.setOnAction(e -> {
             if (currentAssessmentId <= 0) {
                 showAlert("No Assessment Selected",
-                        "Please select an assessment first before generating questions.\n\n" +
-                                "Go back to the Assessment Panel and select a specific assessment.",
+                        "Please select an assessment first before generating questions.\n\nGo back to the Assessment Panel and select a specific assessment.",
                         Alert.AlertType.WARNING);
                 return;
             }
 
-            // Find the selected assessment
             Assessment selectedAssessment = null;
             try {
                 if (assessments != null) {
@@ -172,94 +292,20 @@ public class QuestionPanel extends VBox {
                 return;
             }
 
-            // Open the AI Question Generator dialog
-            new AIQuestionGeneratorDialog(
-                    selectedAssessment,
-                    questionController,  // pass your existing QuestionController instance
-                    this::refreshData     // refresh method
-            ).show();
+            new AIQuestionGeneratorDialog(selectedAssessment, questionController, this::refreshData).show();
         });
 
         return aiGenerateBtn;
     }
 
-    private Button createCancelButton() {
-        Button button = new Button("CANCEL");
-        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        button.setTextFill(Color.web(toHex(TEXT_DARK)));
-        button.setStyle(
-                "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 12 40;" +
-                        "-fx-cursor: hand;"
-        );
-
-        // Hover effect
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN.darker()) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 40;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 40;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
-        // FIXED: Changed from showPanel to showAssessmentPanel
-        button.setOnAction(e -> parentApp.showAssessmentPanel());
-        return button;
-    }
-
-    private Button createAddButton() {
-        Button button = new Button("ADD");
-        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        button.setTextFill(Color.web(toHex(TEXT_DARK)));
-        button.setStyle(
-                "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 12 40;" +
-                        "-fx-cursor: hand;"
-        );
-
-        // Hover effect
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN.darker()) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 40;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 40;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
-        return button;
-    }
-
     private void createTable() {
         questionTable = new TableView<>();
-        questionTable.setStyle("-fx-background-color: white; -fx-border-color: #" + toHex(BORDER_LIGHT) + ";");
-        // FIXED: setRowHeight doesn't exist in JavaFX TableView
-        questionTable.setFixedCellSize(70);  // Use setFixedCellSize instead
-        questionTable.setPlaceholder(new Label("No questions available. Click ADD to create one."));
+        styleTable(questionTable);
+        questionTable.setPlaceholder(emptyLabel("No questions available. Click Add Question to create one."));
 
-        // Create columns
         TableColumn<QuestionModel, String> questionCol = new TableColumn<>("Question");
         questionCol.setCellValueFactory(new PropertyValueFactory<>("questionText"));
-        questionCol.setPrefWidth(300);
+        questionCol.setPrefWidth(330);
         questionCol.setCellFactory(column -> new TableCell<QuestionModel, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -267,93 +313,100 @@ public class QuestionPanel extends VBox {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    String displayText = item.length() > 80 ? item.substring(0, 77) + "..." : item;
-                    setText(displayText);
+                    setText(item.length() > 90 ? item.substring(0, 87) + "..." : item);
                     setWrapText(true);
+                    setTextFill(INK);
+                    setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
                 }
             }
         });
 
         TableColumn<QuestionModel, String> scaleCol = new TableColumn<>("Scale");
         scaleCol.setCellValueFactory(new PropertyValueFactory<>("scale"));
-        scaleCol.setPrefWidth(150);
-        scaleCol.setStyle("-fx-alignment: CENTER;");
+        scaleCol.setPrefWidth(210);
+        scaleCol.setCellFactory(column -> new TableCell<QuestionModel, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty || item == null ? null : badge("📏 " + item, Color.web("#E3F2FD"), Color.web("#1565C0")));
+                setText(null);
+                setAlignment(Pos.CENTER_LEFT);
+            }
+        });
 
         TableColumn<QuestionModel, String> assessmentCol = new TableColumn<>("Assessment");
         assessmentCol.setCellValueFactory(new PropertyValueFactory<>("assessmentName"));
-        assessmentCol.setPrefWidth(200);
-        assessmentCol.setStyle("-fx-alignment: CENTER-LEFT;");
+        assessmentCol.setPrefWidth(210);
+        assessmentCol.setCellFactory(column -> new TableCell<QuestionModel, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty || item == null ? null : badge(item, SOFT_GREEN, EMERALD_DARK));
+                setText(null);
+                setAlignment(Pos.CENTER_LEFT);
+            }
+        });
 
         TableColumn<QuestionModel, String> typeCol = new TableColumn<>("Type");
         typeCol.setCellValueFactory(new PropertyValueFactory<>("assessmentType"));
-        typeCol.setPrefWidth(150);
-        typeCol.setStyle("-fx-alignment: CENTER-LEFT;");
+        typeCol.setPrefWidth(140);
+        typeCol.setCellFactory(column -> new TableCell<QuestionModel, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item);
+                setTextFill(MUTED);
+                setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+            }
+        });
 
         TableColumn<QuestionModel, Void> editCol = new TableColumn<>("Edit");
-        editCol.setPrefWidth(80);
-        editCol.setCellFactory(col -> new ActionButtonCell("Edit", true));
+        editCol.setPrefWidth(90);
+        editCol.setCellFactory(col -> new ActionButtonCell("✏ Edit", true));
 
         TableColumn<QuestionModel, Void> deleteCol = new TableColumn<>("Delete");
-        deleteCol.setPrefWidth(80);
-        deleteCol.setCellFactory(col -> new ActionButtonCell("Delete", false));
+        deleteCol.setPrefWidth(100);
+        deleteCol.setCellFactory(col -> new ActionButtonCell("🗑 Delete", false));
 
         questionTable.getColumns().addAll(questionCol, scaleCol, assessmentCol, typeCol, editCol, deleteCol);
 
-        // Style table header
-        questionTable.getColumns().forEach(col -> {
-            col.setStyle(
-                    "-fx-background-color: white;" +
-                            "-fx-text-fill: #" + toHex(ACCENT_DARK_GREEN) + ";" +
-                            "-fx-font-size: 14px;" +
-                            "-fx-font-weight: bold;"
-            );
-        });
+        questionTable.getColumns().forEach(col -> col.setStyle(
+                "-fx-background-color: #F8F9FA;" +
+                        "-fx-text-fill: " + css(EMERALD_DARK) + ";" +
+                        "-fx-font-size: 15px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-border-color: #E9ECEF;" +
+                        "-fx-border-width: 0 0 1 0;"
+        ));
 
         VBox.setVgrow(questionTable, Priority.ALWAYS);
         getChildren().add(questionTable);
     }
 
-    // Action Button Cell
     class ActionButtonCell extends TableCell<QuestionModel, Void> {
         private final Button button;
         private final boolean isEdit;
 
         public ActionButtonCell(String text, boolean isEdit) {
             this.isEdit = isEdit;
-            this.button = new Button(text);
-            button.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
-            button.setTextFill(Color.web(toHex(TEXT_DARK)));
-            button.setStyle(
-                    "-fx-background-color: #" + toHex(CARD_WHITE) + ";" +
-                            "-fx-background-radius: 5;" +
-                            "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                            "-fx-border-radius: 5;" +
-                            "-fx-padding: 8 15;" +
-                            "-fx-cursor: hand;"
-            );
+            this.button = isEdit ? outlineButton(text) : outlineButton(text);
+            if (!isEdit) button.setTextFill(DANGER);
 
             button.setOnAction(e -> {
                 QuestionModel question = getTableView().getItems().get(getIndex());
-                if (isEdit) {
-                    showEditQuestionDialog(question);
-                } else {
-                    showDeleteQuestionDialog(question);
-                }
+                if (isEdit) showEditQuestionDialog(question);
+                else showDeleteQuestionDialog(question);
             });
         }
 
         @Override
         protected void updateItem(Void item, boolean empty) {
             super.updateItem(item, empty);
-            if (empty) {
-                setGraphic(null);
-            } else {
-                setGraphic(button);
-            }
+            setGraphic(empty ? null : button);
+            setAlignment(Pos.CENTER);
         }
     }
 
-    // Question Model for TableView
     public static class QuestionModel {
         private final SimpleIntegerProperty questionId;
         private final SimpleIntegerProperty assessmentId;
@@ -386,7 +439,6 @@ public class QuestionPanel extends VBox {
         public void setAssessmentName(String name) { this.assessmentName.set(name); }
         public void setAssessmentType(String type) { this.assessmentType.set(type); }
 
-        // Property getters for TableView
         public SimpleIntegerProperty questionIdProperty() { return questionId; }
         public SimpleIntegerProperty assessmentIdProperty() { return assessmentId; }
         public SimpleStringProperty questionTextProperty() { return questionText; }
@@ -395,12 +447,10 @@ public class QuestionPanel extends VBox {
         public SimpleStringProperty assessmentTypeProperty() { return assessmentType; }
     }
 
-    // SimpleIntegerProperty wrapper
     public static class SimpleIntegerProperty extends javafx.beans.property.SimpleIntegerProperty {
         public SimpleIntegerProperty(int value) { super(value); }
     }
 
-    // SimpleStringProperty wrapper
     public static class SimpleStringProperty extends javafx.beans.property.SimpleStringProperty {
         public SimpleStringProperty(String value) { super(value); }
     }
@@ -409,11 +459,7 @@ public class QuestionPanel extends VBox {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Confirm Delete");
         confirm.setHeaderText(null);
-        confirm.setContentText("Are you sure you want to delete this question?\n\n" +
-                questionModel.getQuestionText());
-
-        // FIXED: Removed initOwner since getScene() doesn't exist in MentisLoginFrame
-        // confirm.initOwner(parentApp.getScene().getWindow());
+        confirm.setContentText("Are you sure you want to delete this question?\n\n" + questionModel.getQuestionText());
 
         confirm.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
@@ -480,10 +526,10 @@ public class QuestionPanel extends VBox {
             }
 
             if (questions == null || questions.isEmpty()) {
-                questionTable.setPlaceholder(new Label(
+                questionTable.setPlaceholder(emptyLabel(
                         currentAssessmentId > 0 ?
-                                "No questions available for this assessment. Click ADD to create one." :
-                                "No questions available. Click ADD to create one."
+                                "No questions available for this assessment. Click Add Question to create one." :
+                                "No questions available. Click Add Question to create one."
                 ));
                 questionTable.setItems(FXCollections.observableArrayList());
                 return;
@@ -502,28 +548,25 @@ public class QuestionPanel extends VBox {
                     }
                 }
 
-                QuestionModel model = new QuestionModel(
+                questionData.add(new QuestionModel(
                         question.getQuestionId(),
                         question.getAssessmentId(),
                         question.getText(),
                         question.getScale(),
                         assessmentName,
                         assessmentType
-                );
-                questionData.add(model);
+                ));
             }
 
             questionTable.setItems(questionData);
 
         } catch (SQLException e) {
             e.printStackTrace();
-            questionTable.setPlaceholder(new Label("Database Error: " + e.getMessage()));
-            showAlert("Database Error",
-                    "Cannot connect to database.\nError: " + e.getMessage(),
-                    Alert.AlertType.ERROR);
+            questionTable.setPlaceholder(emptyLabel("Database Error: " + e.getMessage()));
+            showAlert("Database Error", "Cannot connect to database.\nError: " + e.getMessage(), Alert.AlertType.ERROR);
         } catch (Exception e) {
             e.printStackTrace();
-            questionTable.setPlaceholder(new Label("Error loading data: " + e.getMessage()));
+            questionTable.setPlaceholder(emptyLabel("Error loading data: " + e.getMessage()));
         }
     }
 
@@ -532,19 +575,21 @@ public class QuestionPanel extends VBox {
         refreshData();
     }
 
+    private Label emptyLabel(String text) {
+        Label label = new Label(text);
+        label.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 15));
+        label.setTextFill(MUTED);
+        return label;
+    }
+
     private void showAlert(String title, String content, Alert.AlertType type) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
-
-        // FIXED: Removed initOwner since getScene() doesn't exist in MentisLoginFrame
-        // alert.initOwner(parentApp.getScene().getWindow());
-
         alert.showAndWait();
     }
 
-    // ================= UTILITY =================
     private String toHex(Color color) {
         return String.format("%02x%02x%02x",
                 (int)(color.getRed() * 255),

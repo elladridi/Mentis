@@ -79,6 +79,308 @@ public class AssessmentResultController {
         return response;
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  SUBMIT ASSESSMENT WITH FREE TEXT (for the "One Last Question")
+    // ═══════════════════════════════════════════════════════════════
+
+    public Map<String, Object> submitAssessmentWithFreeText(int userId, int assessmentId,
+                                                            Map<Integer, Integer> scores,
+                                                            Map<Integer, String> originalAnswers,
+                                                            String freeText) {
+        // First, submit the assessment normally
+        Map<String, Object> response = submitAssessment(userId, assessmentId, scores, originalAnswers);
+
+        if ((Boolean) response.get("success")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = (Map<String, Object>) response.get("result");
+
+            // Add free text to the result
+            result.put("freeText", freeText);
+
+            // If free text was provided, enhance the AI analysis with sentiment analysis
+            if (freeText != null && !freeText.trim().isEmpty()) {
+                try {
+                    // Get the existing AI analysis
+                    String existingAnalysis = (String) result.get("aiAnalysis");
+
+                    // Generate sentiment analysis for the free text
+                    String sentimentAnalysis = generateSentimentAnalysis(freeText);
+
+                    // Append sentiment analysis to the AI analysis
+                    String enhancedAnalysis = existingAnalysis + "\n\n" + sentimentAnalysis;
+                    result.put("aiAnalysis", enhancedAnalysis);
+
+                    // Store sentiment data separately for the UI
+                    result.put("sentimentData", analyzeSentimentData(freeText));
+
+                } catch (Exception e) {
+                    System.err.println("Error analyzing free text: " + e.getMessage());
+                    result.put("sentimentAnalysisError", e.getMessage());
+                }
+            }
+
+            response.put("result", result);
+        }
+
+        return response;
+    }
+
+    /**
+     * Generates a sentiment analysis for the user's free text response
+     */
+    private String generateSentimentAnalysis(String freeText) {
+        try {
+            String prompt = buildSentimentPrompt(freeText);
+            return GeminiService.generateContent(prompt);
+        } catch (Exception e) {
+            System.err.println("Gemini sentiment API failed: " + e.getMessage());
+            return generateRuleBasedSentimentAnalysis(freeText);
+        }
+    }
+
+    /**
+     * Builds the prompt for sentiment analysis
+     */
+    private String buildSentimentPrompt(String freeText) {
+        return """
+        You are a compassionate mental health AI assistant. Analyze the following user response 
+        and provide a sentiment analysis report.
+        
+        User's response:
+        "%s"
+        
+        Please provide:
+        1. Overall emotional tone (Positive, Neutral, or Negative)
+        2. A sentiment score from 0.0 (very negative) to 1.0 (very positive)
+        3. Key emotions detected (list 2-4 emotions)
+        4. Key themes or topics mentioned
+        5. Any protective factors mentioned (strengths, support systems, coping strategies)
+        6. A brief clinical observation (1-2 sentences)
+        7. Crisis indicators (if any concerning language is detected)
+        
+        Format your response in plain text without markdown symbols.
+        """.formatted(freeText);
+    }
+
+    /**
+     * Rule-based fallback for sentiment analysis
+     */
+    private String generateRuleBasedSentimentAnalysis(String freeText) {
+        String lowerText = freeText.toLowerCase();
+        StringBuilder analysis = new StringBuilder();
+
+        // Sentiment detection
+        List<String> positiveWords = Arrays.asList("good", "great", "happy", "joy", "excited", "hopeful", "calm", "peaceful", "grateful");
+        List<String> negativeWords = Arrays.asList("sad", "depressed", "anxious", "worried", "stressed", "hopeless", "angry", "lonely", "tired", "exhausted");
+        List<String> crisisWords = Arrays.asList("suicide", "kill myself", "end it", "give up", "no hope", "worthless", "trapped", "can't go on");
+
+        int positiveCount = 0;
+        int negativeCount = 0;
+        boolean crisisDetected = false;
+
+        for (String word : positiveWords) {
+            if (lowerText.contains(word)) positiveCount++;
+        }
+
+        for (String word : negativeWords) {
+            if (lowerText.contains(word)) negativeCount++;
+        }
+
+        for (String word : crisisWords) {
+            if (lowerText.contains(word)) {
+                crisisDetected = true;
+                break;
+            }
+        }
+
+        double sentimentScore;
+        String sentimentLabel;
+
+        if (positiveCount > negativeCount) {
+            sentimentScore = 0.6 + (positiveCount * 0.05);
+            sentimentLabel = "Generally Positive";
+        } else if (negativeCount > positiveCount) {
+            sentimentScore = 0.4 - (negativeCount * 0.05);
+            sentimentLabel = "Generally Negative";
+        } else {
+            sentimentScore = 0.5;
+            sentimentLabel = "Neutral";
+        }
+
+        sentimentScore = Math.max(0.0, Math.min(1.0, sentimentScore));
+
+        analysis.append("=== SENTIMENT ANALYSIS ===\n\n");
+        analysis.append("Overall Emotional Tone: ").append(sentimentLabel).append("\n");
+        analysis.append("Sentiment Score: ").append(String.format("%.2f", sentimentScore)).append(" (0.0=very negative, 1.0=very positive)\n\n");
+
+        if (crisisDetected) {
+            analysis.append("⚠️ CRISIS INDICATORS DETECTED ⚠️\n");
+            analysis.append("Your response contains language that may indicate significant distress.\n");
+            analysis.append("Please reach out to a mental health professional or crisis line for support.\n");
+            analysis.append("Crisis Line: 1-800-273-8255 | Text HOME to 741741\n\n");
+        }
+
+        analysis.append("Key Observations:\n");
+        analysis.append("- Based on your response, you appear to be experiencing ")
+                .append(sentimentLabel.toLowerCase()).append(" emotions.\n");
+
+        if (lowerText.contains("feel") || lowerText.contains("feeling")) {
+            analysis.append("- You are actively reflecting on your emotional state, which shows self-awareness.\n");
+        }
+
+        if (lowerText.contains("help") || lowerText.contains("need") || lowerText.contains("struggling")) {
+            analysis.append("- Your response suggests you may benefit from additional support.\n");
+        }
+
+        if (lowerText.contains("family") || lowerText.contains("friend") || lowerText.contains("partner")) {
+            analysis.append("- You mentioned social connections, which can be an important protective factor.\n");
+        }
+
+        if (lowerText.contains("work") || lowerText.contains("job") || lowerText.contains("school")) {
+            analysis.append("- Work or academic stress may be contributing to how you're feeling.\n");
+        }
+
+        if (lowerText.contains("sleep") || lowerText.contains("tired")) {
+            analysis.append("- Sleep quality or fatigue appears to be affecting your wellbeing.\n");
+        }
+
+        analysis.append("\nClinical Note:\n");
+        analysis.append("This AI-generated sentiment analysis is for informational purposes. ")
+                .append("It is not a clinical diagnosis. If you are concerned about your mental health, ")
+                .append("please consult with a qualified mental health professional.\n");
+
+        return analysis.toString();
+    }
+
+    /**
+     * Analyzes sentiment data for structured display in the UI
+     */
+    private Map<String, Object> analyzeSentimentData(String freeText) {
+        Map<String, Object> sentimentData = new HashMap<>();
+        String lowerText = freeText.toLowerCase();
+
+        // Emotion detection
+        List<String> detectedEmotions = new ArrayList<>();
+        Map<String, List<String>> emotionKeywords = Map.of(
+                "anxiety", Arrays.asList("anxious", "worried", "nervous", "panic", "fear"),
+                "depression", Arrays.asList("sad", "depressed", "hopeless", "empty", "worthless"),
+                "stress", Arrays.asList("stressed", "overwhelmed", "pressure", "burnout"),
+                "anger", Arrays.asList("angry", "frustrated", "annoyed", "resentful"),
+                "loneliness", Arrays.asList("lonely", "isolated", "alone", "abandoned"),
+                "grief", Arrays.asList("lost", "miss", "grief", "mourning"),
+                "hopefulness", Arrays.asList("hopeful", "optimistic", "positive", "excited"),
+                "calmness", Arrays.asList("calm", "peaceful", "relaxed", "content")
+        );
+
+        for (Map.Entry<String, List<String>> entry : emotionKeywords.entrySet()) {
+            for (String keyword : entry.getValue()) {
+                if (lowerText.contains(keyword)) {
+                    detectedEmotions.add(entry.getKey());
+                    break;
+                }
+            }
+        }
+
+        if (detectedEmotions.isEmpty()) {
+            detectedEmotions.add("neutral");
+        }
+
+        sentimentData.put("emotion_tags", detectedEmotions);
+
+        // Theme detection
+        List<String> detectedThemes = new ArrayList<>();
+        Map<String, List<String>> themeKeywords = Map.of(
+                "work", Arrays.asList("work", "job", "career", "office", "boss", "coworker"),
+                "relationships", Arrays.asList("relationship", "partner", "spouse", "dating", "marriage"),
+                "family", Arrays.asList("family", "parent", "child", "mother", "father", "sibling"),
+                "health", Arrays.asList("health", "sick", "illness", "pain", "doctor"),
+                "finances", Arrays.asList("money", "financial", "bills", "rent", "debt"),
+                "sleep", Arrays.asList("sleep", "insomnia", "tired", "fatigue", "rest"),
+                "self_esteem", Arrays.asList("worthless", "failure", "inadequate", "not good enough")
+        );
+
+        for (Map.Entry<String, List<String>> entry : themeKeywords.entrySet()) {
+            for (String keyword : entry.getValue()) {
+                if (lowerText.contains(keyword)) {
+                    detectedThemes.add(entry.getKey());
+                    break;
+                }
+            }
+        }
+
+        sentimentData.put("key_themes", detectedThemes);
+
+        // Protective factors
+        List<String> protectiveFactors = new ArrayList<>();
+        if (lowerText.contains("friend") || lowerText.contains("family") || lowerText.contains("support")) {
+            protectiveFactors.add("social_support");
+        }
+        if (lowerText.contains("exercise") || lowerText.contains("walk") || lowerText.contains("gym")) {
+            protectiveFactors.add("physical_activity");
+        }
+        if (lowerText.contains("meditation") || lowerText.contains("mindfulness") || lowerText.contains("yoga")) {
+            protectiveFactors.add("mindfulness_practice");
+        }
+        if (lowerText.contains("hobby") || lowerText.contains("enjoy") || lowerText.contains("fun")) {
+            protectiveFactors.add("enjoyable_activities");
+        }
+        if (lowerText.contains("therapy") || lowerText.contains("counselor") || lowerText.contains("help")) {
+            protectiveFactors.add("seeking_help");
+        }
+
+        sentimentData.put("protective_factors", protectiveFactors);
+
+        // Crisis detection
+        List<String> crisisIndicators = Arrays.asList("suicide", "kill myself", "end it", "give up", "no hope", "can't go on");
+        boolean crisisDetected = false;
+        for (String indicator : crisisIndicators) {
+            if (lowerText.contains(indicator)) {
+                crisisDetected = true;
+                break;
+            }
+        }
+        sentimentData.put("crisis_detected", crisisDetected);
+
+        // Calculate sentiment score
+        List<String> positiveWords = Arrays.asList("good", "great", "happy", "joy", "excited", "hopeful", "calm", "peaceful", "grateful");
+        List<String> negativeWords = Arrays.asList("sad", "depressed", "anxious", "worried", "stressed", "hopeless", "angry", "lonely", "tired");
+
+        int posCount = 0;
+        int negCount = 0;
+
+        for (String word : positiveWords) {
+            if (lowerText.contains(word)) posCount++;
+        }
+        for (String word : negativeWords) {
+            if (lowerText.contains(word)) negCount++;
+        }
+
+        double sentimentScore = 0.5;
+        if (posCount + negCount > 0) {
+            sentimentScore = (double) posCount / (posCount + negCount);
+        }
+
+        sentimentData.put("sentiment_score", sentimentScore);
+        sentimentData.put("sentiment_label",
+                sentimentScore >= 0.7 ? "positive" : (sentimentScore >= 0.4 ? "neutral" : "negative"));
+
+        // Clinical note
+        String clinicalNote;
+        if (crisisDetected) {
+            clinicalNote = "The response contains language that may indicate acute distress or crisis. Immediate follow-up is recommended.";
+        } else if (sentimentScore < 0.4) {
+            clinicalNote = "The response reflects predominantly negative emotional content. Further exploration of underlying concerns may be beneficial.";
+        } else if (sentimentScore > 0.7) {
+            clinicalNote = "The response reflects positive emotional content with good protective factors evidenced.";
+        } else {
+            clinicalNote = "The response shows mixed emotional content. No immediate concerns detected, but continued monitoring is reasonable.";
+        }
+
+        sentimentData.put("clinical_note", clinicalNote);
+
+        return sentimentData;
+    }
+
     // Backward compatibility
     public Map<String, Object> submitAssessment(int userId, int assessmentId, Map<Integer, Integer> scores) {
         return submitAssessment(userId, assessmentId, scores, new HashMap<>());

@@ -3,8 +3,6 @@ package ui;
 import controller.AssessmentController;
 import controller.AssessmentResultController;
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -20,19 +18,17 @@ import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import models.AdaptiveAssessmentSession;
 import models.Assessment;
 import models.AssessmentResult;
 import models.Question;
-import models.AdaptiveAssessmentSession;
 import services.AdaptiveQuestionService;
-import services.GeminiService;
 import services.GeolocationService;
 import services.YouTubeRecommendationService;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.nio.file.Files;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class TakeAssessmentPanel extends VBox {
@@ -42,21 +38,21 @@ public class TakeAssessmentPanel extends VBox {
     private AssessmentController assessmentController;
     private AssessmentResultController resultController;
     private AdaptiveQuestionService adaptiveService;
+
     private List<Assessment> availableAssessments;
     private List<Question> currentQuestions;
     private List<Question> originalQuestions;
     private Map<Integer, String> answers;
+
     private int currentQuestionIndex = 0;
     private int currentAssessmentId = 0;
 
-    // Adaptive assessment fields
     private AdaptiveAssessmentSession adaptiveSession;
     private boolean useAdaptiveMode = true;
     private static final int MAX_ADAPTIVE_QUESTIONS = 8;
     private boolean adaptiveEnabled = true;
     private boolean isAdapting = false;
 
-    // UI Components
     private StackPane contentStack;
     private VBox selectionPanel;
     private VBox questionPanel;
@@ -69,32 +65,32 @@ public class TakeAssessmentPanel extends VBox {
     private Button submitButton;
     private ImageView assessmentImageView;
     private TextField searchField;
-    private Label userInfoLabel;
-    private Label adaptiveStatusLabel;
+    private ProgressBar questionProgressBar;
+    private Label progressMetaLabel;
+    private Label calmHintLabel;
 
-    // For image handling
     private Map<Integer, Image> assessmentImages = new HashMap<>();
 
-    // Color constants
-    private static final Color BACKGROUND_BEIGE = Color.rgb(243, 243, 243);
-    private static final Color CARD_WHITE = Color.WHITE;
-    private static final Color ACCENT_GREEN = Color.rgb(108, 158, 131);
-    private static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
-    private static final Color ACCENT_LIGHT_GREEN = Color.rgb(200, 225, 210);
-    private static final Color BORDER_LIGHT = Color.rgb(220, 220, 220);
-    private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
-    private static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
-    private static final Color TEXT_GRAY = Color.rgb(120, 120, 120);
+    private static final Color PAGE_BG = Color.web("#F8F9FA");
+    private static final Color SOFT_GREEN_BG = Color.web("#F1F8E9");
+    private static final Color EMERALD = Color.web("#50C878");
+    private static final Color EMERALD_DARK = Color.web("#2E7D32");
+    private static final Color EMERALD_MID = Color.web("#3A9B5E");
+    private static final Color INK = Color.web("#1A3C34");
+    private static final Color MUTED = Color.web("#6C757D");
+    private static final Color LINE = Color.web("#E9ECEF");
+    private static final Color DANGER = Color.web("#E74C3C");
+    private static final Color WARNING = Color.web("#F39C12");
 
-    // Type colors
     private static final Color TYPE_DEPRESSION = Color.rgb(144, 127, 201);
     private static final Color TYPE_ANXIETY = Color.rgb(227, 149, 149);
     private static final Color TYPE_STRESS = Color.rgb(227, 206, 163);
-    private static final Color TYPE_WELLNESS = Color.rgb(60, 120, 90);
-    private static final Color TYPE_GENERAL = Color.rgb(165, 186, 227);
-    private static final Color TYPE_DEFAULT = Color.rgb(165, 186, 227);
+    private static final Color TYPE_WELLNESS = Color.web("#50C878");
+    private static final Color TYPE_GENERAL = Color.web("#74B9FF");
+    private static final Color TYPE_DEFAULT = Color.web("#74B9FF");
 
-    public TakeAssessmentPanel(MentisLoginFrame parentApp, AssessmentController assessmentController,
+    public TakeAssessmentPanel(MentisLoginFrame parentApp,
+                               AssessmentController assessmentController,
                                AssessmentResultController resultController) {
         this.parentApp = parentApp;
         this.assessmentController = assessmentController;
@@ -103,14 +99,13 @@ public class TakeAssessmentPanel extends VBox {
         this.userId = parentApp.getUserId();
         this.adaptiveService = new AdaptiveQuestionService();
 
-        setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
+        setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
         setPadding(new Insets(0));
         setSpacing(0);
         VBox.setVgrow(this, Priority.ALWAYS);
 
-        // Create content stack for panel switching
         contentStack = new StackPane();
-        contentStack.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
+        contentStack.setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
         VBox.setVgrow(contentStack, Priority.ALWAYS);
 
         createSelectionPanel();
@@ -123,347 +118,275 @@ public class TakeAssessmentPanel extends VBox {
     }
 
     private void createSelectionPanel() {
-        selectionPanel = new VBox(20);
-        selectionPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        selectionPanel.setPadding(new Insets(45, 50, 45, 50));
-        selectionPanel.setVisible(true);
+        selectionPanel = new VBox(28);
+        selectionPanel.setPadding(new Insets(46, 56, 46, 56));
+        selectionPanel.setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
 
-        // Header - REMOVED user ID from top
-        BorderPane headerPanel = new BorderPane();
-        headerPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        headerPanel.setPadding(new Insets(0, 0, 35, 0));
+        VBox hero = new VBox(10);
+        hero.setAlignment(Pos.CENTER);
 
-        Label titleLabel = new Label("Take Assessment!");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 42));
-        titleLabel.setTextFill(Color.web(toHex(ACCENT_GREEN)));
+        Label titleLabel = new Label("Take Assessment");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 46));
+        titleLabel.setTextFill(EMERALD_DARK);
 
-        // Top right - Only Results link (removed user ID)
-        HBox topRightPanel = new HBox(30);
-        topRightPanel.setAlignment(Pos.CENTER_RIGHT);
-        topRightPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
+        Label subtitle = new Label("Choose an assessment to begin your mental wellness journey");
+        subtitle.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 18));
+        subtitle.setTextFill(MUTED);
 
-        Button resultsLink = createHeaderLink("Results");
+        Button resultsLink = createSymfonyOutlineButton("📊 Results");
         resultsLink.setOnAction(e -> parentApp.showResultsPanel());
 
-        topRightPanel.getChildren().add(resultsLink);
-        headerPanel.setLeft(titleLabel);
-        headerPanel.setRight(topRightPanel);
+        hero.getChildren().addAll(titleLabel, subtitle, resultsLink);
 
-        // Search Bar
-        HBox searchPanel = new HBox(10);
-        searchPanel.setAlignment(Pos.CENTER_LEFT);
-        searchPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        searchPanel.setPadding(new Insets(20, 0, 15, 0));
-
-        Label searchLabel = new Label("Search Assessments:");
-        searchLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        searchLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        HBox filtersCard = new HBox(14);
+        filtersCard.setAlignment(Pos.CENTER);
+        filtersCard.setPadding(new Insets(18, 22, 18, 22));
+        filtersCard.setMaxWidth(980);
+        filtersCard.setStyle(glassCardStyle());
 
         searchField = new TextField();
-        searchField.setPromptText("Type assessment title to search...");
-        searchField.setPrefWidth(300);
-        searchField.setStyle(
-                "-fx-font-family: 'Segoe UI';" +
-                        "-fx-font-size: 14px;" +
-                        "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 10 15;"
-        );
+        searchField.setPromptText("🔍 Search title, description, type...");
+        searchField.setPrefWidth(430);
+        searchField.setStyle(pillInputStyle());
+        searchField.setOnAction(e -> searchAssessments(searchField.getText().trim()));
 
-        Button searchButton = createSearchButton("Search");
+        Button searchButton = createSymfonyPrimaryButton("Filter");
         searchButton.setOnAction(e -> searchAssessments(searchField.getText().trim()));
 
-        Button clearSearchButton = createClearButton("Clear");
-        clearSearchButton.setOnAction(e -> {
+        Button clearButton = createSymfonyOutlineButton("Clear");
+        clearButton.setOnAction(e -> {
             searchField.clear();
             refreshData();
         });
 
-        searchPanel.getChildren().addAll(searchLabel, searchField, searchButton, clearSearchButton);
+        filtersCard.getChildren().addAll(searchField, searchButton, clearButton);
 
-        // REMOVED the user panel with "Logged in as User ID: 0"
-
-        // Header container
-        VBox headerContainer = new VBox(0);
-        headerContainer.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        headerContainer.getChildren().addAll(headerPanel, searchPanel);
-
-        // Cards grid
         cardsGrid = new GridPane();
-        cardsGrid.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        cardsGrid.setHgap(25);
-        cardsGrid.setVgap(25);
-        cardsGrid.setPadding(new Insets(10, 0, 10, 0));
+        cardsGrid.setHgap(26);
+        cardsGrid.setVgap(26);
+        cardsGrid.setPadding(new Insets(8, 0, 8, 0));
+        cardsGrid.setAlignment(Pos.TOP_CENTER);
+        cardsGrid.setStyle("-fx-background-color: transparent;");
 
-        ScrollPane scrollPane = new ScrollPane(cardsGrid);
-        scrollPane.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        scrollPane.setBorder(null);
-        scrollPane.setFitToWidth(true);
-        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        ScrollPane scrollPane = cleanScrollPane(cardsGrid);
 
-        selectionPanel.getChildren().addAll(headerContainer, scrollPane);
+        selectionPanel.getChildren().addAll(hero, filtersCard, scrollPane);
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
     }
 
-    private Button createHeaderLink(String text) {
-        Button link = new Button(text);
-        link.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
-        link.setTextFill(Color.web(toHex(ACCENT_GREEN)));
-        link.setStyle(
-                "-fx-background-color: transparent;" +
-                        "-fx-border-width: 0;" +
-                        "-fx-cursor: hand;"
-        );
-
-        // Hover effect with underline
-        link.setOnMouseEntered(e ->
-                link.setStyle(
-                        "-fx-background-color: transparent;" +
-                                "-fx-border-width: 0 0 2 0;" +
-                                "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
-                                "-fx-cursor: hand;"
-                )
-        );
-        link.setOnMouseExited(e ->
-                link.setStyle(
-                        "-fx-background-color: transparent;" +
-                                "-fx-border-width: 0;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
-        return link;
-    }
-
-    private Button createSearchButton(String text) {
-        Button button = new Button(text);
-        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-        button.setTextFill(Color.web(toHex(TEXT_DARK)));
-        button.setStyle(
-                "-fx-background-color: #" + toHex(ACCENT_LIGHT_GREEN) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8 20;" +
-                        "-fx-cursor: hand;"
-        );
-
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(ACCENT_LIGHT_GREEN.darker()) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 8 20;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(ACCENT_LIGHT_GREEN) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 8 20;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
-        return button;
-    }
-
-    private Button createClearButton(String text) {
-        Button button = new Button(text);
-        button.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
-        button.setTextFill(Color.web(toHex(TEXT_LIGHT)));
-        button.setStyle(
-                "-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-padding: 8 15;" +
-                        "-fx-cursor: hand;"
-        );
-
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(BORDER_LIGHT) + ";" +
-                                "-fx-border-color: #" + toHex(TEXT_LIGHT) + ";" +
-                                "-fx-border-radius: 5;" +
-                                "-fx-padding: 8 15;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";" +
-                                "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                                "-fx-border-radius: 5;" +
-                                "-fx-padding: 8 15;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
-        return button;
-    }
-
     private void createQuestionPanel() {
-        questionPanel = new VBox(20);
-        questionPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        questionPanel.setPadding(new Insets(30, 50, 30, 50));
+        questionPanel = new VBox(22);
+        questionPanel.setPadding(new Insets(34, 56, 34, 56));
+        questionPanel.setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
         questionPanel.setVisible(false);
 
-        // Top panel with back button only (removed adaptive status)
-        HBox topPanel = new HBox();
-        topPanel.setAlignment(Pos.CENTER_LEFT);
-        topPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        topPanel.setPadding(new Insets(0, 0, 15, 0));
-        topPanel.setSpacing(20);
-
-        Button backButton = new Button("← Back to Assessments");
-        backButton.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
-        backButton.setTextFill(Color.web(toHex(ACCENT_GREEN)));
-        backButton.setStyle(
-                "-fx-background-color: transparent;" +
-                        "-fx-border-width: 0;" +
-                        "-fx-cursor: hand;"
-        );
+        Button backButton = createSymfonyOutlineButton("← Back to Assessments");
+        backButton.setTextFill(EMERALD);
         backButton.setOnAction(e -> showSelectionPanel());
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        progressMetaLabel = new Label("❔ Question 1 of 1");
+        progressMetaLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        progressMetaLabel.setTextFill(MUTED);
 
-        topPanel.getChildren().addAll(backButton, spacer);
+        calmHintLabel = new Label("🕒 Take your time");
+        calmHintLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        calmHintLabel.setTextFill(MUTED);
 
-        // Main content container
-        VBox centerContainer = new VBox();
-        centerContainer.setAlignment(Pos.CENTER);
-        centerContainer.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        VBox.setVgrow(centerContainer, Priority.ALWAYS);
+        Region metaSpacer = new Region();
+        HBox progressMeta = new HBox(progressMetaLabel, metaSpacer, calmHintLabel);
+        progressMeta.setAlignment(Pos.CENTER);
+        HBox.setHgrow(metaSpacer, Priority.ALWAYS);
 
-        // Question card - FIXED: Image takes full width, no white sides
-        VBox card = new VBox(20);
-        card.setStyle(
-                "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-width: 1;" +
-                        "-fx-border-radius: 10;" +
-                        "-fx-background-radius: 10;" +
-                        "-fx-padding: 30 0 30 0;" +
-                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);"
+        questionProgressBar = new ProgressBar(0);
+        questionProgressBar.setMaxWidth(Double.MAX_VALUE);
+        questionProgressBar.setPrefHeight(10);
+        questionProgressBar.setStyle(
+                "-fx-accent: " + cssColor(EMERALD) + ";" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-control-inner-background: #E9ECEF;"
         );
-        card.setAlignment(Pos.TOP_CENTER);
-        card.setMaxWidth(900);
+
+        VBox topBlock = new VBox(14, backButton, progressMeta, questionProgressBar);
+        topBlock.setMaxWidth(920);
+        topBlock.setAlignment(Pos.CENTER_LEFT);
+
+        VBox card = new VBox(0);
+        card.setMaxWidth(860);
         card.setMinHeight(500);
-        card.setMaxHeight(Region.USE_COMPUTED_SIZE);
+        card.setStyle(glassCardStyle() + "-fx-padding: 0;");
+        card.setAlignment(Pos.TOP_CENTER);
 
-        // Question number
-        questionNumberLabel = new Label("Question 1 of 8");
-        questionNumberLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
-        questionNumberLabel.setTextFill(Color.web(toHex(TEXT_GRAY)));
-        questionNumberLabel.setPadding(new Insets(0, 40, 10, 40));
-
-        // Image display - FIXED: Full width, no white sides
-        assessmentImageView = new ImageView();
-        assessmentImageView.setFitWidth(900);
-        assessmentImageView.setFitHeight(250);
-        assessmentImageView.setPreserveRatio(true);
-        assessmentImageView.setStyle(
-                "-fx-background-color: #f5f5f5;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-width: 1 0 1 0;"
+        StackPane imageHolder = new StackPane();
+        imageHolder.setPrefHeight(220);
+        imageHolder.setMaxWidth(Double.MAX_VALUE);
+        imageHolder.setStyle(
+                "-fx-background-color: " + gradient(EMERALD, EMERALD_DARK) + ";" +
+                        "-fx-background-radius: 20 20 0 0;"
         );
 
-        // Question text
-        questionTextLabel = new Label();
-        questionTextLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
-        questionTextLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        assessmentImageView = new ImageView();
+        assessmentImageView.setFitHeight(220);
+        assessmentImageView.setFitWidth(860);
+        assessmentImageView.setPreserveRatio(false);
+        imageHolder.getChildren().add(assessmentImageView);
+
+        VBox body = new VBox(22);
+        body.setPadding(new Insets(30, 42, 34, 42));
+        body.setAlignment(Pos.CENTER);
+
+        questionNumberLabel = new Label("Question 1 of 1");
+        questionNumberLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        questionNumberLabel.setTextFill(MUTED);
+
+        questionTextLabel = new Label("Loading...");
+        questionTextLabel.setFont(Font.font("Segoe UI", FontWeight.SEMI_BOLD, 22));
+        questionTextLabel.setTextFill(EMERALD_DARK);
         questionTextLabel.setWrapText(true);
         questionTextLabel.setTextAlignment(TextAlignment.CENTER);
-        questionTextLabel.setMaxWidth(700);
-        questionTextLabel.setMinHeight(80);
-        questionTextLabel.setPadding(new Insets(20, 40, 20, 40));
+        questionTextLabel.setAlignment(Pos.CENTER);
+        questionTextLabel.setMaxWidth(720);
+        questionTextLabel.setMinHeight(92);
 
-        // Answer combo box
         answerCombo = new ComboBox<>();
-        answerCombo.setStyle(
-                "-fx-font-family: 'Segoe UI';" +
-                        "-fx-font-size: 15px;" +
-                        "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
-                        "-fx-border-width: 1.5;" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8 12;"
-        );
-        answerCombo.setPrefWidth(500);
-        answerCombo.setPrefHeight(45);
+        answerCombo.setPrefWidth(520);
+        answerCombo.setPrefHeight(48);
         answerCombo.setPromptText("Select your answer...");
+        answerCombo.setStyle(pillInputStyle());
 
-        card.getChildren().addAll(questionNumberLabel, assessmentImageView, questionTextLabel, answerCombo);
+        body.getChildren().addAll(questionNumberLabel, questionTextLabel, answerCombo);
+        card.getChildren().addAll(imageHolder, body);
 
-        // Center the card
-        HBox cardWrapper = new HBox(card);
-        cardWrapper.setAlignment(Pos.CENTER);
-        cardWrapper.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        HBox.setHgrow(card, Priority.NEVER);
+        HBox tipCard = new HBox(14);
+        tipCard.setAlignment(Pos.CENTER_LEFT);
+        tipCard.setMaxWidth(860);
+        tipCard.setPadding(new Insets(16, 20, 16, 20));
+        tipCard.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 16;" +
+                        softShadow()
+        );
 
-        centerContainer.getChildren().add(cardWrapper);
+        Label bulb = createIconCircle("💡", WARNING, Color.web("#F1C40F"), 46);
+        VBox tipText = new VBox(2);
+        Label tipTitle = new Label("Tip");
+        tipTitle.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        tipTitle.setTextFill(INK);
+        Label tipBody = new Label("Answer honestly for the most accurate results. There are no right or wrong answers.");
+        tipBody.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+        tipBody.setTextFill(MUTED);
+        tipBody.setWrapText(true);
+        tipText.getChildren().addAll(tipTitle, tipBody);
+        tipCard.getChildren().addAll(bulb, tipText);
 
-        // Navigation buttons
-        HBox navPanel = new HBox(20);
+        HBox navPanel = new HBox(14);
         navPanel.setAlignment(Pos.CENTER);
-        navPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_BEIGE) + ";");
-        navPanel.setPadding(new Insets(20, 0, 0, 0));
 
-        prevButton = createNavButton("Previous", ACCENT_LIGHT_GREEN);
+        prevButton = createSymfonyOutlineButton("← Previous");
         prevButton.setDisable(true);
         prevButton.setOnAction(e -> showPreviousQuestion());
 
-        nextButton = createNavButton("Next", ACCENT_LIGHT_GREEN);
+        nextButton = createSymfonyPrimaryButton("Next →");
         nextButton.setDisable(true);
         nextButton.setOnAction(e -> showNextQuestion());
 
-        submitButton = createNavButton("Submit", ACCENT_GREEN);
-        submitButton.setTextFill(Color.WHITE);
+        submitButton = createSymfonyPrimaryButton("✓ Submit & Analyze");
         submitButton.setDisable(true);
         submitButton.setOnAction(e -> submitAssessment());
 
         navPanel.getChildren().addAll(prevButton, nextButton, submitButton);
 
-        questionPanel.getChildren().addAll(topPanel, centerContainer, navPanel);
-        VBox.setVgrow(centerContainer, Priority.ALWAYS);
+        VBox centered = new VBox(24, topBlock, card, tipCard, navPanel);
+        centered.setAlignment(Pos.TOP_CENTER);
+        VBox.setVgrow(centered, Priority.ALWAYS);
+
+        questionPanel.getChildren().add(centered);
     }
 
-    private Button createNavButton(String text, Color bgColor) {
-        Button button = new Button(text);
-        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
-        button.setTextFill(bgColor == ACCENT_GREEN ? Color.WHITE : Color.web(toHex(TEXT_DARK)));
-        button.setStyle(
-                "-fx-background-color: #" + toHex(bgColor) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 10 30;" +
-                        "-fx-cursor: hand;"
+    private VBox createAssessmentCard(Assessment assessment) {
+        VBox card = new VBox(0);
+        card.setPrefWidth(330);
+        card.setPrefHeight(430);
+        card.setMaxHeight(430);
+        card.setCursor(javafx.scene.Cursor.HAND);
+        card.setStyle(glassCardStyle());
+
+        StackPane imagePanel = new StackPane();
+        imagePanel.setPrefSize(330, 200);
+        imagePanel.setMaxHeight(200);
+
+        ImageView imageView = new ImageView();
+        imageView.setFitWidth(330);
+        imageView.setFitHeight(200);
+        imageView.setPreserveRatio(false);
+
+        Image icon = assessmentImages.get(assessment.getAssessmentId());
+
+        if (icon != null) {
+            imageView.setImage(icon);
+            imagePanel.getChildren().add(imageView);
+        } else {
+            imagePanel.setStyle(
+                    "-fx-background-color: " + gradient(getTypeColor(assessment.getType()), getTypeColor(assessment.getType()).darker()) + ";" +
+                            "-fx-background-radius: 20 20 0 0;"
+            );
+
+            Label brain = new Label("🧠");
+            brain.setFont(Font.font("Segoe UI Emoji", FontWeight.BOLD, 54));
+            brain.setTextFill(Color.WHITE);
+            imagePanel.getChildren().add(brain);
+        }
+
+        Label typeBadge = createBadge(assessment.getType(), getTypeColor(assessment.getType()));
+        StackPane.setAlignment(typeBadge, Pos.TOP_RIGHT);
+        StackPane.setMargin(typeBadge, new Insets(14));
+        imagePanel.getChildren().add(typeBadge);
+
+        VBox body = new VBox(8);
+        body.setPadding(new Insets(18, 22, 18, 22));
+        body.setAlignment(Pos.TOP_CENTER);
+        body.setPrefHeight(230);
+        body.setMaxHeight(230);
+        body.setStyle("-fx-background-color: #ffffff; -fx-background-radius: 0 0 20 20;");
+
+        Label titleLabel = new Label(assessment.getTitle());
+        titleLabel.setStyle("-fx-text-fill: #2E7D32; -fx-font-size: 18px; -fx-font-weight: bold;");
+        titleLabel.setWrapText(true);
+        titleLabel.setTextAlignment(TextAlignment.CENTER);
+        titleLabel.setAlignment(Pos.CENTER);
+        titleLabel.setMaxWidth(286);
+
+        String description = assessment.getDescription();
+        Label descLabel = new Label(
+                description == null || description.isBlank()
+                        ? "Start this wellness check and receive personalized insights."
+                        : description.length() > 80 ? description.substring(0, 77) + "..." : description
         );
+        descLabel.setStyle("-fx-text-fill: #6C757D; -fx-font-size: 13px;");
+        descLabel.setWrapText(true);
+        descLabel.setTextAlignment(TextAlignment.CENTER);
+        descLabel.setAlignment(Pos.CENTER);
+        descLabel.setMaxWidth(286);
 
-        button.setOnMouseEntered(e -> {
-            if (!button.isDisable()) {
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(bgColor.darker()) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 10 30;" +
-                                "-fx-cursor: hand;"
-                );
-            }
-        });
-        button.setOnMouseExited(e -> {
-            if (!button.isDisable()) {
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(bgColor) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 10 30;" +
-                                "-fx-cursor: hand;"
-                );
-            }
-        });
+        Label brand = new Label("🌿 Mentis Assessment");
+        brand.setStyle("-fx-text-fill: #6C757D; -fx-font-size: 12px;");
 
-        return button;
+        Button takeTestBtn = createSymfonyPrimaryButton("▶ Start Assessment");
+        takeTestBtn.setMaxWidth(Double.MAX_VALUE);
+        takeTestBtn.setOnAction(e -> startAssessment(assessment));
+
+        body.getChildren().addAll(titleLabel, descLabel, brand, takeTestBtn);
+
+        card.getChildren().addAll(imagePanel, body);
+
+        card.setOnMouseEntered(e -> card.setStyle(
+                glassCardStyle() +
+                        "-fx-translate-y: -8;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.18), 28, 0, 0, 14);"
+        ));
+
+        card.setOnMouseExited(e -> card.setStyle(glassCardStyle()));
+
+        return card;
     }
 
     private void searchAssessments(String searchText) {
@@ -483,62 +406,21 @@ public class TakeAssessmentPanel extends VBox {
         List<Assessment> filteredAssessments = new ArrayList<>();
 
         for (Assessment assessment : availableAssessments) {
-            if (assessment.getTitle().toLowerCase().contains(searchLower) ||
-                    (assessment.getDescription() != null &&
-                            assessment.getDescription().toLowerCase().contains(searchLower)) ||
-                    assessment.getType().toLowerCase().contains(searchLower)) {
+            String title = assessment.getTitle() == null ? "" : assessment.getTitle().toLowerCase();
+            String description = assessment.getDescription() == null ? "" : assessment.getDescription().toLowerCase();
+            String type = assessment.getType() == null ? "" : assessment.getType().toLowerCase();
+
+            if (title.contains(searchLower) || description.contains(searchLower) || type.contains(searchLower)) {
                 filteredAssessments.add(assessment);
             }
         }
 
         if (filteredAssessments.isEmpty()) {
-            VBox noResultsBox = new VBox(10);
-            noResultsBox.setAlignment(Pos.CENTER);
-            noResultsBox.setPadding(new Insets(50, 0, 50, 0));
-
-            Label title = new Label("No matching assessments found");
-            title.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
-            title.setTextFill(Color.web(toHex(TEXT_GRAY)));
-
-            Label subtitle = new Label("Try searching with different keywords");
-            subtitle.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
-            subtitle.setTextFill(Color.web(toHex(TEXT_LIGHT)));
-
-            Label searchTerm = new Label("Search: \"" + searchText + "\"");
-            searchTerm.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
-            searchTerm.setTextFill(Color.web(toHex(TEXT_LIGHT)));
-
-            noResultsBox.getChildren().addAll(title, subtitle, searchTerm);
-
-            cardsGrid.add(noResultsBox, 0, 0);
-            GridPane.setColumnSpan(noResultsBox, 2);
-        } else {
-            int col = 0, row = 0;
-            for (Assessment assessment : filteredAssessments) {
-                if (!assessmentImages.containsKey(assessment.getAssessmentId())) {
-                    loadAssessmentImage(assessment);
-                }
-
-                VBox card = createAssessmentCard(assessment);
-                cardsGrid.add(card, col, row);
-
-                col++;
-                if (col >= 2) {
-                    col = 0;
-                    row++;
-                }
-            }
+            showEmptyState(cardsGrid, "No matching assessments found");
+            return;
         }
-    }
 
-    private void showEmptyState(GridPane grid, String message) {
-        grid.getChildren().clear();
-        Label emptyLabel = new Label(message);
-        emptyLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 18));
-        emptyLabel.setTextFill(Color.web(toHex(TEXT_GRAY)));
-        emptyLabel.setAlignment(Pos.CENTER);
-        grid.add(emptyLabel, 0, 0);
-        GridPane.setColumnSpan(emptyLabel, 2);
+        displayCards(filteredAssessments);
     }
 
     public void refreshData() {
@@ -559,18 +441,28 @@ public class TakeAssessmentPanel extends VBox {
             return;
         }
 
-        // Load all images first
         for (Assessment assessment : availableAssessments) {
             loadAssessmentImage(assessment);
         }
 
-        int col = 0, row = 0;
-        for (Assessment assessment : availableAssessments) {
+        displayCards(availableAssessments);
+    }
+
+    private void displayCards(List<Assessment> assessments) {
+        cardsGrid.getChildren().clear();
+        int col = 0;
+        int row = 0;
+
+        for (Assessment assessment : assessments) {
+            if (!assessmentImages.containsKey(assessment.getAssessmentId())) {
+                loadAssessmentImage(assessment);
+            }
+
             VBox card = createAssessmentCard(assessment);
             cardsGrid.add(card, col, row);
 
             col++;
-            if (col >= 2) {
+            if (col >= 3) {
                 col = 0;
                 row++;
             }
@@ -600,9 +492,9 @@ public class TakeAssessmentPanel extends VBox {
                 if (imgFile.exists()) {
                     Image image = new Image(new FileInputStream(imgFile));
                     assessmentImageView.setImage(image);
-                    assessmentImageView.setFitWidth(900);
-                    assessmentImageView.setFitHeight(250);
-                    assessmentImageView.setPreserveRatio(true);
+                    assessmentImageView.setFitWidth(860);
+                    assessmentImageView.setFitHeight(220);
+                    assessmentImageView.setPreserveRatio(false);
                     return;
                 }
             } catch (Exception e) {
@@ -610,151 +502,16 @@ public class TakeAssessmentPanel extends VBox {
             }
         }
 
-        // If no image or error, show a colored placeholder that spans full width
         assessmentImageView.setImage(null);
         assessmentImageView.setStyle(
-                "-fx-background-color: #" + toHex(getTypeColor(assessment.getType())) + ";" +
-                        "-fx-border-width: 1 0 1 0;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";"
+                "-fx-background-color: " + gradient(getTypeColor(assessment.getType()), getTypeColor(assessment.getType()).darker()) + ";"
         );
-    }
-
-    private VBox createAssessmentCard(Assessment assessment) {
-        VBox card = new VBox(0);
-        card.setStyle(
-                "-fx-background-color: #" + toHex(ACCENT_LIGHT_GREEN) + ";" +
-                        "-fx-border-color: #" + toHex(ACCENT_LIGHT_GREEN) + ";" +
-                        "-fx-border-width: 1;" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;"
-        );
-        card.setPrefWidth(450);
-        card.setPrefHeight(350);
-        card.setCursor(javafx.scene.Cursor.HAND);
-
-        // Image area
-        StackPane imagePanel = new StackPane();
-        imagePanel.setStyle("-fx-background-color: white;");
-        imagePanel.setPrefHeight(180);
-        imagePanel.setPrefWidth(450);
-
-        ImageView imageView = new ImageView();
-        imageView.setFitWidth(450);
-        imageView.setFitHeight(180);
-        imageView.setPreserveRatio(true);
-
-        Image icon = assessmentImages.get(assessment.getAssessmentId());
-        if (icon != null) {
-            imageView.setImage(icon);
-        } else {
-            // Create colored placeholder
-            Label placeholder = new Label(assessment.getTitle());
-            placeholder.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
-            placeholder.setTextFill(Color.WHITE);
-            placeholder.setStyle("-fx-background-color: #" + toHex(getTypeColor(assessment.getType())) + ";");
-            placeholder.setAlignment(Pos.CENTER);
-            placeholder.setPrefSize(450, 180);
-            imagePanel.getChildren().add(placeholder);
-        }
-
-        if (imageView.getImage() != null) {
-            imagePanel.getChildren().add(imageView);
-        }
-
-        // Content area
-        VBox contentPanel = new VBox(10);
-        contentPanel.setStyle("-fx-background-color: #" + toHex(ACCENT_LIGHT_GREEN) + ";");
-        contentPanel.setPadding(new Insets(25, 25, 20, 25));
-        contentPanel.setAlignment(Pos.CENTER);
-
-        Label titleLabel = new Label(assessment.getTitle());
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 20));
-        titleLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-        titleLabel.setWrapText(true);
-        titleLabel.setTextAlignment(TextAlignment.CENTER);
-
-        Label typeLabel = new Label(assessment.getType());
-        typeLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
-        typeLabel.setTextFill(Color.web(toHex(getTypeColor(assessment.getType()))));
-        typeLabel.setPadding(new Insets(8, 0, 20, 0));
-
-        // Description if available
-        String description = assessment.getDescription();
-        if (description != null && !description.isEmpty()) {
-            Label descLabel = new Label();
-            if (description.length() > 60) {
-                descLabel.setText(description.substring(0, 57) + "...");
-            } else {
-                descLabel.setText(description);
-            }
-            descLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
-            descLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
-            descLabel.setWrapText(true);
-            descLabel.setTextAlignment(TextAlignment.CENTER);
-            descLabel.setPadding(new Insets(0, 0, 10, 0));
-            contentPanel.getChildren().add(descLabel);
-        }
-
-        // Take test button
-        Button takeTestBtn = new Button("TAKE TEST");
-        takeTestBtn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
-        takeTestBtn.setTextFill(Color.WHITE);
-        takeTestBtn.setStyle(
-                "-fx-background-color: #" + toHex(ACCENT_GREEN) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 12 40;" +
-                        "-fx-cursor: hand;"
-        );
-        takeTestBtn.setOnAction(e -> startAssessment(assessment));
-
-        contentPanel.getChildren().addAll(titleLabel, typeLabel);
-        contentPanel.getChildren().add(takeTestBtn);
-
-        VBox.setVgrow(contentPanel, Priority.ALWAYS);
-
-        card.getChildren().addAll(imagePanel, contentPanel);
-
-        // Hover effect
-        card.setOnMouseEntered(e ->
-                card.setStyle(
-                        "-fx-background-color: #" + toHex(ACCENT_LIGHT_GREEN) + ";" +
-                                "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
-                                "-fx-border-width: 3;" +
-                                "-fx-border-radius: 5;" +
-                                "-fx-background-radius: 5;"
-                )
-        );
-        card.setOnMouseExited(e ->
-                card.setStyle(
-                        "-fx-background-color: #" + toHex(ACCENT_LIGHT_GREEN) + ";" +
-                                "-fx-border-color: #" + toHex(ACCENT_LIGHT_GREEN) + ";" +
-                                "-fx-border-width: 1;" +
-                                "-fx-border-radius: 5;" +
-                                "-fx-background-radius: 5;"
-                )
-        );
-
-        return card;
-    }
-
-    private Color getTypeColor(String type) {
-        if (type == null) return TYPE_DEFAULT;
-        switch (type.toLowerCase()) {
-            case "depression": return TYPE_DEPRESSION;
-            case "anxiety": return TYPE_ANXIETY;
-            case "stress": return TYPE_STRESS;
-            case "wellness": return TYPE_WELLNESS;
-            case "general": return TYPE_GENERAL;
-            default: return TYPE_DEFAULT;
-        }
     }
 
     private void startAssessment(Assessment assessment) {
         try {
             if (userId <= 0) {
-                showAlert("Authentication Error",
-                        "User ID not found. Please login again.",
-                        Alert.AlertType.WARNING);
+                showAlert("Authentication Error", "User ID not found. Please login again.", Alert.AlertType.WARNING);
                 return;
             }
 
@@ -766,11 +523,7 @@ public class TakeAssessmentPanel extends VBox {
                 return;
             }
 
-            // Initialize adaptive session
-            adaptiveSession = new AdaptiveAssessmentSession(
-                    currentAssessmentId, userId, originalQuestions);
-
-            // Set adaptive mode
+            adaptiveSession = new AdaptiveAssessmentSession(currentAssessmentId, userId, originalQuestions);
             adaptiveSession.setUseAIAdaptive(useAdaptiveMode);
             adaptiveEnabled = true;
             isAdapting = false;
@@ -779,16 +532,13 @@ public class TakeAssessmentPanel extends VBox {
             currentQuestionIndex = 0;
             answers.clear();
 
-            // Shuffle questions for better adaptive experience
             Collections.shuffle(currentQuestions);
 
             prevButton.setDisable(true);
             nextButton.setDisable(currentQuestions.size() <= 1);
             submitButton.setDisable(true);
 
-            // Load and display assessment image
             loadAndDisplayAssessmentImage(assessment);
-
             showQuestion(currentQuestionIndex);
             showQuestionPanel();
 
@@ -798,43 +548,31 @@ public class TakeAssessmentPanel extends VBox {
     }
 
     private Question getNextAdaptiveQuestion() {
-        if (adaptiveSession == null || originalQuestions == null || !adaptiveEnabled) {
-            return null;
-        }
+        if (adaptiveSession == null || originalQuestions == null || !adaptiveEnabled) return null;
 
-        // Check if we've reached the maximum number of adaptive questions
         if (adaptiveSession.getQuestionCount() >= MAX_ADAPTIVE_QUESTIONS) {
             adaptiveEnabled = false;
             return null;
         }
 
-        // Get remaining questions that haven't been asked
         List<Question> asked = adaptiveSession.getAskedQuestions();
         List<Question> remaining = new ArrayList<>(originalQuestions);
         remaining.removeAll(asked);
 
-        if (remaining.isEmpty()) {
-            return null;
-        }
+        if (remaining.isEmpty()) return null;
 
-        // Let the adaptive service decide the next question
         return adaptiveService.getNextAdaptiveQuestion(adaptiveSession, remaining);
     }
 
     private void showQuestion(int index) {
-        if (currentQuestions == null || index < 0 || index >= currentQuestions.size()) {
-            return;
-        }
+        if (currentQuestions == null || index < 0 || index >= currentQuestions.size()) return;
 
         Question question = currentQuestions.get(index);
 
         questionNumberLabel.setText("Question " + (index + 1) + " of " + currentQuestions.size());
+        updateQuestionProgress(index);
 
-        // Ensure full question text is displayed
-        String questionText = question.getText();
-        questionTextLabel.setText(questionText);
-
-        // Force layout refresh
+        questionTextLabel.setText(question.getText());
         questionTextLabel.setWrapText(true);
         questionTextLabel.autosize();
 
@@ -845,7 +583,8 @@ public class TakeAssessmentPanel extends VBox {
         if (answers.containsKey(question.getQuestionId())) {
             answerCombo.setValue(answers.get(question.getQuestionId()));
         } else {
-            answerCombo.getSelectionModel().selectFirst();
+            answerCombo.getSelectionModel().clearSelection();
+            answerCombo.setPromptText("Select your answer...");
         }
 
         prevButton.setDisable(index <= 0);
@@ -853,8 +592,18 @@ public class TakeAssessmentPanel extends VBox {
         submitButton.setDisable(false);
     }
 
+    private void updateQuestionProgress(int index) {
+        if (currentQuestions == null || currentQuestions.isEmpty()) return;
+
+        int total = currentQuestions.size();
+        double progress = (index + 1.0) / total;
+
+        if (questionProgressBar != null) questionProgressBar.setProgress(progress);
+        if (progressMetaLabel != null) progressMetaLabel.setText("❔ Question " + (index + 1) + " of " + total);
+    }
+
     private void saveCurrentAnswer() {
-        if (currentQuestions != null && currentQuestionIndex < currentQuestions.size()) {
+        if (currentQuestions != null && currentQuestionIndex < currentQuestions.size() && answerCombo.getValue() != null) {
             Question question = currentQuestions.get(currentQuestionIndex);
             answers.put(question.getQuestionId(), answerCombo.getValue());
         }
@@ -869,34 +618,29 @@ public class TakeAssessmentPanel extends VBox {
     }
 
     private void showNextQuestion() {
-        saveCurrentAnswer(); // Save current answer before moving
+        if (answerCombo.getValue() == null || answerCombo.getValue().isBlank()) {
+            showAlert("Answer Required", "Please select your answer before continuing.", Alert.AlertType.WARNING);
+            return;
+        }
 
-        // Add the answered question to adaptive session
+        saveCurrentAnswer();
+
         Question currentQ = currentQuestions.get(currentQuestionIndex);
         String answer = answers.get(currentQ.getQuestionId());
         int score = resultController.parseAnswerToScore(answer, currentQ.getScale());
         adaptiveSession.addAnsweredQuestion(currentQ, answer, score);
 
-        // Adaptive starts after 2nd question (index 1)
         if (useAdaptiveMode && adaptiveEnabled && currentQuestionIndex >= 1 && !isAdapting) {
-            // Try to get an adaptive next question
             Question adaptiveQuestion = getNextAdaptiveQuestion();
 
-            if (adaptiveQuestion != null && !adaptiveSession.getAskedQuestions().contains(adaptiveQuestion)) {
-                // Set flag to prevent multiple adaptations
+            if (adaptiveQuestion != null && !adaptiveSession.getAskedQuestions().contains(adaptiveQuestion)
+                    && !currentQuestions.contains(adaptiveQuestion)) {
                 isAdapting = true;
-
-                // Insert adaptive question at next position
                 currentQuestions.add(currentQuestionIndex + 1, adaptiveQuestion);
-
-                // Reset flag after a short delay
-                Platform.runLater(() -> {
-                    isAdapting = false;
-                });
+                Platform.runLater(() -> isAdapting = false);
             }
         }
 
-        // Move to next question
         if (currentQuestionIndex < currentQuestions.size() - 1) {
             currentQuestionIndex++;
             showQuestion(currentQuestionIndex);
@@ -904,25 +648,20 @@ public class TakeAssessmentPanel extends VBox {
     }
 
     private void submitAssessment() {
-        saveCurrentAnswer();
-
-        // Proper validation - check if all questions have answers
-        boolean allAnswered = true;
-        for (Question question : currentQuestions) {
-            if (!answers.containsKey(question.getQuestionId())) {
-                allAnswered = false;
-                break;
-            }
-        }
-
-        if (!allAnswered) {
-            showAlert("Incomplete Assessment",
-                    "Please answer all questions before submitting!",
-                    Alert.AlertType.WARNING);
+        if (answerCombo.getValue() == null || answerCombo.getValue().isBlank()) {
+            showAlert("Answer Required", "Please select your answer before submitting.", Alert.AlertType.WARNING);
             return;
         }
 
-        // Add last question to adaptive session if not already added
+        saveCurrentAnswer();
+
+        for (Question question : currentQuestions) {
+            if (!answers.containsKey(question.getQuestionId())) {
+                showAlert("Incomplete Assessment", "Please answer all questions before submitting!", Alert.AlertType.WARNING);
+                return;
+            }
+        }
+
         if (adaptiveSession != null && adaptiveSession.getAskedQuestions().size() < currentQuestions.size()) {
             Question lastQ = currentQuestions.get(currentQuestionIndex);
             String answer = answers.get(lastQ.getQuestionId());
@@ -943,15 +682,12 @@ public class TakeAssessmentPanel extends VBox {
         }
 
         try {
-            Map<String, Object> result = resultController.submitAssessment(
-                    userId, currentAssessmentId, answerScores, originalAnswers);
+            Map<String, Object> result = resultController.submitAssessment(userId, currentAssessmentId, answerScores, originalAnswers);
 
-            if ((Boolean) result.get("success")) {
+            if (Boolean.TRUE.equals(result.get("success"))) {
                 showResultsWithAI((Map<String, Object>) result.get("result"));
             } else {
-                showAlert("Submission Error",
-                        "Error submitting assessment: " + result.get("error"),
-                        Alert.AlertType.ERROR);
+                showAlert("Submission Error", "Error submitting assessment: " + result.get("error"), Alert.AlertType.ERROR);
             }
         } catch (Exception e) {
             showAlert("Error", "Error: " + e.getMessage(), Alert.AlertType.ERROR);
@@ -962,18 +698,19 @@ public class TakeAssessmentPanel extends VBox {
         Stage resultDialog = new Stage();
         resultDialog.initModality(Modality.APPLICATION_MODAL);
         resultDialog.setTitle("Assessment Results");
-        resultDialog.setMinWidth(700);
-        resultDialog.setMinHeight(800);
+        resultDialog.setMinWidth(900);
+        resultDialog.setMinHeight(760);
 
         BorderPane mainPanel = new BorderPane();
-        mainPanel.setStyle("-fx-background-color: #f3f3f3;");
+        mainPanel.setStyle("-fx-background-color: #F8F9FA;");
+        mainPanel.setPadding(new Insets(18));
 
         TabPane tabbedPane = new TabPane();
         tabbedPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
-        tabbedPane.setStyle("-fx-background-color: white;");
+        tabbedPane.setStyle("-fx-background-color: white; -fx-background-radius: 16; -fx-border-radius: 16;");
 
-        Tab summaryTab         = new Tab("📊 Summary");
-        Tab analysisTab        = new Tab("🤖 AI Analysis");
+        Tab summaryTab = new Tab("📊 Summary");
+        Tab analysisTab = new Tab("🤖 AI Analysis");
         Tab recommendationsTab = new Tab("💡 Recommendations");
 
         summaryTab.setContent(createSummaryTab(result));
@@ -983,45 +720,41 @@ public class TakeAssessmentPanel extends VBox {
         tabbedPane.getTabs().addAll(summaryTab, analysisTab, recommendationsTab);
         mainPanel.setCenter(tabbedPane);
 
-        // ── Risk check (fixed) ───────────────────────────────────────────────
         String riskLevel = (String) result.get("riskLevel");
-        System.out.println("[DEBUG] riskLevel = '" + riskLevel + "' → isCritical=" + isCriticalRisk(riskLevel));
         boolean isCritical = isCriticalRisk(riskLevel);
 
-        // ── Buttons ──────────────────────────────────────────────────────────
-        HBox buttonPanel = new HBox(20);
+        HBox buttonPanel = new HBox(14);
         buttonPanel.setAlignment(Pos.CENTER);
-        buttonPanel.setStyle("-fx-background-color: #f3f3f3; -fx-padding: 15px;");
+        buttonPanel.setStyle("-fx-background-color: #F8F9FA; -fx-padding: 18px;");
 
-        Button exportTextBtn = createExportButton("Export as Text File");
+        Button exportTextBtn = createSymfonyPrimaryButton("Export Text");
         exportTextBtn.setOnAction(e -> exportAsText(result));
 
-        Button exportHTMLBtn = createExportButton("Export as HTML");
+        Button exportHTMLBtn = createSymfonyPrimaryButton("Export HTML");
         exportHTMLBtn.setOnAction(e -> exportAsHTML(result));
 
-        Button closeBtn = createExportButton("Close");
-        closeBtn.setOnAction(e -> { resultDialog.close(); showSelectionPanel(); });
+        Button closeBtn = createSymfonyOutlineButton("Close");
+        closeBtn.setOnAction(e -> {
+            resultDialog.close();
+            showSelectionPanel();
+        });
 
         if (isCritical) {
             Button emergencyBtn = createEmergencyButton();
-            emergencyBtn.setOnAction(e ->
-                    GeolocationService.checkAndShowEmergencyResources(riskLevel, null)
-            );
+            emergencyBtn.setOnAction(e -> GeolocationService.checkAndShowEmergencyResources(riskLevel, null));
             buttonPanel.getChildren().addAll(emergencyBtn, exportTextBtn, exportHTMLBtn, closeBtn);
 
-            // Show warning popup after dialog opens
             Platform.runLater(() -> {
                 Alert warn = new Alert(Alert.AlertType.WARNING);
                 warn.setTitle("⚠️ CRITICAL RISK DETECTED");
                 warn.setHeaderText("Please seek immediate support");
                 warn.setContentText(
                         "Your results indicate a HIGH risk level.\n\n" +
-                                "Click '🚨 EMERGENCY HELP' below to find the nearest\n" +
-                                "hospitals and mental health centers on a live map.\n\n" +
+                                "Click '🚨 EMERGENCY HELP' below to find nearby hospitals and mental health centers.\n\n" +
                                 "Emergency Contacts:\n" +
-                                "  • 911 (US) / 112 (EU) — Emergency Services\n" +
-                                "  • 988 — Mental Health Crisis Line (US)\n" +
-                                "  • Text HOME to 741741 — Crisis Text Line"
+                                "• 911 (US) / 112 (EU) — Emergency Services\n" +
+                                "• 988 — Mental Health Crisis Line (US)\n" +
+                                "• Text HOME to 741741 — Crisis Text Line"
                 );
                 warn.show();
             });
@@ -1031,100 +764,41 @@ public class TakeAssessmentPanel extends VBox {
 
         mainPanel.setBottom(buttonPanel);
 
-        Scene scene = new Scene(mainPanel, 700, 800);
+        Scene scene = new Scene(mainPanel, 900, 760);
         resultDialog.setScene(scene);
         resultDialog.showAndWait();
     }
 
-    // Add helper method to check critical risk
-    private boolean isCriticalRisk(String riskLevel) {
-        return GeolocationService.isCriticalRisk(riskLevel);
-    }
-
-    // Add emergency button creation
-    private Button createEmergencyButton() {
-        Button button = new Button("🚨 EMERGENCY HELP");
-        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        button.setTextFill(Color.WHITE);
-        button.setStyle(
-                "-fx-background-color: #ff4444;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 10 20;" +
-                        "-fx-cursor: hand;" +
-                        "-fx-effect: dropshadow(gaussian, rgba(255,0,0,0.5), 10, 0, 0, 0);"
-        );
-
-        // Add pulsing animation effect
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #ff6666;" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 10 20;" +
-                                "-fx-cursor: hand;" +
-                                "-fx-effect: dropshadow(gaussian, rgba(255,0,0,0.8), 15, 0, 0, 0);"
-                )
-        );
-
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: #ff4444;" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 10 20;" +
-                                "-fx-cursor: hand;" +
-                                "-fx-effect: dropshadow(gaussian, rgba(255,0,0,0.5), 10, 0, 0, 0);"
-                )
-        );
-
-        return button;
-    }
-
     private VBox createSummaryTab(Map<String, Object> result) {
-        VBox panel = new VBox(20);
+        VBox panel = new VBox(22);
         panel.setStyle("-fx-background-color: white;");
-        panel.setPadding(new Insets(20));
+        panel.setPadding(new Insets(26));
 
-        TextArea textArea = new TextArea();
-        textArea.setEditable(false);
-        textArea.setFont(Font.font("Monospaced", 13));
-        textArea.setWrapText(true);
+        HBox cards = new HBox(16);
+        cards.setAlignment(Pos.CENTER);
+        cards.getChildren().addAll(
+                createMetricCard("⭐", String.valueOf(result.get("totalScore")), "Total Score", EMERALD),
+                createMetricCard("📈", String.valueOf(result.get("riskLevel")), "Risk Level", riskColor(String.valueOf(result.get("riskLevel")))),
+                createMetricCard("📅", "Today", "Date Taken", EMERALD)
+        );
 
-        // Adaptive info block
-        String adaptiveInfo = "";
-        if (adaptiveSession != null && useAdaptiveMode) {
-            adaptiveInfo =
-                    "=== ADAPTIVE ASSESSMENT INFO ===\n" +
-                            "Questions Asked : " + adaptiveSession.getQuestionCount() + "\n" +
-                            "Category Scores : " + adaptiveSession.getCategoryScores() + "\n\n";
-        }
+        VBox details = createTextSection("Assessment Details", buildSummaryText(result));
+        VBox interpretation = createTextSection("Interpretation", String.valueOf(result.get("interpretation")));
 
-        // Pull full AI analysis but cap at ~800 chars so it stays readable
-        String fullAI = result.get("aiAnalysis") != null ? result.get("aiAnalysis").toString() : "";
-        String keyInsights = fullAI.length() > 800 ? fullAI.substring(0, 800) + "…\n(see AI Analysis tab for full report)" : fullAI;
-
-        String summary =
-                "=== ASSESSMENT RESULTS ===\n\n" +
-                        adaptiveInfo +
-                        "Total Score      : " + result.get("totalScore") + "\n" +
-                        "Risk Level       : " + result.get("riskLevel") + "\n" +
-                        "Session Suggested: " + (Boolean.TRUE.equals(result.get("suggestSession")) ? "Yes" : "No") + "\n\n" +
-                        "=== INTERPRETATION ===\n" +
-                        result.get("interpretation") + "\n\n" +
-                        "=== KEY INSIGHTS ===\n" +
-                        keyInsights;
-
-        textArea.setText(summary);
-        VBox.setVgrow(textArea, Priority.ALWAYS);
-        panel.getChildren().add(textArea);
+        panel.getChildren().addAll(cards, details, interpretation);
         return panel;
     }
 
     private VBox createAnalysisTab(Map<String, Object> result) {
-        VBox panel = new VBox();
+        VBox panel = new VBox(16);
         panel.setStyle("-fx-background-color: white;");
-        panel.setPadding(new Insets(20));
+        panel.setPadding(new Insets(26));
 
-        // Clean markdown symbols from the text
-        String rawAnalysis = result.get("aiAnalysis").toString();
+        Label title = new Label("🤖 AI-Powered Analysis");
+        title.setFont(Font.font("Segoe UI", FontWeight.BOLD, 20));
+        title.setTextFill(EMERALD_DARK);
+
+        String rawAnalysis = result.get("aiAnalysis") == null ? "AI analysis was not generated for this result." : result.get("aiAnalysis").toString();
         String cleanedAnalysis = rawAnalysis
                 .replace("**", "")
                 .replace("###", "")
@@ -1136,76 +810,72 @@ public class TakeAssessmentPanel extends VBox {
         textArea.setEditable(false);
         textArea.setFont(Font.font("Segoe UI", 14));
         textArea.setWrapText(true);
+        textArea.setStyle(
+                "-fx-background-color: #F8F9FA;" +
+                        "-fx-border-color: #E9ECEF;" +
+                        "-fx-border-radius: 12;" +
+                        "-fx-background-radius: 12;"
+        );
         VBox.setVgrow(textArea, Priority.ALWAYS);
-        textArea.setPrefHeight(500);
 
-        panel.getChildren().add(textArea);
+        panel.getChildren().addAll(title, textArea);
         return panel;
     }
-
 
     private VBox createRecommendationsTab(Map<String, Object> result) {
         VBox panel = new VBox(0);
         panel.setStyle("-fx-background-color: white;");
 
-        // ── Text recommendations (top half) ─────────────────────────────────
         Label recHeader = new Label("💡 Personalized Recommendations");
-        recHeader.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
-        recHeader.setTextFill(Color.web("#3c7860"));
-        recHeader.setPadding(new Insets(16, 20, 6, 20));
+        recHeader.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
+        recHeader.setTextFill(EMERALD_DARK);
+        recHeader.setPadding(new Insets(18, 22, 8, 22));
 
-        TextArea recText = new TextArea(result.get("recommendedContent").toString());
+        TextArea recText = new TextArea(String.valueOf(result.get("recommendedContent")));
         recText.setEditable(false);
         recText.setFont(Font.font("Segoe UI", 13));
         recText.setWrapText(true);
         recText.setPrefHeight(160);
-        recText.setStyle("-fx-background-color: #f9f9f9; -fx-border-color: #e0e0e0;");
+        recText.setStyle("-fx-background-color: #F8F9FA; -fx-border-color: #E9ECEF;");
 
-        // ── YouTube section header ───────────────────────────────────────────
         HBox ytHeader = new HBox(10);
         ytHeader.setAlignment(Pos.CENTER_LEFT);
-        ytHeader.setPadding(new Insets(14, 20, 6, 20));
-        ytHeader.setStyle("-fx-background-color: #fff3f3; -fx-border-color: #ffcdd2; -fx-border-width: 1 0 1 0;");
+        ytHeader.setPadding(new Insets(14, 22, 8, 22));
+        ytHeader.setStyle("-fx-background-color: #FFF3F3; -fx-border-color: #FFCDD2; -fx-border-width: 1 0 1 0;");
 
         Label ytIcon = new Label("▶");
         ytIcon.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
-        ytIcon.setStyle("-fx-text-fill: #ff0000;");
+        ytIcon.setStyle("-fx-text-fill: #FF0000;");
 
         Label ytLabel = new Label("Therapy & Relaxation Videos");
         ytLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
-        ytLabel.setTextFill(Color.web("#333"));
+        ytLabel.setTextFill(INK);
 
         Label loadingLabel = new Label("Loading videos…");
         loadingLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
-        loadingLabel.setTextFill(Color.web("#888"));
+        loadingLabel.setTextFill(MUTED);
 
         Region ytSpacer = new Region();
         HBox.setHgrow(ytSpacer, Priority.ALWAYS);
         ytHeader.getChildren().addAll(ytIcon, ytLabel, ytSpacer, loadingLabel);
 
-        // ── WebView for video cards ──────────────────────────────────────────
         WebView webView = new WebView();
         webView.setContextMenuEnabled(false);
         webView.getEngine().setUserAgent("Mozilla/5.0 MentisMentalHealthApp/1.0");
         VBox.setVgrow(webView, Priority.ALWAYS);
-
-        // Show placeholder skeleton while loading
         webView.getEngine().loadContent(buildSkeletonHtml());
 
         panel.getChildren().addAll(recHeader, recText, ytHeader, webView);
 
-        // ── Fetch videos in background ───────────────────────────────────────
-        String riskLevel      = (String) result.getOrDefault("riskLevel", "");
-        String assessmentType = getAssessmentType();   // helper below
+        String riskLevel = (String) result.getOrDefault("riskLevel", "");
+        String assessmentType = getAssessmentType();
 
         Thread fetchThread = new Thread(() -> {
             List<YouTubeRecommendationService.VideoResult> videos =
                     YouTubeRecommendationService.fetchVideos(assessmentType, riskLevel, 6);
 
             Platform.runLater(() -> {
-                loadingLabel.setText(videos.isEmpty()
-                        ? "Could not load videos"
-                        : videos.size() + " videos found");
+                loadingLabel.setText(videos.isEmpty() ? "Could not load videos" : videos.size() + " videos found");
                 webView.getEngine().loadContent(buildVideoCardsHtml(videos));
             });
         });
@@ -1215,30 +885,122 @@ public class TakeAssessmentPanel extends VBox {
         return panel;
     }
 
-    /**
-     * Get the assessment type string for the current assessment.
-     * Looks it up from availableAssessments by currentAssessmentId.
-     */
+    private VBox createMetricCard(String icon, String value, String label, Color color) {
+        VBox card = new VBox(7);
+        card.setAlignment(Pos.CENTER);
+        card.setPrefWidth(240);
+        card.setPadding(new Insets(20));
+        card.setStyle(
+                "-fx-background-color: #F1F8E9;" +
+                        "-fx-background-radius: 16;"
+        );
+
+        Label i = new Label(icon);
+        i.setFont(Font.font("Segoe UI Emoji", 30));
+
+        Label v = new Label(value == null ? "N/A" : value);
+        v.setFont(Font.font("Segoe UI", FontWeight.BOLD, 28));
+        v.setTextFill(color);
+        v.setWrapText(true);
+        v.setTextAlignment(TextAlignment.CENTER);
+
+        Label l = new Label(label);
+        l.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+        l.setTextFill(MUTED);
+
+        card.getChildren().addAll(i, v, l);
+        return card;
+    }
+
+    private VBox createTextSection(String title, String content) {
+        VBox box = new VBox(10);
+        box.setPadding(new Insets(18));
+        box.setStyle("-fx-background-color: #F8F9FA; -fx-background-radius: 14;");
+
+        Label titleLabel = new Label(title);
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
+        titleLabel.setTextFill(EMERALD_DARK);
+
+        Separator separator = new Separator();
+
+        Label contentLabel = new Label(content == null ? "N/A" : content);
+        contentLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        contentLabel.setTextFill(MUTED);
+        contentLabel.setWrapText(true);
+        contentLabel.setStyle("-fx-line-spacing: 5;");
+
+        box.getChildren().addAll(titleLabel, separator, contentLabel);
+        return box;
+    }
+
+    private String buildSummaryText(Map<String, Object> result) {
+        String adaptiveInfo = "";
+        if (adaptiveSession != null && useAdaptiveMode) {
+            adaptiveInfo =
+                    "Adaptive Questions Asked: " + adaptiveSession.getQuestionCount() + "\n" +
+                            "Category Scores: " + adaptiveSession.getCategoryScores() + "\n\n";
+        }
+
+        return adaptiveInfo +
+                "Total Score: " + result.get("totalScore") + "\n" +
+                "Risk Level: " + result.get("riskLevel") + "\n" +
+                "Session Suggested: " + (Boolean.TRUE.equals(result.get("suggestSession")) ? "Yes" : "No");
+    }
+
+    private Color riskColor(String riskLevel) {
+        if (riskLevel == null) return EMERALD;
+        String r = riskLevel.toLowerCase();
+        if (r.contains("high") || r.contains("severe") || r.contains("critical")) return DANGER;
+        if (r.contains("moderate") || r.contains("mild")) return WARNING;
+        return EMERALD;
+    }
+
+    private boolean isCriticalRisk(String riskLevel) {
+        return GeolocationService.isCriticalRisk(riskLevel);
+    }
+
+    private Button createEmergencyButton() {
+        Button button = new Button("🚨 EMERGENCY HELP");
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        button.setTextFill(Color.WHITE);
+        button.setStyle(
+                "-fx-background-color: #E74C3C;" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-padding: 11 24;" +
+                        "-fx-cursor: hand;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(231,76,60,0.45), 16, 0, 0, 7);"
+        );
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: #C0392B;" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-padding: 11 24;" +
+                        "-fx-cursor: hand;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(231,76,60,0.65), 20, 0, 0, 8);"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+                "-fx-background-color: #E74C3C;" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-padding: 11 24;" +
+                        "-fx-cursor: hand;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(231,76,60,0.45), 16, 0, 0, 7);"
+        ));
+        return button;
+    }
+
     private String getAssessmentType() {
         if (availableAssessments != null) {
             for (Assessment a : availableAssessments) {
-                if (a.getAssessmentId() == currentAssessmentId) {
-                    return a.getType();
-                }
+                if (a.getAssessmentId() == currentAssessmentId) return a.getType();
             }
         }
         return "general";
     }
 
-    /**
-     * Skeleton loading HTML shown while videos are fetching.
-     */
     private String buildSkeletonHtml() {
         return "<!DOCTYPE html><html><head><style>" +
                 "body{margin:0;padding:12px;background:#fafafa;font-family:Arial,sans-serif;}" +
                 ".grid{display:flex;flex-wrap:wrap;gap:12px;}" +
-                ".card{width:calc(33% - 8px);background:#f0f0f0;border-radius:8px;" +
-                "height:180px;animation:pulse 1.2s infinite alternate;}" +
+                ".card{width:calc(33% - 8px);background:#f0f0f0;border-radius:12px;height:180px;animation:pulse 1.2s infinite alternate;}" +
                 "@keyframes pulse{from{opacity:0.5}to{opacity:1}}" +
                 "</style></head><body>" +
                 "<div class='grid'>" +
@@ -1247,17 +1009,11 @@ public class TakeAssessmentPanel extends VBox {
                 "</div></body></html>";
     }
 
-    /**
-     * Build a rich HTML grid of video cards from fetched results.
-     * Clicking a card opens it in the default browser via JavaScript bridge,
-     * OR falls back to showing the URL in an alert (works without bridge too).
-     */
     private String buildVideoCardsHtml(List<YouTubeRecommendationService.VideoResult> videos) {
         if (videos.isEmpty()) {
             return "<!DOCTYPE html><html><body style='font-family:Arial;padding:30px;color:#888;text-align:center;'>" +
-                    "<p style='font-size:16px;'>⚠️ Could not load videos.<br>" +
-                    "Check your YouTube API key in YouTubeRecommendationService.java<br>" +
-                    "or your internet connection.</p></body></html>";
+                    "<p style='font-size:16px;'>⚠️ Could not load videos.<br>Check your YouTube API key or internet connection.</p>" +
+                    "</body></html>";
         }
 
         StringBuilder sb = new StringBuilder();
@@ -1265,102 +1021,38 @@ public class TakeAssessmentPanel extends VBox {
                 .append("*{margin:0;padding:0;box-sizing:border-box;}\n")
                 .append("body{background:#fafafa;font-family:Arial,sans-serif;padding:12px;}\n")
                 .append(".grid{display:flex;flex-wrap:wrap;gap:12px;}\n")
-                .append(".card{\n")
-                .append("  width:calc(33.33% - 8px);background:white;border-radius:10px;\n")
-                .append("  box-shadow:0 2px 8px rgba(0,0,0,0.10);overflow:hidden;\n")
-                .append("  cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;\n")
-                .append("  text-decoration:none;display:block;color:inherit;\n")
-                .append("}\n")
+                .append(".card{width:calc(33.33% - 8px);background:white;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,0.10);overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;text-decoration:none;display:block;color:inherit;}\n")
                 .append(".card:hover{transform:translateY(-3px);box-shadow:0 6px 18px rgba(0,0,0,0.16);}\n")
                 .append(".thumb-wrap{position:relative;width:100%;padding-top:56.25%;overflow:hidden;background:#000;}\n")
                 .append(".thumb-wrap img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;}\n")
-                .append(".play-overlay{\n")
-                .append("  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);\n")
-                .append("  width:42px;height:42px;background:rgba(255,0,0,0.85);border-radius:50%;\n")
-                .append("  display:flex;align-items:center;justify-content:center;\n")
-                .append("  font-size:18px;color:white;pointer-events:none;\n")
-                .append("}\n")
+                .append(".play-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:42px;height:42px;background:rgba(255,0,0,0.85);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:white;pointer-events:none;}\n")
                 .append(".info{padding:10px;}\n")
-                .append(".title{font-size:12px;font-weight:bold;color:#111;line-height:1.4;\n")
-                .append("  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}\n")
+                .append(".title{font-size:12px;font-weight:bold;color:#111;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}\n")
                 .append(".channel{font-size:11px;color:#606060;margin-top:4px;}\n")
-                .append(".yt-badge{display:inline-block;margin-top:5px;background:#ff0000;\n")
-                .append("  color:white;font-size:10px;padding:2px 7px;border-radius:3px;font-weight:bold;}\n")
-                .append("</style></head><body>\n")
-                .append("<div class='grid'>\n");
+                .append(".yt-badge{display:inline-block;margin-top:5px;background:#ff0000;color:white;font-size:10px;padding:2px 7px;border-radius:999px;font-weight:bold;}\n")
+                .append("</style></head><body><div class='grid'>\n");
 
         for (YouTubeRecommendationService.VideoResult v : videos) {
-            String safeTitle   = v.title.replace("'", "\\'").replace("\"", "&quot;");
-            String safeUrl     = v.watchUrl;
-            String safeThumb   = v.thumbnail.isEmpty()
-                    ? "https://i.ytimg.com/vi/" + v.videoId + "/mqdefault.jpg"
-                    : v.thumbnail;
-            String safeChannel = v.channelTitle.replace("'", "\\'");
+            String safeTitle = escapeHtml(v.title);
+            String safeUrl = v.watchUrl;
+            String safeThumb = v.thumbnail.isEmpty() ? "https://i.ytimg.com/vi/" + v.videoId + "/mqdefault.jpg" : v.thumbnail;
+            String safeChannel = escapeHtml(v.channelTitle);
 
-            sb.append("  <a class='card' href='").append(safeUrl).append("' ")
-                    .append("onclick=\"window.open('").append(safeUrl).append("','_blank');return false;\">\n")
-                    .append("    <div class='thumb-wrap'>\n")
-                    .append("      <img src='").append(safeThumb).append("' alt='").append(safeTitle).append("'/>\n")
-                    .append("      <div class='play-overlay'>▶</div>\n")
-                    .append("    </div>\n")
-                    .append("    <div class='info'>\n")
-                    .append("      <div class='title'>").append(v.title.replace("<","&lt;").replace(">","&gt;")).append("</div>\n")
-                    .append("      <div class='channel'>").append(v.channelTitle.replace("<","&lt;")).append("</div>\n")
-                    .append("      <span class='yt-badge'>YouTube</span>\n")
-                    .append("    </div>\n")
-                    .append("  </a>\n");
+            sb.append("<a class='card' href='").append(safeUrl).append("'>")
+                    .append("<div class='thumb-wrap'>")
+                    .append("<img src='").append(safeThumb).append("' alt='").append(safeTitle).append("'/>")
+                    .append("<div class='play-overlay'>▶</div>")
+                    .append("</div>")
+                    .append("<div class='info'>")
+                    .append("<div class='title'>").append(safeTitle).append("</div>")
+                    .append("<div class='channel'>").append(safeChannel).append("</div>")
+                    .append("<span class='yt-badge'>YouTube</span>")
+                    .append("</div>")
+                    .append("</a>");
         }
 
-        sb.append("</div>\n");
-
-        // JS bridge: open in system browser via JavaFX WebEngine
-        sb.append("<script>\n")
-                .append("document.querySelectorAll('.card').forEach(function(card){\n")
-                .append("  card.addEventListener('click',function(e){\n")
-                .append("    e.preventDefault();\n")
-                .append("    var url = card.getAttribute('href');\n")
-                .append("    // Try JavaFX hostServices bridge first\n")
-                .append("    try { javaApp.openUrl(url); } catch(ex) {\n")
-                .append("      // Fallback: load in current WebView\n")
-                .append("      window.location.href = url;\n")
-                .append("    }\n")
-                .append("  });\n")
-                .append("});\n")
-                .append("</script>\n")
-                .append("</body></html>");
-
+        sb.append("</div></body></html>");
         return sb.toString();
-    }
-
-    private Button createExportButton(String text) {
-        Button button = new Button(text);
-        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-        button.setTextFill(Color.WHITE);
-        button.setStyle(
-                "-fx-background-color: #" + toHex(ACCENT_GREEN) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 10 20;" +
-                        "-fx-cursor: hand;"
-        );
-
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(ACCENT_GREEN.darker()) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 10 20;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(ACCENT_GREEN) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 10 20;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
-        return button;
     }
 
     private void exportAsText(Map<String, Object> result) {
@@ -1372,21 +1064,15 @@ public class TakeAssessmentPanel extends VBox {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Save Report as Text");
             fileChooser.setInitialFileName("mentis_assessment_report.txt");
-            fileChooser.getExtensionFilters().add(
-                    new FileChooser.ExtensionFilter("Text Files", "*.txt")
-            );
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Text Files", "*.txt"));
 
             File file = fileChooser.showSaveDialog(null);
             if (file != null) {
                 Files.write(file.toPath(), content.getBytes());
-                showAlert("Export Successful",
-                        "Report exported successfully to:\n" + file.getAbsolutePath(),
-                        Alert.AlertType.INFORMATION);
+                showAlert("Export Successful", "Report exported successfully to:\n" + file.getAbsolutePath(), Alert.AlertType.INFORMATION);
             }
         } catch (Exception e) {
-            showAlert("Export Error",
-                    "Error exporting report: " + e.getMessage(),
-                    Alert.AlertType.ERROR);
+            showAlert("Export Error", "Error exporting report: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
@@ -1399,21 +1085,15 @@ public class TakeAssessmentPanel extends VBox {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Save Report as HTML");
             fileChooser.setInitialFileName("mentis_assessment_report.html");
-            fileChooser.getExtensionFilters().add(
-                    new FileChooser.ExtensionFilter("HTML Files", "*.html")
-            );
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("HTML Files", "*.html"));
 
             File file = fileChooser.showSaveDialog(null);
             if (file != null) {
                 Files.write(file.toPath(), content.getBytes());
-                showAlert("Export Successful",
-                        "HTML report exported successfully to:\n" + file.getAbsolutePath(),
-                        Alert.AlertType.INFORMATION);
+                showAlert("Export Successful", "HTML report exported successfully to:\n" + file.getAbsolutePath(), Alert.AlertType.INFORMATION);
             }
         } catch (Exception e) {
-            showAlert("Export Error",
-                    "Error exporting HTML report: " + e.getMessage(),
-                    Alert.AlertType.ERROR);
+            showAlert("Export Error", "Error exporting HTML report: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
@@ -1428,7 +1108,6 @@ public class TakeAssessmentPanel extends VBox {
         assessmentResult.setRecommendedContent((String) result.get("recommendedContent"));
         assessmentResult.setSuggestSession((boolean) result.get("suggestSession"));
         assessmentResult.setTakenAt(new Date());
-
         return assessmentResult;
     }
 
@@ -1438,14 +1117,9 @@ public class TakeAssessmentPanel extends VBox {
         currentQuestionIndex = 0;
         isAdapting = false;
 
-        // Clear the assessment image
         if (assessmentImageView != null) {
             assessmentImageView.setImage(null);
-            assessmentImageView.setStyle(
-                    "-fx-background-color: #f5f5f5;" +
-                            "-fx-border-width: 1 0 1 0;" +
-                            "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";"
-            );
+            assessmentImageView.setStyle("-fx-background-color: " + gradient(EMERALD, EMERALD_DARK) + ";");
         }
 
         refreshData();
@@ -1456,6 +1130,221 @@ public class TakeAssessmentPanel extends VBox {
     private void showQuestionPanel() {
         selectionPanel.setVisible(false);
         questionPanel.setVisible(true);
+    }
+
+    private void showEmptyState(GridPane grid, String message) {
+        grid.getChildren().clear();
+
+        VBox empty = new VBox(14);
+        empty.setAlignment(Pos.CENTER);
+        empty.setPadding(new Insets(50));
+        empty.setPrefWidth(760);
+        empty.setStyle(
+                "-fx-background-color: " + cssColor(SOFT_GREEN_BG) + ";" +
+                        "-fx-background-radius: 20;" +
+                        softShadow()
+        );
+
+        Label icon = new Label("📋");
+        icon.setFont(Font.font("Segoe UI Emoji", 54));
+
+        Label title = new Label(message);
+        title.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
+        title.setTextFill(MUTED);
+
+        Label hint = new Label("Try adjusting your search or clearing filters.");
+        hint.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        hint.setTextFill(MUTED);
+
+        Button reset = createSymfonyPrimaryButton("View All Assessments");
+        reset.setOnAction(e -> {
+            if (searchField != null) searchField.clear();
+            refreshData();
+        });
+
+        empty.getChildren().addAll(icon, title, hint, reset);
+        grid.add(empty, 0, 0);
+        GridPane.setColumnSpan(empty, 3);
+    }
+
+    private Color getTypeColor(String type) {
+        if (type == null) return TYPE_DEFAULT;
+        switch (type.toLowerCase()) {
+            case "depression": return TYPE_DEPRESSION;
+            case "anxiety": return TYPE_ANXIETY;
+            case "stress": return TYPE_STRESS;
+            case "wellness": return TYPE_WELLNESS;
+            case "general": return TYPE_GENERAL;
+            default: return TYPE_DEFAULT;
+        }
+    }
+
+    private Button createSymfonyPrimaryButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        button.setTextFill(Color.WHITE);
+        button.setStyle(
+                "-fx-background-color: " + gradient(EMERALD, EMERALD_MID) + ";" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-padding: 11 26;" +
+                        "-fx-cursor: hand;" +
+                        softShadow()
+        );
+        button.setOnMouseEntered(e -> {
+            if (!button.isDisable()) {
+                button.setStyle(
+                        "-fx-background-color: " + gradient(EMERALD, EMERALD_DARK) + ";" +
+                                "-fx-background-radius: 999;" +
+                                "-fx-padding: 11 26;" +
+                                "-fx-cursor: hand;" +
+                                "-fx-translate-y: -2;" +
+                                "-fx-effect: dropshadow(gaussian, rgba(80,200,120,0.35), 18, 0, 0, 8);"
+                );
+            }
+        });
+        button.setOnMouseExited(e -> {
+            if (!button.isDisable()) {
+                button.setStyle(
+                        "-fx-background-color: " + gradient(EMERALD, EMERALD_MID) + ";" +
+                                "-fx-background-radius: 999;" +
+                                "-fx-padding: 11 26;" +
+                                "-fx-cursor: hand;" +
+                                softShadow()
+                );
+            }
+        });
+        return button;
+    }
+
+    private Button createSymfonyOutlineButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        button.setTextFill(MUTED);
+        button.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-border-radius: 999;" +
+                        "-fx-border-color: #CED4DA;" +
+                        "-fx-border-width: 1.5;" +
+                        "-fx-padding: 10 24;" +
+                        "-fx-cursor: hand;"
+        );
+        button.setOnMouseEntered(e -> {
+            if (!button.isDisable()) {
+                button.setStyle(
+                        "-fx-background-color: #F1F8E9;" +
+                                "-fx-background-radius: 999;" +
+                                "-fx-border-radius: 999;" +
+                                "-fx-border-color: " + cssColor(EMERALD) + ";" +
+                                "-fx-border-width: 1.5;" +
+                                "-fx-padding: 10 24;" +
+                                "-fx-cursor: hand;"
+                );
+            }
+        });
+        button.setOnMouseExited(e -> {
+            if (!button.isDisable()) {
+                button.setStyle(
+                        "-fx-background-color: white;" +
+                                "-fx-background-radius: 999;" +
+                                "-fx-border-radius: 999;" +
+                                "-fx-border-color: #CED4DA;" +
+                                "-fx-border-width: 1.5;" +
+                                "-fx-padding: 10 24;" +
+                                "-fx-cursor: hand;"
+                );
+            }
+        });
+        return button;
+    }
+
+    private Label createBadge(String text, Color bg) {
+        Label badge = new Label(text == null ? "General" : text);
+        badge.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11));
+        badge.setTextFill(Color.WHITE);
+        badge.setPadding(new Insets(6, 13, 6, 13));
+        badge.setStyle("-fx-background-color: " + cssColor(bg) + "; -fx-background-radius: 999;");
+        return badge;
+    }
+
+    private Label createIconCircle(String icon, Color left, Color right, double size) {
+        Label circle = new Label(icon);
+        circle.setFont(Font.font("Segoe UI Emoji", FontWeight.BOLD, size * 0.38));
+        circle.setTextFill(Color.WHITE);
+        circle.setAlignment(Pos.CENTER);
+        circle.setMinSize(size, size);
+        circle.setPrefSize(size, size);
+        circle.setMaxSize(size, size);
+        circle.setStyle(
+                "-fx-background-color: " + gradient(left, right) + ";" +
+                        "-fx-background-radius: 999;" +
+                        softShadow()
+        );
+        return circle;
+    }
+
+    private ScrollPane cleanScrollPane(Region content) {
+        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setStyle(
+                "-fx-background: transparent;" +
+                        "-fx-background-color: transparent;" +
+                        "-fx-border-color: transparent;"
+        );
+        return scrollPane;
+    }
+
+    private String pillInputStyle() {
+        return "-fx-background-color: white;" +
+                "-fx-background-radius: 999;" +
+                "-fx-border-radius: 999;" +
+                "-fx-border-width: 2;" +
+                "-fx-border-color: " + cssColor(EMERALD) + ";" +
+                "-fx-padding: 11 18;" +
+                "-fx-font-size: 14px;" +
+                "-fx-font-family: 'Segoe UI';";
+    }
+
+    private String glassCardStyle() {
+        return "-fx-background-color: white;" +
+                "-fx-background-radius: 20;" +
+                "-fx-border-radius: 20;" +
+                "-fx-border-color: transparent;" +
+                cardShadow();
+    }
+
+    private String cardShadow() {
+        return "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 18, 0, 0, 8);";
+    }
+
+    private String softShadow() {
+        return "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 5);";
+    }
+
+    private String gradient(Color left, Color right) {
+        return "linear-gradient(to bottom right, " + cssColor(left) + ", " + cssColor(right) + ")";
+    }
+
+    private String cssColor(Color color) {
+        return "#" + toHex(color);
+    }
+
+    private String toHex(Color color) {
+        return String.format("%02x%02x%02x",
+                (int) (color.getRed() * 255),
+                (int) (color.getGreen() * 255),
+                (int) (color.getBlue() * 255));
+    }
+
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 
     private void showAlert(String title, String content, Alert.AlertType type) {
@@ -1472,15 +1361,6 @@ public class TakeAssessmentPanel extends VBox {
 
     public void setUserId(int userId) {
         this.userId = userId;
-        // Don't show user ID in UI anymore
         refreshData();
-    }
-
-    // ================= UTILITY =================
-    private String toHex(Color color) {
-        return String.format("%02x%02x%02x",
-                (int)(color.getRed() * 255),
-                (int)(color.getGreen() * 255),
-                (int)(color.getBlue() * 255));
     }
 }

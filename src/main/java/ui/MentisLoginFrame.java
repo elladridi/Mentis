@@ -15,6 +15,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
@@ -29,19 +30,19 @@ import java.util.Optional;
 public class MentisLoginFrame extends Application {
 
     // JavaFX Color constants
-    public static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
-    public static final Color CARD_WHITE = Color.rgb(255, 255, 255);
-    public static final Color ACCENT_GREEN = Color.rgb(90, 150, 120);
-    public static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
-    public static final Color TEXT_DARK = Color.rgb(40, 70, 50);
-    public static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
-    public static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
-    public static final Color BUTTON_LIGHT_GREEN = Color.rgb(160, 200, 180);
-    public static final Color SIDEBAR_BG = Color.rgb(245, 250, 248);
-    public static final Color HOVER_GREEN = Color.rgb(140, 190, 160);
-    public static final Color ERROR_RED = Color.rgb(200, 119, 119);
-    public static final Color SUCCESS_GREEN = Color.rgb(153, 205, 156);
-    public static final Color WARNING_ORANGE = Color.rgb(255, 152, 0);
+    public static final Color BACKGROUND_LIGHT = Color.web("#F8F9FA");
+    public static final Color CARD_WHITE = Color.web("#FFFFFF");
+    public static final Color ACCENT_GREEN = Color.web("#50C878");
+    public static final Color ACCENT_DARK_GREEN = Color.web("#2E7D32");
+    public static final Color TEXT_DARK = Color.web("#1A3C34");
+    public static final Color TEXT_LIGHT = Color.web("#6C757D");
+    public static final Color BORDER_LIGHT = Color.web("#E9ECEF");
+    public static final Color BUTTON_LIGHT_GREEN = Color.web("#A8E6CF");
+    public static final Color SIDEBAR_BG = Color.web("#FFFFFF");
+    public static final Color HOVER_GREEN = Color.web("#50C878");
+    public static final Color ERROR_RED = Color.web("#E74C3C");
+    public static final Color SUCCESS_GREEN = Color.web("#50C878");
+    public static final Color WARNING_ORANGE = Color.web("#F39C12");
 
     private StackPane root;
     private BorderPane mainContainer;
@@ -94,6 +95,9 @@ public class MentisLoginFrame extends Application {
     private javafx.scene.layout.BorderPane eventPanel;
 
     private Label userInfoLabel;
+    private VBox sidebarMenu;
+    private Button logoutButton;
+    private VBox sidebarFooter;
 
     // Track current visible panel
     private Node currentVisiblePanel = null;
@@ -108,7 +112,7 @@ public class MentisLoginFrame extends Application {
 
         // Create root layout
         root = new StackPane();
-        root.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        root.setStyle("-fx-background-color: linear-gradient(to bottom right, #EEF8F2, #F8FCF9);");
 
         // Main container with BorderPane
         mainContainer = new BorderPane();
@@ -118,7 +122,7 @@ public class MentisLoginFrame extends Application {
 
         // Create content area
         contentArea = new StackPane();
-        contentArea.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        contentArea.setStyle("-fx-background-color: transparent; -fx-padding: 22;");
 
         // Initialize ALL panels at startup
         initializeAllPanels();
@@ -159,7 +163,7 @@ public class MentisLoginFrame extends Application {
         root.getChildren().add(mainContainer);
 
         // Create scene
-        Scene scene = new Scene(root, 1400, 800);
+        Scene scene = new Scene(root, 1400, 820);
 
         // Setup stage
         primaryStage.setTitle("Mentis - Mental Health Companion");
@@ -328,53 +332,194 @@ public class MentisLoginFrame extends Application {
         }
     }
 
+
+    // ================= MODERN FRAME STYLE HELPERS =================
+    private String css(Color color) {
+        return "#" + toHex(color);
+    }
+
+    private String emeraldGradient() {
+        return "linear-gradient(to right, #50C878, #3A9B5E)";
+    }
+
+    private String sidebarGradient() {
+        return "linear-gradient(to bottom, #FFFFFF, #F4FBF7)";
+    }
+
+    private DropShadow sidebarShadow() {
+        DropShadow shadow = new DropShadow();
+        shadow.setRadius(30);
+        shadow.setOffsetX(5);
+        shadow.setOffsetY(0);
+        shadow.setColor(Color.rgb(80, 120, 95, 0.10));
+        return shadow;
+    }
+
+    private String modernSidebarButtonStyle(boolean active) {
+        if (active) {
+            return "-fx-background-color: linear-gradient(to right, #E8F5E9, #F6FCF8);" +
+                    "-fx-text-fill: #1A3C34;" +
+                    "-fx-background-radius: 18;" +
+                    "-fx-border-radius: 18;" +
+                    "-fx-border-color: #DCEFE4;" +
+                    "-fx-cursor: hand;" +
+                    "-fx-alignment: CENTER_LEFT;" +
+                    "-fx-padding: 0 0 0 18;" +
+                    "-fx-font-weight: 700;";
+        }
+
+        return "-fx-background-color: transparent;" +
+                "-fx-text-fill: #1A3C34;" +
+                "-fx-background-radius: 18;" +
+                "-fx-cursor: hand;" +
+                "-fx-alignment: CENTER_LEFT;" +
+                "-fx-padding: 0 0 0 18;" +
+                "-fx-font-weight: 600;";
+    }
+
+    private String iconForMenu(String text) {
+        switch (text) {
+            case "Dashboard": return "🏠";
+            case "Manage Sessions": return "📅";
+            case "Reservations": return "🗓";
+            case "Session Calendar": return "📆";
+            case "Analytics": return "📊";
+            case "Assessments": return "📋";
+            case "Psychologists": return "👩‍⚕️";
+            case "Patients": return "👥";
+            case "Mood Tracking": return "😊";
+            case "Wellbeing": return "🌿";
+            case "Content": return "📚";
+            case "Event": return "🎟";
+            case "Access Logs": return "🔐";
+            case "Available Sessions": return "🔎";
+            case "My Sessions": return "🧾";
+            case "My Reviews": return "⭐";
+            case "Recommended For You": return "✨";
+            case "Take Assessment": return "▶";
+            case "My Results": return "📈";
+            case "Logout": return "🚪";
+            default: return "•";
+        }
+    }
+
     // ================= SIDEBAR CREATION =================
     private VBox createSidebar() {
-        VBox sidebar = new VBox(10);
-        sidebar.setPrefWidth(220);
-        sidebar.setStyle("-fx-background-color: #" + toHex(SIDEBAR_BG) + ";");
-        sidebar.setPadding(new Insets(20, 15, 20, 15));
-        sidebar.setSpacing(10);
+        VBox sidebar = new VBox(16);
+        sidebar.setPrefWidth(280);
+        sidebar.setMinWidth(280);
+        sidebar.setMaxWidth(280);
+        sidebar.setPadding(new Insets(44, 24, 22, 24));
+        sidebar.setStyle(
+                "-fx-background-color: linear-gradient(to bottom, #FFFFFF, #F6FCF8);" +
+                        "-fx-border-color: #E7F1EB;" +
+                        "-fx-border-width: 0 1 0 0;"
+        );
+        sidebar.setEffect(sidebarShadow());
 
         HBox header = createSidebarHeader();
         sidebar.getChildren().add(header);
 
-        userInfoLabel = new Label("Not logged in");
-        userInfoLabel.setFont(Font.font("Segoe UI", 14));
-        userInfoLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
-        userInfoLabel.setAlignment(Pos.CENTER);
-        userInfoLabel.setMaxWidth(Double.MAX_VALUE);
-        sidebar.getChildren().add(userInfoLabel);
+        VBox userCard = new VBox(6);
+        userCard.setPadding(new Insets(16, 18, 16, 18));
+        userCard.setMaxWidth(Double.MAX_VALUE);
+        userCard.setStyle(
+                "-fx-background-color: #F1F8E9;" +
+                        "-fx-background-radius: 20;" +
+                        "-fx-border-radius: 20;" +
+                        "-fx-border-color: #DCEFE4;"
+        );
 
-        Separator separator = new Separator();
-        separator.setStyle("-fx-background-color: #" + toHex(BORDER_LIGHT) + ";");
-        separator.setMaxWidth(180);
-        sidebar.getChildren().add(separator);
+        Label userSmall = new Label("Signed in as");
+        userSmall.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
+        userSmall.setTextFill(Color.web("#7C9286"));
+
+        userInfoLabel = new Label("Not logged in");
+        userInfoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        userInfoLabel.setTextFill(Color.web("#1A3C34"));
+        userInfoLabel.setWrapText(true);
+        userInfoLabel.setMaxWidth(Double.MAX_VALUE);
+
+        userCard.getChildren().addAll(userSmall, userInfoLabel);
+        sidebar.getChildren().add(userCard);
+
+        Separator separatorTop = new Separator();
+        separatorTop.setStyle("-fx-background-color: #DDEBE4;");
+        sidebar.getChildren().add(separatorTop);
+
+        sidebarMenu = new VBox(10);
+        sidebarMenu.setFillWidth(true);
+        sidebarMenu.setStyle("-fx-background-color: transparent;");
+
+        ScrollPane menuScroll = new ScrollPane(sidebarMenu);
+        menuScroll.setFitToWidth(true);
+        menuScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        menuScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        menuScroll.setStyle(
+                "-fx-background: transparent;" +
+                        "-fx-background-color: transparent;" +
+                        "-fx-border-color: transparent;"
+        );
+        VBox.setVgrow(menuScroll, Priority.ALWAYS);
+        sidebar.getChildren().add(menuScroll);
+
+        sidebarFooter = new VBox(12);
+        sidebarFooter.setFillWidth(true);
+
+        Separator separatorBottom = new Separator();
+        separatorBottom.setStyle("-fx-background-color: #DDEBE4;");
+
+        logoutButton = createSidebarButton("Logout");
+        logoutButton.setOnAction(e -> logout());
+        logoutButton.setVisible(false);
+        logoutButton.setManaged(false);
+
+        sidebarFooter.getChildren().addAll(separatorBottom, logoutButton);
+        sidebar.getChildren().add(sidebarFooter);
 
         return sidebar;
     }
 
     private HBox createSidebarHeader() {
-        HBox header = new HBox(10);
-        header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(0, 0, 20, 0));
 
+        HBox header = new HBox(14);
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(6, 0, 18, 6));
+
+        // ===== LOGO =====
         ImageView logoView = createLogoImageView();
+
         if (logoView != null) {
-            logoView.setFitWidth(50);
-            logoView.setFitHeight(50);
-            header.getChildren().add(logoView);
-        } else {
-            Label fallbackLogo = new Label("M");
-            fallbackLogo.setFont(Font.font("Segoe UI", FontWeight.BOLD, 32));
-            fallbackLogo.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
-            header.getChildren().add(fallbackLogo);
+            logoView.setFitWidth(58);
+            logoView.setFitHeight(58);
+            logoView.setPreserveRatio(true);
         }
 
-        Label appName = new Label("Mentis");
-        appName.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
-        appName.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
-        header.getChildren().add(appName);
+        // ===== TEXT =====
+        VBox textBox = new VBox(2);
+        textBox.setAlignment(Pos.CENTER_LEFT);
+
+        Label appName = new Label("MENTIS");
+        appName.setFont(Font.font("Segoe UI", FontWeight.EXTRA_BOLD, 28));
+        appName.setTextFill(Color.web("#2E7D32"));
+
+        Label subtitle = new Label("Mental Health Platform");
+        subtitle.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
+        subtitle.setTextFill(Color.web("#7C9286"));
+
+        textBox.getChildren().addAll(appName, subtitle);
+
+        // ===== ADD TO HEADER =====
+        if (logoView != null) {
+            header.getChildren().addAll(logoView, textBox);
+        } else {
+
+            Label fallbackLogo = new Label("☘");
+            fallbackLogo.setFont(Font.font("Segoe UI Emoji", FontWeight.BOLD, 48));
+            fallbackLogo.setTextFill(Color.web("#2E7D32"));
+
+            header.getChildren().addAll(fallbackLogo, textBox);
+        }
 
         return header;
     }
@@ -401,67 +546,240 @@ public class MentisLoginFrame extends Application {
         return null;
     }
 
-    private void updateSidebarMenu() {
-        sidebar.getChildren().removeIf(node ->
-                node instanceof Button || (node instanceof Separator && sidebar.getChildren().indexOf(node) > 2)
+
+    private Label createSidebarSectionLabel(String text) {
+        Label label = new Label(text.toUpperCase());
+        label.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11));
+        label.setTextFill(Color.web("#7C9286"));
+        label.setPadding(new Insets(14, 0, 4, 12));
+        return label;
+    }
+
+    private void addSidebarGroup(String title, String icon, String[][] items) {
+        VBox groupBox = new VBox(7);
+        groupBox.setStyle("-fx-background-color: transparent;");
+
+        Button groupButton = new Button("▸  " + icon + "  " + title);
+        groupButton.setMaxWidth(Double.MAX_VALUE);
+        groupButton.setPrefHeight(52);
+        groupButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+        groupButton.setTextFill(Color.web("#1A3C34"));
+        groupButton.setStyle(
+                "-fx-background-color: linear-gradient(to right, #F1F8E9, #F9FDFB);" +
+                        "-fx-background-radius: 18;" +
+                        "-fx-border-radius: 18;" +
+                        "-fx-border-color: #DCEFE4;" +
+                        "-fx-cursor: hand;" +
+                        "-fx-alignment: CENTER_LEFT;" +
+                        "-fx-padding: 0 0 0 18;"
         );
+
+        VBox childrenBox = new VBox(5);
+        childrenBox.setVisible(false);
+        childrenBox.setManaged(false);
+        childrenBox.setPadding(new Insets(2, 0, 4, 18));
+
+        for (String[] item : items) {
+            Button child = createSidebarSubButton(item[0]);
+            child.setOnAction(e -> handleSidebarNavigation(item[0], item[1]));
+            childrenBox.getChildren().add(child);
+        }
+
+        groupButton.setOnAction(e -> {
+            boolean open = !childrenBox.isVisible();
+            childrenBox.setVisible(open);
+            childrenBox.setManaged(open);
+            groupButton.setText((open ? "▾  " : "▸  ") + icon + "  " + title);
+        });
+
+        groupBox.getChildren().addAll(groupButton, childrenBox);
+        sidebarMenu.getChildren().add(groupBox);
+    }
+
+    private void addSidebarCard(String text, String icon, String targetPanel) {
+        Button button = new Button(icon + "  " + text + "                                      ›");
+        button.setMaxWidth(Double.MAX_VALUE);
+        button.setPrefHeight(52);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+        button.setTextFill(Color.web("#1A3C34"));
+        button.setStyle(
+                "-fx-background-color: linear-gradient(to right, #F1F8E9, #F9FDFB);" +
+                        "-fx-background-radius: 18;" +
+                        "-fx-border-radius: 18;" +
+                        "-fx-border-color: #DCEFE4;" +
+                        "-fx-cursor: hand;" +
+                        "-fx-alignment: CENTER_LEFT;" +
+                        "-fx-padding: 0 0 0 18;"
+        );
+
+        button.setOnMouseEntered(e -> {
+            button.setStyle(
+                    "-fx-background-color: linear-gradient(to right, #E8F5E9, #FFFFFF);" +
+                            "-fx-background-radius: 18;" +
+                            "-fx-border-radius: 18;" +
+                            "-fx-border-color: #BFE6CC;" +
+                            "-fx-cursor: hand;" +
+                            "-fx-alignment: CENTER_LEFT;" +
+                            "-fx-padding: 0 0 0 18;" +
+                            "-fx-effect: dropshadow(gaussian, rgba(80,200,120,0.18), 12, 0.2, 0, 4);"
+            );
+        });
+
+        button.setOnMouseExited(e -> {
+            button.setStyle(
+                    "-fx-background-color: linear-gradient(to right, #F1F8E9, #F9FDFB);" +
+                            "-fx-background-radius: 18;" +
+                            "-fx-border-radius: 18;" +
+                            "-fx-border-color: #DCEFE4;" +
+                            "-fx-cursor: hand;" +
+                            "-fx-alignment: CENTER_LEFT;" +
+                            "-fx-padding: 0 0 0 18;"
+            );
+        });
+
+        button.setOnAction(e -> handleSidebarNavigation(text, targetPanel));
+        sidebarMenu.getChildren().add(button);
+    }
+
+    private Button createSidebarSubButton(String text) {
+        Button button = new Button("•  " + text);
+        button.setMaxWidth(Double.MAX_VALUE);
+        button.setPrefHeight(34);
+        button.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+        button.setTextFill(Color.web("#1A3C34"));
+        button.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-background-radius: 14;" +
+                        "-fx-cursor: hand;" +
+                        "-fx-alignment: CENTER_LEFT;" +
+                        "-fx-padding: 0 0 0 14;"
+        );
+
+        button.setOnMouseEntered(e -> {
+            button.setTextFill(Color.web("#2E7D32"));
+            button.setStyle(
+                    "-fx-background-color: rgba(80,200,120,0.10);" +
+                            "-fx-background-radius: 14;" +
+                            "-fx-cursor: hand;" +
+                            "-fx-alignment: CENTER_LEFT;" +
+                            "-fx-padding: 0 0 0 14;"
+            );
+            button.setTranslateX(3);
+        });
+
+        button.setOnMouseExited(e -> {
+            button.setTextFill(Color.web("#1A3C34"));
+            button.setStyle(
+                    "-fx-background-color: transparent;" +
+                            "-fx-background-radius: 14;" +
+                            "-fx-cursor: hand;" +
+                            "-fx-alignment: CENTER_LEFT;" +
+                            "-fx-padding: 0 0 0 14;"
+            );
+            button.setTranslateX(0);
+        });
+
+        return button;
+    }
+
+    private void addSidebarSingle(String text, String targetPanel) {
+        addSidebarCard(text, iconForMenu(text), targetPanel);
+    }
+
+    private void updateSidebarMenu() {
+        if (sidebarMenu != null) {
+            sidebarMenu.getChildren().clear();
+        }
 
         addSidebarMenuItems();
 
-        if ("admin".equals(currentUserType)) {
-            addSidebarButton("Access Logs", "ACCESS_LOGS");
+        boolean loggedIn = !currentUserType.isEmpty();
+        if (logoutButton != null) {
+            logoutButton.setVisible(loggedIn);
+            logoutButton.setManaged(loggedIn);
         }
-
-        if (!currentUserType.isEmpty()) {
-            VBox spacer = new VBox();
-            VBox.setVgrow(spacer, Priority.ALWAYS);
-            sidebar.getChildren().add(spacer);
-
-            Button logoutBtn = createSidebarButton("Logout");
-            logoutBtn.setOnAction(e -> logout());
-            sidebar.getChildren().add(logoutBtn);
+        if (sidebarFooter != null) {
+            sidebarFooter.setVisible(loggedIn);
+            sidebarFooter.setManaged(loggedIn);
         }
     }
 
     private void addSidebarMenuItems() {
         if ("admin".equals(currentUserType)) {
-            addSidebarButton("Dashboard", "ADMIN_DASHBOARD");
-            addSidebarButton("Manage Sessions", "SESSION_ADMIN");
-            addSidebarButton("Reservations", "RESERVATIONS");
-            addSidebarButton("Session Calendar", "CALENDAR");
-            addSidebarButton("Analytics", "ANALYTICS");
-            addSidebarButton("Assessments", "ASSESSMENT");
-            addSidebarButton("Psychologists", "PSYCHOLOGIST");
-            addSidebarButton("Patients", "PATIENT");
-            addSidebarButton("Mood Tracking", "ADMIN_DASHBOARD");
-            addSidebarButton("Wellbeing", "WELLBEING");
-            addSidebarButton("Content", "CONTENT");
-            addSidebarButton("Event", "EVENT");
+
+            addSidebarSingle("Dashboard", "ADMIN_DASHBOARD");
+
+            addSidebarGroup("Users", "👥", new String[][] {
+                    {"Psychologists", "PSYCHOLOGIST"},
+                    {"Patients", "PATIENT"},
+                    {"Access Logs", "ACCESS_LOGS"}
+            });
+
+            addSidebarGroup("Sessions", "📅", new String[][] {
+                    {"Manage Sessions", "SESSION_ADMIN"},
+                    {"Reservations", "RESERVATIONS"},
+                    {"Session Calendar", "CALENDAR"},
+                    {"Analytics", "ANALYTICS"}
+            });
+
+            addSidebarGroup("Assessments", "📋", new String[][] {
+                    {"Assessments", "ASSESSMENT"}
+            });
+
+            addSidebarGroup("Mood / Goals", "🌿", new String[][] {
+                    {"Mood Tracking", "ADMIN_DASHBOARD"},
+                    {"Wellbeing", "WELLBEING"}
+            });
+
+            addSidebarSingle("Content", "CONTENT");
+            addSidebarSingle("Event", "EVENT");
 
         } else if ("psychologist".equals(currentUserType)) {
-            addSidebarButton("Dashboard", "RESULTS");
-            addSidebarButton("Manage Sessions", "SESSION_ADMIN");
-            addSidebarButton("Reservations", "RESERVATIONS");
-            addSidebarButton("Session Calendar", "CALENDAR");
-            addSidebarButton("Analytics", "ANALYTICS");
-            addSidebarButton("Assessments", "RESULTS");
-            addSidebarButton("Mood Tracking", "RESULTS");
-            addSidebarButton("Wellbeing", "WELLBEING");
-            addSidebarButton("Content", "CONTENT");
-            addSidebarButton("Event", "EVENT");
+
+            addSidebarSingle("Dashboard", "RESULTS");
+
+            addSidebarGroup("Sessions", "📅", new String[][] {
+                    {"Manage Sessions", "SESSION_ADMIN"},
+                    {"Reservations", "RESERVATIONS"},
+                    {"Session Calendar", "CALENDAR"},
+                    {"Analytics", "ANALYTICS"}
+            });
+
+            addSidebarGroup("Assessments", "📋", new String[][] {
+                    {"Assessments", "RESULTS"}
+            });
+
+            addSidebarGroup("Mood / Wellbeing", "🌿", new String[][] {
+                    {"Mood Tracking", "RESULTS"},
+                    {"Wellbeing", "WELLBEING"}
+            });
+
+            addSidebarSingle("Content", "CONTENT");
+            addSidebarSingle("Event", "EVENT");
 
         } else if ("patient".equals(currentUserType)) {
-            addSidebarButton("Dashboard", "PATIENT_DASHBOARD");
-            addSidebarButton("Available Sessions", "PATIENT_AVAILABLE_SESSIONS");
-            addSidebarButton("My Sessions", "PATIENT_MY_SESSIONS");
-            addSidebarButton("My Reviews", "PATIENT_MY_REVIEWS");
-            addSidebarButton("Recommended For You", "RECOMMENDATIONS");
-            addSidebarButton("Take Assessment", "TAKE_ASSESSMENT");
-            addSidebarButton("My Results", "RESULTS");
-            addSidebarButton("Mood Tracking", "PATIENT_DASHBOARD");
-            addSidebarButton("Wellbeing", "WELLBEING");
-            addSidebarButton("Content", "CONTENT");
-            addSidebarButton("Event", "EVENT");
+
+            addSidebarSingle("Dashboard", "PATIENT_DASHBOARD");
+
+            addSidebarGroup("Sessions", "📅", new String[][] {
+                    {"Available Sessions", "PATIENT_AVAILABLE_SESSIONS"},
+                    {"My Sessions", "PATIENT_MY_SESSIONS"},
+                    {"My Reviews", "PATIENT_MY_REVIEWS"},
+                    {"Recommended For You", "RECOMMENDATIONS"}
+            });
+
+            addSidebarGroup("Assessment", "📋", new String[][] {
+                    {"Take Assessment", "TAKE_ASSESSMENT"},
+                    {"My Results", "RESULTS"}
+            });
+
+            addSidebarGroup("Goals / My Mood", "🌿", new String[][] {
+                    {"Mood Tracking", "PATIENT_DASHBOARD"},
+                    {"Wellbeing", "WELLBEING"}
+            });
+
+            addSidebarSingle("Content", "CONTENT");
+            addSidebarSingle("Event", "EVENT");
         }
     }
 
@@ -472,23 +790,26 @@ public class MentisLoginFrame extends Application {
     }
 
     private Button createSidebarButton(String text) {
-        Button button = new Button(text);
-        button.setMaxWidth(Double.MAX_VALUE);
-        button.setPrefHeight(45);
-        button.setFont(Font.font("Segoe UI", 15));
-        button.setTextFill(Color.web(toHex(TEXT_DARK)));
-        button.setStyle(
-                "-fx-background-color: #" + toHex(SIDEBAR_BG) + ";" +
-                        "-fx-background-radius: 0;" +
-                        "-fx-border-width: 0;" +
-                        "-fx-alignment: CENTER_LEFT;" +
-                        "-fx-padding: 10 20 10 20;"
-        );
+        String label = iconForMenu(text) + "  " + text;
 
-        button.setOnMouseEntered(e ->
-                button.setStyle("-fx-background-color: #" + toHex(HOVER_GREEN) + "; -fx-background-radius: 0; -fx-alignment: CENTER_LEFT; -fx-padding: 10 20 10 20;"));
-        button.setOnMouseExited(e ->
-                button.setStyle("-fx-background-color: #" + toHex(SIDEBAR_BG) + "; -fx-background-radius: 0; -fx-alignment: CENTER_LEFT; -fx-padding: 10 20 10 20;"));
+        Button button = new Button(label);
+        button.setMaxWidth(Double.MAX_VALUE);
+        button.setPrefHeight(48);
+        button.setFont(Font.font("Segoe UI", FontWeight.SEMI_BOLD, 14));
+        button.setTextFill(Color.web("#1A3C34"));
+        button.setStyle(modernSidebarButtonStyle(false));
+
+        button.setOnMouseEntered(e -> {
+            button.setTextFill(Color.web("#2E7D32"));
+            button.setStyle(modernSidebarButtonStyle(true));
+            button.setTranslateX(3);
+        });
+
+        button.setOnMouseExited(e -> {
+            button.setTextFill(Color.web("#1A3C34"));
+            button.setStyle(modernSidebarButtonStyle(false));
+            button.setTranslateX(0);
+        });
 
         return button;
     }
@@ -825,7 +1146,7 @@ public class MentisLoginFrame extends Application {
 
         System.out.println("✅ User logged in: " + userName + " (" + this.currentUserType + ") ID: " + userId);
 
-        userInfoLabel.setText(userName + " (" + userType + ")");
+        userInfoLabel.setText(userName + "\n" + userType);
         updateSidebarMenu();
 
         // Update user context in all relevant panels

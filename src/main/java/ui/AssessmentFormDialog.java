@@ -17,8 +17,6 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import models.Assessment;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -41,16 +39,17 @@ public class AssessmentFormDialog extends Stage {
     private String imagePathToSave;
     private Label uploadStatusLabel;
 
-    // Color constants
-    private static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
+    // Modern color scheme matching Symfony
+    private static final String GRADIENT_START = "#50C878";
+    private static final String GRADIENT_END = "#2E7D32";
+    private static final Color BACKGROUND_LIGHT = Color.rgb(248, 250, 248);
     private static final Color CARD_WHITE = Color.WHITE;
-    private static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
-    private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
-    private static final Color BUTTON_LIGHT_GREEN = Color.rgb(160, 200, 180);
-    private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
-    private static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
-    private static final Color PLACEHOLDER_BG = Color.rgb(240, 240, 240);
-    private static final Color PLACEHOLDER_BORDER = Color.rgb(200, 200, 200);
+    private static final Color TEXT_DARK = Color.rgb(46, 125, 50);
+    private static final Color TEXT_MUTED = Color.rgb(108, 117, 125);
+    private static final Color BORDER_COLOR = Color.rgb(222, 226, 230);
+    private static final Color PREVIEW_BG = Color.rgb(248, 249, 250);
+    private static final Color SUCCESS_BG = Color.rgb(80, 200, 120, 0.1);
+    private static final Color ERROR_COLOR = Color.rgb(220, 53, 69);
 
     public AssessmentFormDialog(MentisLoginFrame parentApp, AssessmentController controller,
                                 Assessment assessment, boolean isEdit) {
@@ -60,22 +59,15 @@ public class AssessmentFormDialog extends Stage {
 
         initModality(Modality.APPLICATION_MODAL);
         initStyle(StageStyle.UTILITY);
-        setTitle(isEdit ? "Edit Assessment" : "Add Assessment");
+        setTitle(isEdit ? "Edit Assessment - Mentis" : "Add Assessment - Mentis");
 
-        // Main layout
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-
-        // Header
+        root.setStyle("-fx-background-color: " + toHex(BACKGROUND_LIGHT) + ";");
         root.setTop(createHeader(isEdit));
-
-        // Form
         root.setCenter(createForm());
-
-        // Buttons
         root.setBottom(createButtonPanel(isEdit));
 
-        Scene scene = new Scene(root, 800, 700);
+        Scene scene = new Scene(root, 900, 750);
         setScene(scene);
         setResizable(false);
 
@@ -89,137 +81,44 @@ public class AssessmentFormDialog extends Stage {
     private HBox createHeader(boolean isEdit) {
         HBox header = new HBox();
         header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(20, 30, 20, 30));
-        header.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        header.setPadding(new Insets(25, 35, 20, 35));
+        header.setStyle("-fx-background-color: " + toHex(BACKGROUND_LIGHT) + ";");
 
-        Label titleLabel = new Label(isEdit ? "Edit Assessment" : "Add New Assessment");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
-        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        VBox headerContent = new VBox(5);
 
-        header.getChildren().add(titleLabel);
+        Label titleLabel = new Label(isEdit ? "✏️ Edit Assessment" : "✨ Create New Assessment");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 28));
+        titleLabel.setStyle("-fx-text-fill: " + GRADIENT_END + ";");
+
+        Label subtitleLabel = new Label(isEdit ? "Update assessment details and settings" : "Build a new mental health assessment");
+        subtitleLabel.setFont(Font.font("Segoe UI", 14));
+        subtitleLabel.setTextFill(TEXT_MUTED);
+
+        headerContent.getChildren().addAll(titleLabel, subtitleLabel);
+        header.getChildren().add(headerContent);
+
         return header;
     }
 
     private ScrollPane createForm() {
-        GridPane formPanel = new GridPane();
-        formPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        formPanel.setPadding(new Insets(20, 30, 20, 30));
-        formPanel.setHgap(15);
-        formPanel.setVgap(15);
-        formPanel.setAlignment(Pos.TOP_CENTER);
+        VBox mainContainer = new VBox(20);
+        mainContainer.setStyle("-fx-background-color: " + toHex(BACKGROUND_LIGHT) + ";");
+        mainContainer.setPadding(new Insets(10, 35, 20, 35));
 
-        // Column constraints
-        ColumnConstraints col1 = new ColumnConstraints();
-        col1.setMinWidth(100);
-        col1.setHalignment(javafx.geometry.HPos.RIGHT);
+        // Create all sections
+        VBox basicInfoSection = createBasicInfoSection();
+        VBox descriptionSection = createDescriptionSection();
+        VBox imageSection = createImageSection();
 
-        ColumnConstraints col2 = new ColumnConstraints();
-        col2.setHgrow(Priority.ALWAYS);
-        col2.setFillWidth(true);
+        // Wrap sections in cards
+        VBox basicCard = createCard("📝 Basic Information", basicInfoSection);
+        VBox descCard = createCard("📄 Description", descriptionSection);
+        VBox imageCard = createCard("🖼️ Assessment Image", imageSection);
 
-        formPanel.getColumnConstraints().addAll(col1, col2);
+        mainContainer.getChildren().addAll(basicCard, descCard, imageCard);
 
-        int row = 0;
-
-        // Title
-        Label titleLabel = new Label("Title:");
-        titleLabel.setFont(Font.font("Segoe UI", 14));
-        titleLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        titleField = new TextField();
-        titleField.setFont(Font.font("Segoe UI", 14));
-        titleField.setStyle(
-                "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8 12;"
-        );
-        titleField.setPrefHeight(40);
-
-        formPanel.add(titleLabel, 0, row);
-        formPanel.add(titleField, 1, row++);
-
-        // Type
-        Label typeLabel = new Label("Type:");
-        typeLabel.setFont(Font.font("Segoe UI", 14));
-        typeLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        // Type ComboBox - FIXED
-        String[] types = {"Depression", "Anxiety", "Stress", "Wellness", "General", "Custom"};
-        typeCombo = new ComboBox<>();
-        typeCombo.getItems().addAll(types);
-        typeCombo.setValue(types[0]);
-        typeCombo.setPrefHeight(40);
-        typeCombo.setMaxWidth(Double.MAX_VALUE);
-        typeCombo.setStyle(
-                "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-font-family: 'Segoe UI';" +
-                        "-fx-font-size: 14px;"
-        );
-
-// Status ComboBox - FIXED
-
-        formPanel.add(typeLabel, 0, row);
-        formPanel.add(typeCombo, 1, row++);
-
-        // Status
-        Label statusLabel = new Label("Status:");
-        statusLabel.setFont(Font.font("Segoe UI", 14));
-        statusLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-        String[] statuses = {"Active", "Inactive", "Draft"};
-        statusCombo = new ComboBox<>();
-        statusCombo.getItems().addAll(statuses);
-        statusCombo.setValue(statuses[0]);
-        statusCombo.setPrefHeight(40);
-        statusCombo.setMaxWidth(Double.MAX_VALUE);
-        statusCombo.setStyle(
-                "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-font-family: 'Segoe UI';" +
-                        "-fx-font-size: 14px;"
-        );
-
-
-        formPanel.add(statusLabel, 0, row);
-        formPanel.add(statusCombo, 1, row++);
-
-        // Description
-        Label descLabel = new Label("Description:");
-        descLabel.setFont(Font.font("Segoe UI", 14));
-        descLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-        descLabel.setAlignment(Pos.TOP_RIGHT);
-
-        descriptionArea = new TextArea();
-        descriptionArea.setFont(Font.font("Segoe UI", 14));
-        descriptionArea.setWrapText(true);
-        descriptionArea.setPrefRowCount(4);
-        descriptionArea.setStyle(
-                "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8;"
-        );
-
-        formPanel.add(descLabel, 0, row);
-        formPanel.add(descriptionArea, 1, row++);
-
-        // Image Upload Section
-        Label imageLabel = new Label("Image:");
-        imageLabel.setFont(Font.font("Segoe UI", 14));
-        imageLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        VBox imageUploadPanel = createImageUploadPanel();
-        formPanel.add(imageLabel, 0, row);
-        formPanel.add(imageUploadPanel, 1, row++);
-
-        // Wrap in ScrollPane
-        ScrollPane scrollPane = new ScrollPane(formPanel);
-        scrollPane.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        ScrollPane scrollPane = new ScrollPane(mainContainer);
+        scrollPane.setStyle("-fx-background-color: " + toHex(BACKGROUND_LIGHT) + ";");
         scrollPane.setBorder(null);
         scrollPane.setFitToWidth(true);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
@@ -227,29 +126,125 @@ public class AssessmentFormDialog extends Stage {
         return scrollPane;
     }
 
-    private VBox createImageUploadPanel() {
-        VBox panel = new VBox(10);
-        panel.setStyle("-fx-background-color: white; -fx-border-color: #" + toHex(BORDER_LIGHT) +
-                "; -fx-border-radius: 5; -fx-background-radius: 5;");
-        panel.setPadding(new Insets(15));
-        panel.setAlignment(Pos.CENTER);
+    private VBox createCard(String title, VBox content) {
+        VBox card = new VBox(15);
+        card.setStyle(
+                "-fx-background-color: " + toHex(CARD_WHITE) + ";" +
+                        "-fx-background-radius: 16px;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);"
+        );
+        card.setPadding(new Insets(20));
 
-        // Preview area
-        VBox previewContainer = new VBox(10);
-        previewContainer.setAlignment(Pos.CENTER);
+        Label titleLabel = new Label(title);
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
+        titleLabel.setStyle("-fx-text-fill: " + GRADIENT_END + ";");
+
+        card.getChildren().addAll(titleLabel, content);
+        return card;
+    }
+
+    private VBox createBasicInfoSection() {
+        VBox section = new VBox(15);
+
+        // Title field
+        VBox titleBox = new VBox(5);
+        Label titleLabel = new Label("Title *");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        titleLabel.setTextFill(TEXT_DARK);
+
+        titleField = new TextField();
+        titleField.setPromptText("Enter assessment title");
+        styleTextField(titleField);
+
+        titleBox.getChildren().addAll(titleLabel, titleField);
+
+        // Type and Status row
+        HBox rowBox = new HBox(20);
+
+        VBox typeBox = new VBox(5);
+        Label typeLabel = new Label("Type");
+        typeLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        typeLabel.setTextFill(TEXT_DARK);
+
+        String[] types = {"Depression", "Anxiety", "Stress", "Wellness", "General", "Custom"};
+        typeCombo = new ComboBox<>();
+        typeCombo.getItems().addAll(types);
+        typeCombo.setValue(types[0]);
+        typeCombo.setPrefHeight(40);
+        typeCombo.setMaxWidth(Double.MAX_VALUE);
+        styleComboBox(typeCombo);
+        HBox.setHgrow(typeCombo, Priority.ALWAYS);
+
+        typeBox.getChildren().addAll(typeLabel, typeCombo);
+
+        VBox statusBox = new VBox(5);
+        Label statusLabel = new Label("Status");
+        statusLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        statusLabel.setTextFill(TEXT_DARK);
+
+        String[] statuses = {"Active", "Inactive", "Draft"};
+        statusCombo = new ComboBox<>();
+        statusCombo.getItems().addAll(statuses);
+        statusCombo.setValue(statuses[0]);
+        statusCombo.setPrefHeight(40);
+        statusCombo.setMaxWidth(Double.MAX_VALUE);
+        styleComboBox(statusCombo);
+        HBox.setHgrow(statusCombo, Priority.ALWAYS);
+
+        statusBox.getChildren().addAll(statusLabel, statusCombo);
+
+        rowBox.getChildren().addAll(typeBox, statusBox);
+        HBox.setHgrow(typeBox, Priority.ALWAYS);
+        HBox.setHgrow(statusBox, Priority.ALWAYS);
+
+        section.getChildren().addAll(titleBox, rowBox);
+
+        return section;
+    }
+
+    private VBox createDescriptionSection() {
+        VBox section = new VBox(5);
+
+        Label descLabel = new Label("Description");
+        descLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        descLabel.setTextFill(TEXT_DARK);
+
+        descriptionArea = new TextArea();
+        descriptionArea.setFont(Font.font("Segoe UI", 14));
+        descriptionArea.setWrapText(true);
+        descriptionArea.setPrefRowCount(4);
+        descriptionArea.setPromptText("Enter assessment description...");
+        styleTextArea(descriptionArea);
+
+        section.getChildren().addAll(descLabel, descriptionArea);
+
+        return section;
+    }
+
+    private VBox createImageSection() {
+        VBox section = new VBox(10);
+
+        Label imageLabel = new Label("Image");
+        imageLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        imageLabel.setTextFill(TEXT_DARK);
+
+        VBox imageContainer = new VBox(10);
+        imageContainer.setStyle(
+                "-fx-background-color: " + toHex(PREVIEW_BG) + ";" +
+                        "-fx-background-radius: 12px;" +
+                        "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                        "-fx-border-radius: 12px;" +
+                        "-fx-border-style: dashed;"
+        );
+        imageContainer.setPadding(new Insets(20));
+        imageContainer.setAlignment(Pos.CENTER);
 
         imagePreview = new ImageView();
         imagePreview.setFitWidth(300);
         imagePreview.setFitHeight(200);
         imagePreview.setPreserveRatio(true);
-        imagePreview.setStyle("-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);");
-
-        // Set default placeholder
+        imagePreview.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);");
         setPlaceholderImage();
-
-        uploadStatusLabel = new Label("Drag & drop image here or click to browse");
-        uploadStatusLabel.setFont(Font.font("Segoe UI", 12));
-        uploadStatusLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
 
         // Make preview clickable
         imagePreview.setPickOnBounds(true);
@@ -259,12 +254,12 @@ public class AssessmentFormDialog extends Stage {
         // Setup drag and drop
         setupDragAndDrop(imagePreview);
 
-        previewContainer.getChildren().addAll(imagePreview, uploadStatusLabel);
+        uploadStatusLabel = new Label("Drag & drop image here or click to browse");
+        uploadStatusLabel.setFont(Font.font("Segoe UI", 12));
+        uploadStatusLabel.setTextFill(TEXT_MUTED);
 
-        // Control buttons
-        HBox buttonPanel = new HBox(10);
-        buttonPanel.setAlignment(Pos.CENTER);
-        buttonPanel.setPadding(new Insets(5, 0, 0, 0));
+        HBox buttonRow = new HBox(10);
+        buttonRow.setAlignment(Pos.CENTER);
 
         Button browseButton = createSmallButton("Browse...");
         browseButton.setOnAction(e -> browseForImage());
@@ -272,10 +267,235 @@ public class AssessmentFormDialog extends Stage {
         Button clearButton = createSmallButton("Clear Image");
         clearButton.setOnAction(e -> clearImage());
 
-        buttonPanel.getChildren().addAll(browseButton, clearButton);
+        buttonRow.getChildren().addAll(browseButton, clearButton);
 
-        panel.getChildren().addAll(previewContainer, buttonPanel);
+        imageContainer.getChildren().addAll(imagePreview, uploadStatusLabel, buttonRow);
+        section.getChildren().addAll(imageLabel, imageContainer);
+
+        Label helpText = new Label("JPG, PNG, WebP — Max 5MB — Recommended: 800×500px");
+        helpText.setFont(Font.font("Segoe UI", 11));
+        helpText.setTextFill(TEXT_MUTED);
+        section.getChildren().add(helpText);
+
+        return section;
+    }
+
+    private Button createSmallButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", 12));
+        button.setStyle(
+                "-fx-background-color: " + toHex(PREVIEW_BG) + ";" +
+                        "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                        "-fx-border-radius: 20px;" +
+                        "-fx-background-radius: 20px;" +
+                        "-fx-padding: 8 20;" +
+                        "-fx-cursor: hand;"
+        );
+
+        button.setOnMouseEntered(e ->
+                button.setStyle(
+                        "-fx-background-color: " + toHex(SUCCESS_BG) + ";" +
+                                "-fx-border-color: " + GRADIENT_START + ";" +
+                                "-fx-border-radius: 20px;" +
+                                "-fx-background-radius: 20px;" +
+                                "-fx-padding: 8 20;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+
+        button.setOnMouseExited(e ->
+                button.setStyle(
+                        "-fx-background-color: " + toHex(PREVIEW_BG) + ";" +
+                                "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                                "-fx-border-radius: 20px;" +
+                                "-fx-background-radius: 20px;" +
+                                "-fx-padding: 8 20;" +
+                                "-fx-cursor: hand;"
+                )
+        );
+
+        return button;
+    }
+
+    private HBox createButtonPanel(boolean isEdit) {
+        HBox panel = new HBox(15);
+        panel.setAlignment(Pos.CENTER_RIGHT);
+        panel.setPadding(new Insets(25, 35, 30, 35));
+        panel.setStyle("-fx-background-color: " + toHex(BACKGROUND_LIGHT) + ";");
+
+        Button cancelButton = createModernButton("Cancel", false);
+        cancelButton.setOnAction(e -> close());
+
+        Button saveButton = createModernButton(isEdit ? "Save Changes" : "Create Assessment", true);
+        saveButton.setOnAction(e -> saveAssessment());
+
+        panel.getChildren().addAll(cancelButton, saveButton);
         return panel;
+    }
+
+    private Button createModernButton(String text, boolean isPrimary) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+
+        if (isPrimary) {
+            button.setStyle(
+                    "-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, " + GRADIENT_START + ", " + GRADIENT_END + ");" +
+                            "-fx-background-radius: 25px;" +
+                            "-fx-text-fill: white;" +
+                            "-fx-padding: 12 35;" +
+                            "-fx-cursor: hand;"
+            );
+            button.setOnMouseEntered(e ->
+                    button.setStyle(
+                            "-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, " + GRADIENT_END + ", " + GRADIENT_START + ");" +
+                                    "-fx-background-radius: 25px;" +
+                                    "-fx-text-fill: white;" +
+                                    "-fx-padding: 12 35;" +
+                                    "-fx-cursor: hand;"
+                    )
+            );
+        } else {
+            button.setStyle(
+                    "-fx-background-color: transparent;" +
+                            "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                            "-fx-border-radius: 25px;" +
+                            "-fx-text-fill: " + toHex(TEXT_MUTED) + ";" +
+                            "-fx-padding: 12 35;" +
+                            "-fx-cursor: hand;"
+            );
+            button.setOnMouseEntered(e ->
+                    button.setStyle(
+                            "-fx-background-color: " + toHex(PREVIEW_BG) + ";" +
+                                    "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                                    "-fx-border-radius: 25px;" +
+                                    "-fx-text-fill: " + toHex(TEXT_DARK) + ";" +
+                                    "-fx-padding: 12 35;" +
+                                    "-fx-cursor: hand;"
+                    )
+            );
+        }
+
+        button.setOnMouseExited(e -> {
+            if (isPrimary) {
+                button.setStyle(
+                        "-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, " + GRADIENT_START + ", " + GRADIENT_END + ");" +
+                                "-fx-background-radius: 25px;" +
+                                "-fx-text-fill: white;" +
+                                "-fx-padding: 12 35;" +
+                                "-fx-cursor: hand;"
+                );
+            } else {
+                button.setStyle(
+                        "-fx-background-color: transparent;" +
+                                "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                                "-fx-border-radius: 25px;" +
+                                "-fx-text-fill: " + toHex(TEXT_MUTED) + ";" +
+                                "-fx-padding: 12 35;" +
+                                "-fx-cursor: hand;"
+                );
+            }
+        });
+
+        return button;
+    }
+
+    private void styleTextField(TextField field) {
+        field.setStyle(
+                "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                        "-fx-border-radius: 8px;" +
+                        "-fx-background-radius: 8px;" +
+                        "-fx-padding: 10;" +
+                        "-fx-font-family: 'Segoe UI';"
+        );
+
+        field.focusedProperty().addListener((obs, old, nw) -> {
+            if (nw) {
+                field.setStyle(
+                        "-fx-border-color: " + GRADIENT_START + ";" +
+                                "-fx-border-radius: 8px;" +
+                                "-fx-background-radius: 8px;" +
+                                "-fx-padding: 10;" +
+                                "-fx-font-family: 'Segoe UI';" +
+                                "-fx-border-width: 2px;"
+                );
+            } else {
+                field.setStyle(
+                        "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                                "-fx-border-radius: 8px;" +
+                                "-fx-background-radius: 8px;" +
+                                "-fx-padding: 10;" +
+                                "-fx-font-family: 'Segoe UI';" +
+                                "-fx-border-width: 1px;"
+                );
+            }
+        });
+    }
+
+    private void styleTextArea(TextArea field) {
+        field.setStyle(
+                "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                        "-fx-border-radius: 8px;" +
+                        "-fx-background-radius: 8px;" +
+                        "-fx-padding: 10;" +
+                        "-fx-font-family: 'Segoe UI';"
+        );
+
+        field.focusedProperty().addListener((obs, old, nw) -> {
+            if (nw) {
+                field.setStyle(
+                        "-fx-border-color: " + GRADIENT_START + ";" +
+                                "-fx-border-radius: 8px;" +
+                                "-fx-background-radius: 8px;" +
+                                "-fx-padding: 10;" +
+                                "-fx-font-family: 'Segoe UI';" +
+                                "-fx-border-width: 2px;"
+                );
+            } else {
+                field.setStyle(
+                        "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                                "-fx-border-radius: 8px;" +
+                                "-fx-background-radius: 8px;" +
+                                "-fx-padding: 10;" +
+                                "-fx-font-family: 'Segoe UI';" +
+                                "-fx-border-width: 1px;"
+                );
+            }
+        });
+    }
+
+    private void styleComboBox(ComboBox<?> comboBox) {
+        comboBox.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                        "-fx-border-radius: 8px;" +
+                        "-fx-background-radius: 8px;" +
+                        "-fx-font-family: 'Segoe UI';" +
+                        "-fx-font-size: 13px;"
+        );
+
+        comboBox.focusedProperty().addListener((obs, old, nw) -> {
+            if (nw) {
+                comboBox.setStyle(
+                        "-fx-background-color: white;" +
+                                "-fx-border-color: " + GRADIENT_START + ";" +
+                                "-fx-border-radius: 8px;" +
+                                "-fx-background-radius: 8px;" +
+                                "-fx-font-family: 'Segoe UI';" +
+                                "-fx-font-size: 13px;" +
+                                "-fx-border-width: 2px;"
+                );
+            } else {
+                comboBox.setStyle(
+                        "-fx-background-color: white;" +
+                                "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                                "-fx-border-radius: 8px;" +
+                                "-fx-background-radius: 8px;" +
+                                "-fx-font-family: 'Segoe UI';" +
+                                "-fx-font-size: 13px;" +
+                                "-fx-border-width: 1px;"
+                );
+            }
+        });
     }
 
     private void setupDragAndDrop(ImageView target) {
@@ -304,10 +524,9 @@ public class AssessmentFormDialog extends Stage {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Select Assessment Image");
 
-        // Add filters for image files
         fileChooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Image Files",
-                        "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp"),
+                        "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.webp"),
                 new FileChooser.ExtensionFilter("All Files", "*.*")
         );
 
@@ -319,30 +538,21 @@ public class AssessmentFormDialog extends Stage {
 
     private boolean handleImageFile(File imageFile) {
         try {
-            // Check file size (limit to 5MB)
             long fileSize = imageFile.length();
             if (fileSize > 5 * 1024 * 1024) {
                 showAlert("Image file is too large. Maximum size is 5MB.", Alert.AlertType.WARNING);
                 return false;
             }
 
-            // Validate it's an image
             Image image = new Image(new FileInputStream(imageFile));
             if (image.isError()) {
                 throw new IOException("Not a valid image file");
             }
 
-            // Set preview
-            ImageView tempView = new ImageView(image);
-            tempView.setFitWidth(300);
-            tempView.setFitHeight(200);
-            tempView.setPreserveRatio(true);
-            imagePreview.setImage(tempView.getImage());
-
-            // Update status
+            imagePreview.setImage(image);
             uploadStatusLabel.setText(imageFile.getName() + " (" +
                     String.format("%.1f", fileSize / 1024.0) + " KB)");
-            uploadStatusLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+            uploadStatusLabel.setTextFill(Color.web(GRADIENT_END));
 
             selectedImageFile = imageFile;
             return true;
@@ -356,102 +566,34 @@ public class AssessmentFormDialog extends Stage {
     private void clearImage() {
         setPlaceholderImage();
         uploadStatusLabel.setText("Drag & drop image here or click to browse");
-        uploadStatusLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
+        uploadStatusLabel.setTextFill(TEXT_MUTED);
         selectedImageFile = null;
         imagePathToSave = null;
     }
 
     private void setPlaceholderImage() {
-        // Create placeholder image programmatically
         javafx.scene.canvas.Canvas canvas = new javafx.scene.canvas.Canvas(300, 200);
         javafx.scene.canvas.GraphicsContext gc = canvas.getGraphicsContext2D();
 
-        // Fill background
-        gc.setFill(PLACEHOLDER_BG);
+        gc.setFill(Color.rgb(248, 249, 250));
         gc.fillRect(0, 0, 300, 200);
 
-        // Draw border
-        gc.setStroke(PLACEHOLDER_BORDER);
+        gc.setStroke(Color.rgb(222, 226, 230));
         gc.setLineDashes(5);
         gc.strokeRect(10, 10, 280, 180);
 
-        // Draw camera icon
         gc.setFill(Color.rgb(150, 150, 150));
         gc.fillOval(120, 60, 60, 60);
-        gc.setFill(PLACEHOLDER_BG);
+        gc.setFill(Color.rgb(248, 249, 250));
         gc.fillOval(130, 70, 40, 40);
         gc.setFill(Color.rgb(150, 150, 150));
         gc.fillOval(140, 80, 20, 20);
 
-        // Draw text
         gc.setFill(Color.rgb(100, 100, 100));
         gc.setFont(Font.font("Arial", 12));
         gc.fillText("No Image Selected", 100, 170);
 
         imagePreview.setImage(canvas.snapshot(null, null));
-        imagePreview.setStyle("-fx-effect: none;");
-    }
-
-    private Button createSmallButton(String text) {
-        Button button = new Button(text);
-        button.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
-        button.setTextFill(Color.web(toHex(TEXT_DARK)));
-        button.setStyle(
-                "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8 20;" +
-                        "-fx-cursor: hand;"
-        );
-        return button;
-    }
-
-    private HBox createButtonPanel(boolean isEdit) {
-        HBox buttonPanel = new HBox(15);
-        buttonPanel.setAlignment(Pos.CENTER_RIGHT);
-        buttonPanel.setPadding(new Insets(20, 30, 20, 30));
-        buttonPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-
-        Button cancelButton = createButton("Cancel", BUTTON_LIGHT_GREEN);
-        cancelButton.setOnAction(e -> close());
-
-        Button saveButton = createButton(isEdit ? "Save Changes" : "Add Assessment", ACCENT_DARK_GREEN);
-        saveButton.setTextFill(Color.WHITE);
-        saveButton.setOnAction(e -> saveAssessment());
-
-        buttonPanel.getChildren().addAll(cancelButton, saveButton);
-        return buttonPanel;
-    }
-
-    private Button createButton(String text, Color bgColor) {
-        Button button = new Button(text);
-        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        button.setTextFill(bgColor == ACCENT_DARK_GREEN ? Color.WHITE : Color.web(toHex(TEXT_DARK)));
-        button.setStyle(
-                "-fx-background-color: #" + toHex(bgColor) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 12 30;" +
-                        "-fx-cursor: hand;"
-        );
-
-        // Hover effect
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(bgColor.darker()) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 30;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(bgColor) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 30;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
-        return button;
     }
 
     private void loadAssessmentData() {
@@ -461,7 +603,6 @@ public class AssessmentFormDialog extends Stage {
             descriptionArea.setText(assessment.getDescription());
             statusCombo.setValue(assessment.getStatus());
 
-            // Load image if exists
             if (assessment.getImagePath() != null && !assessment.getImagePath().isEmpty()) {
                 try {
                     File imgFile = new File(assessment.getImagePath());
@@ -481,13 +622,11 @@ public class AssessmentFormDialog extends Stage {
         }
 
         try {
-            // Create images directory if it doesn't exist
             File imagesDir = new File("assessment_images");
             if (!imagesDir.exists()) {
                 imagesDir.mkdirs();
             }
 
-            // Generate unique filename
             String timestamp = String.valueOf(System.currentTimeMillis());
             String originalName = selectedImageFile.getName();
             String extension = "";
@@ -500,11 +639,9 @@ public class AssessmentFormDialog extends Stage {
             String newFileName = "assessment_" + timestamp + extension;
             File destination = new File(imagesDir, newFileName);
 
-            // Copy file
             Files.copy(selectedImageFile.toPath(), destination.toPath(),
                     StandardCopyOption.REPLACE_EXISTING);
 
-            // Return relative path
             return "assessment_images/" + newFileName;
 
         } catch (IOException e) {
@@ -514,21 +651,18 @@ public class AssessmentFormDialog extends Stage {
     }
 
     private void saveAssessment() {
-        // Validate inputs
         if (titleField.getText().trim().isEmpty()) {
             showAlert("Please enter a title for the assessment.", Alert.AlertType.WARNING);
             return;
         }
 
         try {
-            // Save image first
             String savedImagePath = saveImageToStorage();
             if (selectedImageFile != null && savedImagePath == null) {
-                return; // Image save failed
+                return;
             }
 
             if (assessment == null) {
-                // Create new assessment
                 Assessment newAssessment = new Assessment();
                 newAssessment.setTitle(titleField.getText().trim());
                 newAssessment.setType(typeCombo.getValue());
@@ -537,28 +671,23 @@ public class AssessmentFormDialog extends Stage {
                 newAssessment.setImagePath(savedImagePath);
 
                 controller.createAssessment(newAssessment);
-
-                showAlert("Assessment created successfully!", Alert.AlertType.INFORMATION);
+                showAlert("✨ Assessment created successfully!", Alert.AlertType.INFORMATION);
 
             } else {
-                // Update existing assessment
                 assessment.setTitle(titleField.getText().trim());
                 assessment.setType(typeCombo.getValue());
                 assessment.setDescription(descriptionArea.getText().trim());
                 assessment.setStatus(statusCombo.getValue());
 
-                // Only update image path if a new image was selected
                 if (savedImagePath != null) {
                     assessment.setImagePath(savedImagePath);
                 }
 
                 controller.updateAssessment(assessment);
-
-                showAlert("Assessment updated successfully!", Alert.AlertType.INFORMATION);
+                showAlert("✅ Assessment updated successfully!", Alert.AlertType.INFORMATION);
             }
 
             close();
-            // Refresh the assessments panel
             if (parentApp != null) {
                 parentApp.showAssessmentPanel();
             }
@@ -577,14 +706,25 @@ public class AssessmentFormDialog extends Stage {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.initOwner(this);
+
+        DialogPane dialogPane = alert.getDialogPane();
+        dialogPane.setStyle(
+                "-fx-background-color: " + toHex(CARD_WHITE) + ";" +
+                        "-fx-background-radius: 12px;" +
+                        "-fx-padding: 20;"
+        );
+
         alert.showAndWait();
     }
 
-    // ================= UTILITY =================
     private String toHex(Color color) {
-        return String.format("%02x%02x%02x",
+        return String.format("#%02x%02x%02x",
                 (int)(color.getRed() * 255),
                 (int)(color.getGreen() * 255),
                 (int)(color.getBlue() * 255));
+    }
+
+    private String toHex(String hexColor) {
+        return hexColor;
     }
 }

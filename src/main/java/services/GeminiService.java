@@ -7,210 +7,471 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 public class GeminiService {
-    // Use Groq instead of Gemini since Gemini model is not found
-    private static final String GROQ_API_KEY = AppConfig.groqApiKey();
+
+    private static final String GROQ_API_KEY = "AppConfig.groqApiKey()";
     private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-    public static String getGoalAdvice(String goal) throws Exception {
-        String jsonRequest = "{"
-                + "\"model\": \"llama-3.3-70b-versatile\","
-                + "\"messages\": [{\"role\": \"user\", \"content\": \"Donne un conseil court pour : " + goal + "\"}],"
-                + "\"max_tokens\": 100"
-                + "}";
-
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GROQ_URL))
-                .header("Authorization", "Bearer " + GROQ_API_KEY)
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(jsonRequest))
-                .build();
-
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        System.out.println("--- DEBUG GROQ ---");
-        System.out.println("STATUS: " + response.statusCode());
-
-        if (response.statusCode() == 200) {
-            String body = response.body();
-            int start = body.indexOf("\"content\":\"") + 11;
-            int end = body.indexOf("\"},\"logprobs\"");
-            String advice = body.substring(start, end);
-            return advice.replace("\\n", "\n");
-        }
-        
-        if (response.statusCode() == 401) {
-            return "Erreur d'authentification (Status 401) : Ta clé MENTIS_GROQ_API_KEY est invalide ou absente dans AppConfig.";
-        }
-        return "Erreur du serveur (Status " + response.statusCode() + ") : " + response.body();
-    }
-
+    // ── Main question generation ──────────────────────────
     public static String generateContent(String prompt) throws Exception {
-        // Build a more specific prompt for question generation
-        String systemPrompt = "You are an expert at creating mental health assessment questions. " +
-                "Generate questions in the exact format specified. " +
-                "Each question must be numbered and followed by SCALE: on the next line.";
+        String systemPrompt = "You are an expert at creating mental health assessment questions. "
+                + "Generate questions in the exact format specified. "
+                + "Each question must be numbered and followed by SCALE: on the next line. "
+                + "Questions MUST be answerable with a single scale selection only. "
+                + "Never ask for descriptions or paragraphs.";
 
-        String fullPrompt = systemPrompt + "\n\n" + prompt;
-
-        String jsonRequest = "{"
-                + "\"model\": \"llama-3.3-70b-versatile\","
-                + "\"messages\": ["
-                + "{\"role\": \"system\", \"content\": \"" + escapeJson(systemPrompt) + "\"},"
-                + "{\"role\": \"user\", \"content\": \"" + escapeJson(prompt) + "\"}"
-                + "],"
-                + "\"max_tokens\": 2000,"
-                + "\"temperature\": 0.7"
-                + "}";
-
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GROQ_URL))
-                .header("Authorization", "Bearer " + GROQ_API_KEY)
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(jsonRequest))
-                .build();
-
-        System.out.println("--- Sending request to Groq API ---");
-        System.out.println("Prompt: " + prompt.substring(0, Math.min(100, prompt.length())) + "...");
-
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        System.out.println("STATUS: " + response.statusCode());
-
-        if (response.statusCode() == 200) {
-            String body = response.body();
-
-            // Extract content from Groq response
-            int start = body.indexOf("\"content\":\"") + 11;
-            if (start == 10) { // Try alternative format
-                start = body.indexOf("\"content\": \"") + 12;
-            }
-
-            int end = body.indexOf("\"", start + 1);
-            // Find the actual end of content (looking for the closing quote of the message)
-            while (end < body.length()) {
-                if (body.charAt(end) == '"' && body.charAt(end - 1) != '\\') {
-                    // Check if this is the end of the content field
-                    if (end + 1 < body.length() && (body.charAt(end + 1) == ',' || body.charAt(end + 1) == '}')) {
-                        break;
-                    }
-                }
-                end++;
-                if (end >= body.length()) {
-                    end = body.indexOf("\"},\"logprobs\"");
-                    break;
-                }
-            }
-
-            if (start > 10 && end > start) {
-                String content = body.substring(start, end);
-                // Clean up the response
-                content = content.replace("\\n", "\n")
-                        .replace("\\\"", "\"")
-                        .replace("\\'", "'")
-                        .replace("\\\\", "\\");
-
-                // Ensure the format matches what the parser expects
-                if (!content.contains("SCALE:")) {
-                    // If no SCALE lines, add default scale to each question
-                    String[] lines = content.split("\n");
-                    StringBuilder formatted = new StringBuilder();
-                    for (String line : lines) {
-                        if (line.matches("^\\d+\\..*")) {
-                            formatted.append(line).append("\n");
-                            formatted.append("SCALE: Never/Rarely/Sometimes/Often/Always\n");
-                        } else {
-                            formatted.append(line).append("\n");
-                        }
-                    }
-                    content = formatted.toString();
-                }
-
-                return content;
-            }
-        }
-
-        throw new Exception("Groq API error: HTTP " + response.statusCode() + " - " + response.body());
-    }
-
-    /**
-     * NEW METHOD: Moderate a review to check for inappropriate content
-     * @param reviewText The review text to check
-     * @return JSON string with moderation results
-     */
-    public static String moderateReview(String reviewText) throws Exception {
-        String prompt = String.format(
-                "You are a content moderator for a mental health app. " +
-                        "Analyze this review and determine if it contains ANY offensive, insulting, " +
-                        "harmful, inappropriate, or disrespectful language.\n\n" +
-                        "Review: \"%s\"\n\n" +
-                        "Respond with a JSON object containing these EXACT fields (no other text):\n" +
-                        "{\n" +
-                        "  \"isAppropriate\": true/false,\n" +
-                        "  \"confidence\": 0.0-1.0,\n" +
-                        "  \"reason\": \"brief explanation\",\n" +
-                        "  \"filteredVersion\": \"the same review but with offensive words replaced by [removed]\",\n" +
-                        "  \"containsProfanity\": true/false,\n" +
-                        "  \"containsHateSpeech\": true/false,\n" +
-                        "  \"containsHarassment\": true/false\n" +
-                        "}",
-                reviewText.replace("\"", "\\\"")
+        String jsonRequest = buildJsonRequest(
+                "llama-3.1-8b-instant",
+                systemPrompt,
+                prompt,
+                2000,
+                0.7
         );
 
-        String jsonRequest = "{"
-                + "\"model\": \"llama-3.3-70b-versatile\","
-                + "\"messages\": ["
-                + "{\"role\": \"system\", \"content\": \"You are a content moderator. Return ONLY valid JSON, no other text.\"},"
-                + "{\"role\": \"user\", \"content\": \"" + escapeJson(prompt) + "\"}"
-                + "],"
-                + "\"max_tokens\": 500,"
-                + "\"temperature\": 0.1" // Low temperature for consistent results
-                + "}";
+        String response = sendRequest(jsonRequest);
+        String content  = extractContent(response);
 
+        if (content == null || content.isEmpty()) {
+            throw new Exception("Empty response from Groq API");
+        }
+
+        // Inject SCALE: lines if missing
+        if (!content.contains("SCALE:")) {
+            String[] lines   = content.split("\n");
+            StringBuilder sb = new StringBuilder();
+            for (String line : lines) {
+                sb.append(line).append("\n");
+                if (line.trim().matches("^\\d+\\..*")) {
+                    sb.append("SCALE: Never/Rarely/Sometimes/Often/Always\n");
+                }
+            }
+            content = sb.toString();
+        }
+
+        return content;
+    }
+
+    // ── Goal advice ───────────────────────────────────────
+    public static String getGoalAdvice(String goal) throws Exception {
+        String jsonRequest = buildJsonRequest(
+                "llama-3.3-70b-versatile",
+                "You are a compassionate mental health advisor. Give brief, practical advice.",
+                "Give a short helpful tip for this goal: " + goal,
+                150,
+                0.7
+        );
+
+        String response = sendRequest(jsonRequest);
+        String content  = extractContent(response);
+        return content != null ? content : "Could not generate advice at this time.";
+    }
+
+    // ── Adaptive question generation ──────────────────────
+    // Generates a question that properly fits the given scale
+    public static String generateAdaptiveQuestion(
+            String context,
+            String focus,
+            String scale
+    ) throws Exception {
+
+        // Parse the scale to understand what options are available
+        String scaleDescription = describeScale(scale);
+        String[] options        = parseScaleOptions(scale);
+        String optionsList      = String.join(", ", options);
+
+        String systemPrompt = "You are a clinical psychologist creating mental health assessment questions. "
+                + "You MUST generate questions that make perfect sense with the given answer scale. "
+                + "The question must be naturally answerable using exactly the provided options. "
+                + "Use first-person format (I feel..., I have..., I notice...). "
+                + "Keep questions under 20 words. "
+                + "Return ONLY the question text. Nothing else.";
+
+        String userPrompt = String.format(
+                "Create ONE mental health question about: %s\n\n"
+                        + "Context from patient's previous answers: %s\n\n"
+                        + "ANSWER SCALE: %s\n"
+                        + "SCALE TYPE: %s\n"
+                        + "AVAILABLE OPTIONS: %s\n\n"
+                        + "The question MUST make sense with this scale. "
+                        + "For example:\n"
+                        + "- If scale is Never/Rarely/.../Always → ask about FREQUENCY ('How often do I...')\n"
+                        + "- If scale is 1-5 → ask for a rating ('On a scale of 1-5, how much do I...')\n"
+                        + "- If scale is Yes/No → ask a yes/no question ('Do I experience...')\n"
+                        + "- If scale is Agree/Disagree → make a statement to agree/disagree with ('I feel that...')\n\n"
+                        + "Return ONLY the question text. No numbering, no explanation.",
+                focus,
+                context.isEmpty() ? "no context available" : context,
+                scale,
+                scaleDescription,
+                optionsList
+        );
+
+        String jsonRequest = buildJsonRequest(
+                "llama-3.1-8b-instant",
+                systemPrompt,
+                userPrompt,
+                100,
+                0.6
+        );
+
+        String response = sendRequest(jsonRequest);
+        String content  = extractContent(response);
+
+        if (content == null || content.isEmpty()) {
+            return getFallbackAdaptiveQuestion(focus, scale);
+        }
+
+        // Clean up the response
+        String cleaned = content
+                .replaceAll("^\\d+\\.\\s*", "")
+                .replaceAll("^\"|\"$", "")
+                .replaceAll("^\\*+|\\*+$", "")
+                .replaceAll("SCALE:.*", "")
+                .trim();
+
+        // Validate the question makes sense with scale
+        if (!questionFitsScale(cleaned, scale)) {
+            return getFallbackAdaptiveQuestion(focus, scale);
+        }
+
+        return cleaned.isEmpty() ? getFallbackAdaptiveQuestion(focus, scale) : cleaned;
+    }
+
+    // ── Overload for backward compatibility ──────────────
+    // If no scale provided, default to Never/Always
+    public static String generateAdaptiveQuestion(String context, String focus) throws Exception {
+        return generateAdaptiveQuestion(context, focus, "Never/Rarely/Sometimes/Often/Always");
+    }
+
+    // ── Content moderation ────────────────────────────────
+    public static String moderateReview(String reviewText) throws Exception {
+        String prompt = "Analyze this review for inappropriate content:\n\n"
+                + "Review: \"" + escapeJson(reviewText) + "\"\n\n"
+                + "Return ONLY this JSON:\n"
+                + "{\"isAppropriate\": true, \"confidence\": 0.0, \"reason\": \"\", "
+                + "\"filteredVersion\": \"\", \"containsProfanity\": false, "
+                + "\"containsHateSpeech\": false, \"containsHarassment\": false}";
+
+        String jsonRequest = buildJsonRequest(
+                "llama-3.3-70b-versatile",
+                "You are a content moderator. Return ONLY valid JSON.",
+                prompt,
+                500,
+                0.1
+        );
+
+        try {
+            String response = sendRequest(jsonRequest);
+            String content  = extractContent(response);
+            return content != null ? content.replace("\\n", "\n").replace("\\\"", "\"")
+                    : defaultModerationJson(reviewText);
+        } catch (Exception e) {
+            return defaultModerationJson(reviewText);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  PRIVATE HELPERS
+    // ═══════════════════════════════════════════════════
+
+    // ── Parse scale string into array of options ─────────
+    private static String[] parseScaleOptions(String scale) {
+        if (scale == null || scale.isEmpty()) {
+            return new String[]{"Never", "Rarely", "Sometimes", "Often", "Always"};
+        }
+
+        scale = scale.trim();
+
+        // Slash format: Never/Rarely/Sometimes/Often/Always
+        if (scale.contains("/")) {
+            return scale.split("/");
+        }
+
+        // Comma format: Never,Rarely,Sometimes,Often,Always
+        if (scale.contains(",") && !scale.contains("=")) {
+            return scale.split(",");
+        }
+
+        // Key=value format: 0=Never,1=Rarely,...
+        if (scale.contains("=")) {
+            String[] pairs = scale.split(",");
+            String[] values = new String[pairs.length];
+            for (int i = 0; i < pairs.length; i++) {
+                String[] kv = pairs[i].split("=");
+                values[i] = kv.length > 1 ? kv[1].trim() : kv[0].trim();
+            }
+            return values;
+        }
+
+        // Numeric range: 1-5 or 1-10
+        if (scale.matches("\\d+-\\d+")) {
+            String[] parts = scale.split("-");
+            int start = Integer.parseInt(parts[0]);
+            int end   = Integer.parseInt(parts[1]);
+            String[] nums = new String[end - start + 1];
+            for (int i = 0; i <= end - start; i++) {
+                nums[i] = String.valueOf(start + i);
+            }
+            return nums;
+        }
+
+        // Yes/No
+        if (scale.equalsIgnoreCase("Yes/No") || scale.equalsIgnoreCase("Yes,No")) {
+            return new String[]{"Yes", "No"};
+        }
+
+        return new String[]{"Never", "Rarely", "Sometimes", "Often", "Always"};
+    }
+
+    // ── Describe scale type for the AI prompt ────────────
+    private static String describeScale(String scale) {
+        if (scale == null || scale.isEmpty()) {
+            return "frequency (Never to Always)";
+        }
+
+        scale = scale.trim().toLowerCase();
+
+        if (scale.contains("never") && scale.contains("always")) {
+            return "frequency scale (Never/Rarely/Sometimes/Often/Always) — ask HOW OFTEN";
+        }
+        if (scale.contains("agree") || scale.contains("disagree")) {
+            return "agreement scale — make a STATEMENT the person agrees or disagrees with";
+        }
+        if (scale.matches("\\d+-\\d+")) {
+            return "numeric rating scale — ask to RATE on a scale of numbers";
+        }
+        if (scale.contains("yes") && scale.contains("no")) {
+            return "yes/no scale — ask a question answerable with YES or NO";
+        }
+        if (scale.contains("not at all") || scale.contains("extremely")) {
+            return "intensity scale — ask about INTENSITY or SEVERITY";
+        }
+        if (scale.contains("poor") || scale.contains("excellent")) {
+            return "quality scale — ask about QUALITY or HOW GOOD something is";
+        }
+
+        return "custom scale with options: " + scale;
+    }
+
+    // ── Validate question fits scale ──────────────────────
+    private static boolean questionFitsScale(String question, String scale) {
+        if (question == null || question.isEmpty()) return false;
+
+        String q = question.toLowerCase();
+        String s = scale.toLowerCase();
+
+        // Frequency scales need frequency questions
+        if (s.contains("never") && s.contains("always")) {
+            boolean hasFrequencyWords = q.contains("how often") || q.contains("often")
+                    || q.contains("frequently") || q.contains("do i") || q.contains("have i")
+                    || q.contains("feel") || q.contains("experience") || q.contains("notice");
+            return hasFrequencyWords;
+        }
+
+        // Agreement scale needs a statement not a question
+        if (s.contains("agree") || s.contains("disagree")) {
+            // Should NOT be a question (no question mark at start logic)
+            // Should be a statement like "I feel..." or "I have..."
+            return q.startsWith("i ") || q.startsWith("my ");
+        }
+
+        // Yes/No needs a direct question
+        if (s.contains("yes") && s.contains("no")) {
+            return q.contains("do i") || q.contains("have i")
+                    || q.contains("am i") || q.contains("can i")
+                    || q.contains("did i") || q.contains("is my");
+        }
+
+        // Numeric scales need rating questions
+        if (scale.matches("\\d+-\\d+")) {
+            return q.contains("rate") || q.contains("scale") || q.contains("how much")
+                    || q.contains("how") || q.contains("level");
+        }
+
+        return true; // Accept by default for unknown scales
+    }
+
+    // ── Fallback questions that fit common scales ─────────
+    private static String getFallbackAdaptiveQuestion(String focus, String scale) {
+        String[] options = parseScaleOptions(scale);
+        String s = scale.toLowerCase();
+
+        // Frequency scale fallbacks
+        if (s.contains("never") && s.contains("always")) {
+            switch (focus.toLowerCase()) {
+                case "anxiety":
+                    return "How often do I feel anxious or worried about everyday situations?";
+                case "depression":
+                    return "How often do I feel sad, empty, or hopeless throughout the day?";
+                case "sleep":
+                    return "How often do I have difficulty falling or staying asleep?";
+                case "social":
+                    return "How often do I avoid social situations due to discomfort?";
+                default:
+                    return "How often do I feel overwhelmed by my emotions?";
+            }
+        }
+
+        // Agreement scale fallbacks
+        if (s.contains("agree") || s.contains("disagree")) {
+            switch (focus.toLowerCase()) {
+                case "anxiety":
+                    return "I find it difficult to control my worrying thoughts.";
+                case "depression":
+                    return "I feel a persistent sense of sadness that affects my daily life.";
+                case "sleep":
+                    return "My sleep problems significantly impact my daily functioning.";
+                case "social":
+                    return "I feel uncomfortable in most social situations.";
+                default:
+                    return "I struggle to manage my emotions on a daily basis.";
+            }
+        }
+
+        // Numeric scale fallbacks
+        if (scale.matches("\\d+-\\d+")) {
+            String[] parts = scale.split("-");
+            String max = parts[1];
+            switch (focus.toLowerCase()) {
+                case "anxiety":
+                    return "On a scale of 1-" + max + ", how intense is my anxiety today?";
+                case "depression":
+                    return "On a scale of 1-" + max + ", how low is my mood right now?";
+                case "sleep":
+                    return "On a scale of 1-" + max + ", how poor has my sleep quality been?";
+                case "social":
+                    return "On a scale of 1-" + max + ", how much do I avoid social interactions?";
+                default:
+                    return "On a scale of 1-" + max + ", how much does this affect my daily life?";
+            }
+        }
+
+        // Yes/No fallbacks
+        if (s.contains("yes") && s.contains("no")) {
+            switch (focus.toLowerCase()) {
+                case "anxiety":
+                    return "Do I experience physical symptoms like racing heart when anxious?";
+                case "depression":
+                    return "Have I lost interest in activities I used to enjoy?";
+                case "sleep":
+                    return "Do I regularly wake up feeling unrefreshed or tired?";
+                case "social":
+                    return "Do I avoid social situations because of fear or discomfort?";
+                default:
+                    return "Do I feel that my mental health significantly impacts my daily life?";
+            }
+        }
+
+        // Generic fallback
+        return "How would you describe your experience with " + focus + " recently?";
+    }
+
+    // ── Build JSON request payload ────────────────────────
+    private static String buildJsonRequest(
+            String model,
+            String systemPrompt,
+            String userPrompt,
+            int maxTokens,
+            double temperature
+    ) {
+        return "{"
+                + "\"model\": \"" + model + "\","
+                + "\"messages\": ["
+                + "{\"role\": \"system\", \"content\": \"" + escapeJson(systemPrompt) + "\"},"
+                + "{\"role\": \"user\", \"content\": \"" + escapeJson(userPrompt) + "\"}"
+                + "],"
+                + "\"max_tokens\": " + maxTokens + ","
+                + "\"temperature\": " + temperature
+                + "}";
+    }
+
+    // ── Send HTTP request to Groq ─────────────────────────
+    private static String sendRequest(String jsonPayload) throws Exception {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(GROQ_URL))
                 .header("Authorization", "Bearer " + GROQ_API_KEY)
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(jsonRequest))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                 .build();
 
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = client.send(
+                request,
+                HttpResponse.BodyHandlers.ofString()
+        );
 
-        if (response.statusCode() == 200) {
-            String body = response.body();
-
-            // Extract content from Groq response
-            int start = body.indexOf("\"content\":\"") + 11;
-            if (start == 10) {
-                start = body.indexOf("\"content\": \"") + 12;
-            }
-
-            int end = body.indexOf("\"", start + 1);
-            while (end < body.length()) {
-                if (body.charAt(end) == '"' && body.charAt(end - 1) != '\\') {
-                    if (end + 1 < body.length() && (body.charAt(end + 1) == ',' || body.charAt(end + 1) == '}')) {
-                        break;
-                    }
-                }
-                end++;
-                if (end >= body.length()) {
-                    end = body.indexOf("\"},\"logprobs\"");
-                    break;
-                }
-            }
-
-            if (start > 10 && end > start) {
-                String content = body.substring(start, end);
-                return content.replace("\\n", "\n").replace("\\\"", "\"");
-            }
+        if (response.statusCode() == 401) {
+            throw new Exception("Invalid API key (401). Check your GROQ_API_KEY in AppConfig.");
+        }
+        if (response.statusCode() != 200) {
+            throw new Exception("Groq API error: HTTP " + response.statusCode()
+                    + " - " + response.body());
         }
 
-        // Return a default approved response if API fails
-        return "{\"isAppropriate\": true, \"confidence\": 1.0, \"reason\": \"API unavailable, auto-approved\", \"filteredVersion\": \"" + escapeJson(reviewText) + "\", \"containsProfanity\": false, \"containsHateSpeech\": false, \"containsHarassment\": false}";
+        return response.body();
     }
 
+    // ── Extract content from Groq JSON response ───────────
+    private static String extractContent(String responseBody) {
+        if (responseBody == null || responseBody.isEmpty()) return null;
+
+        try {
+            // Primary extraction — standard Groq response format
+            String marker = "\"content\":\"";
+            int start = responseBody.indexOf(marker);
+            if (start == -1) {
+                marker = "\"content\": \"";
+                start  = responseBody.indexOf(marker);
+            }
+            if (start == -1) return null;
+
+            start += marker.length();
+
+            // Find closing quote accounting for escaped quotes
+            StringBuilder content = new StringBuilder();
+            int i = start;
+            while (i < responseBody.length()) {
+                char c = responseBody.charAt(i);
+                if (c == '\\' && i + 1 < responseBody.length()) {
+                    char next = responseBody.charAt(i + 1);
+                    switch (next) {
+                        case 'n':  content.append('\n'); i += 2; break;
+                        case 't':  content.append('\t'); i += 2; break;
+                        case '"':  content.append('"');  i += 2; break;
+                        case '\\': content.append('\\'); i += 2; break;
+                        default:   content.append(c);    i++;    break;
+                    }
+                } else if (c == '"') {
+                    break; // End of content
+                } else {
+                    content.append(c);
+                    i++;
+                }
+            }
+
+            return content.toString().trim();
+
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // ── Parse response helper (public for backward compat) ─
+    public static String parseResponse(String rawJson) {
+        String extracted = extractContent(rawJson);
+        return extracted != null ? extracted : rawJson;
+    }
+
+    // ── Default moderation JSON ───────────────────────────
+    private static String defaultModerationJson(String reviewText) {
+        return "{\"isAppropriate\": true, \"confidence\": 1.0, "
+                + "\"reason\": \"API unavailable, auto-approved\", "
+                + "\"filteredVersion\": \"" + escapeJson(reviewText) + "\", "
+                + "\"containsProfanity\": false, "
+                + "\"containsHateSpeech\": false, "
+                + "\"containsHarassment\": false}";
+    }
+
+    // ── JSON escaping ─────────────────────────────────────
     private static String escapeJson(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\")
@@ -218,31 +479,5 @@ public class GeminiService {
                 .replace("\n", "\\n")
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
-    }
-
-    public static String parseResponse(String rawJson) {
-        try {
-            if (rawJson.contains("\"content\": \"")) {
-                int start = rawJson.indexOf("\"content\": \"") + 12;
-                int end = rawJson.indexOf("\"", start);
-                return rawJson.substring(start, end).replace("\\n", "\n").replace("\\\"", "\"");
-            }
-        } catch (Exception e) {
-            return "Réponse brute : " + rawJson;
-        }
-        return rawJson;
-    }
-
-    public static String generateAdaptiveQuestion(String context, String focus) throws Exception {
-        String prompt = String.format(
-                "You are an expert clinical psychologist. Based on this assessment context: %s\n\n" +
-                        "Generate ONE specific, clinically appropriate %s question. " +
-                        "The question should be in first-person format and use a 5-point scale " +
-                        "(Never/Rarely/Sometimes/Often/Always).\n\n" +
-                        "Return ONLY the question text, no explanations, no numbering.",
-                context, focus
-        );
-
-        return generateContent(prompt);
     }
 }

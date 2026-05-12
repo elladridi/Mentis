@@ -6,6 +6,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -15,7 +16,6 @@ import javafx.scene.text.FontWeight;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.util.StringConverter;
 import models.Assessment;
 import models.Question;
 
@@ -27,26 +27,58 @@ public class QuestionFormDialog extends Stage {
     private MentisLoginFrame parentApp;
     private QuestionController questionController;
     private AssessmentController assessmentController;
-    private Question question; // null for add, not null for edit
-    private int assessmentId; // for adding questions to specific assessment
+    private Question question;
+    private int assessmentId;
 
     private ComboBox<Assessment> assessmentCombo;
     private TextArea questionTextArea;
-    private TextField scaleField;
+    private ComboBox<String> scaleCombo;
+    private TextField customScaleField;
+    private Label scalePreviewLabel;
     private Label typeDisplayLabel;
+    private Label previewQuestionText;
+    private Label previewScaleLabel;
 
-    // Color constants
-    private static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
-    private static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
-    private static final Color BUTTON_LIGHT_GREEN = Color.rgb(160, 200, 180);
-    private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
-    private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
-    private static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
-    private static final Color ERROR_RED = Color.rgb(200, 80, 80);
+    // Scale presets
+    private static final String[][] SCALE_PRESETS = {
+            {"Frequency — Never / Rarely / Sometimes / Often / Always",
+                    "Never/Rarely/Sometimes/Often/Always"},
+            {"Intensity — Not at all / A little / Moderately / Quite a bit / Extremely",
+                    "Not at all/A little/Moderately/Quite a bit/Extremely"},
+            {"Frequency 2 — Never / Sometimes / Half the time / Usually / Always",
+                    "Never/Sometimes/Half the time/Usually/Always"},
+            {"Agreement — Strongly Disagree / Disagree / Neutral / Agree / Strongly Agree",
+                    "Strongly Disagree/Disagree/Neutral/Agree/Strongly Agree"},
+            {"PHQ-9 — Not at all / Several days / More than half / Nearly every day",
+                    "Not at all/Several days/More than half/Nearly every day"},
+            {"Numeric — 1 to 5", "1-5"},
+            {"Numeric — 1 to 10", "1-10"},
+            {"Binary — Yes / No", "Yes/No"},
+            {"Scored — 0=Never / 1=Rarely / 2=Sometimes / 3=Often / 4=Always",
+                    "0=Never,1=Rarely,2=Sometimes,3=Often,4=Always"},
+            {"✏️  Custom — type your own", "CUSTOM"},
+    };
 
-    public QuestionFormDialog(MentisLoginFrame parentApp, QuestionController questionController,
-                              AssessmentController assessmentController, Question question,
-                              Integer specificAssessmentId, boolean isEdit) {
+    // Modern color scheme matching Symfony
+    private static final String GRADIENT_START = "#50C878";
+    private static final String GRADIENT_END = "#2E7D32";
+    private static final Color BACKGROUND_LIGHT = Color.rgb(248, 250, 248);
+    private static final Color CARD_WHITE = Color.WHITE;
+    private static final Color TEXT_DARK = Color.rgb(46, 125, 50);
+    private static final Color TEXT_MUTED = Color.rgb(108, 117, 125);
+    private static final Color BORDER_COLOR = Color.rgb(222, 226, 230);
+    private static final Color PREVIEW_BG = Color.rgb(248, 249, 250);
+    private static final Color SUCCESS_BG = Color.rgb(80, 200, 120, 0.1);
+    private static final Color WARNING_BG = Color.rgb(255, 193, 7, 0.1);
+
+    public QuestionFormDialog(
+            MentisLoginFrame parentApp,
+            QuestionController questionController,
+            AssessmentController assessmentController,
+            Question question,
+            Integer specificAssessmentId,
+            boolean isEdit
+    ) {
         this.parentApp = parentApp;
         this.questionController = questionController;
         this.assessmentController = assessmentController;
@@ -55,22 +87,15 @@ public class QuestionFormDialog extends Stage {
 
         initModality(Modality.APPLICATION_MODAL);
         initStyle(StageStyle.UTILITY);
-        setTitle(isEdit ? "Edit Question" : "Add Question");
+        setTitle(isEdit ? "Edit Question - Mentis" : "Add Question - Mentis");
 
-        // Main layout
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-
-        // Header
+        root.setStyle("-fx-background-color: " + toHex(BACKGROUND_LIGHT) + ";");
         root.setTop(createHeader(isEdit));
-
-        // Form
         root.setCenter(createForm());
-
-        // Buttons
         root.setBottom(createButtonPanel(isEdit));
 
-        Scene scene = new Scene(root, 700, 550);
+        Scene scene = new Scene(root, 850, 750);
         setScene(scene);
         setResizable(false);
 
@@ -84,201 +109,46 @@ public class QuestionFormDialog extends Stage {
     private HBox createHeader(boolean isEdit) {
         HBox header = new HBox();
         header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(20, 30, 20, 30));
-        header.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        header.setPadding(new Insets(25, 35, 20, 35));
+        header.setStyle("-fx-background-color: " + toHex(BACKGROUND_LIGHT) + ";");
 
-        Label titleLabel = new Label(isEdit ? "Edit Question" : "Add New Question");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
-        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        VBox headerContent = new VBox(5);
 
-        header.getChildren().add(titleLabel);
+        Label titleLabel = new Label(isEdit ? "✏️ Edit Question" : "✨ Add New Question");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 28));
+        titleLabel.setStyle("-fx-text-fill: " + GRADIENT_END + ";");
+
+        Label subtitleLabel = new Label(isEdit ? "Update question details and settings" : "Create a new question for an assessment");
+        subtitleLabel.setFont(Font.font("Segoe UI", 14));
+        subtitleLabel.setTextFill(TEXT_MUTED);
+
+        headerContent.getChildren().addAll(titleLabel, subtitleLabel);
+        header.getChildren().add(headerContent);
+
         return header;
     }
 
     private ScrollPane createForm() {
-        GridPane formPanel = new GridPane();
-        formPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        formPanel.setPadding(new Insets(20, 30, 20, 30));
-        formPanel.setHgap(15);
-        formPanel.setVgap(15);
-        formPanel.setAlignment(Pos.TOP_CENTER);
+        VBox mainContainer = new VBox(20);
+        mainContainer.setStyle("-fx-background-color: " + toHex(BACKGROUND_LIGHT) + ";");
+        mainContainer.setPadding(new Insets(10, 35, 20, 35));
 
-        // Column constraints
-        ColumnConstraints col1 = new ColumnConstraints();
-        col1.setMinWidth(120);
-        col1.setHalignment(javafx.geometry.HPos.RIGHT);
+        // Create all sections
+        VBox assessmentSection = createAssessmentSection();
+        VBox questionSection = createQuestionSection();
+        VBox scaleSection = createScaleSection();
+        VBox previewSection = createPreviewSection();
 
-        ColumnConstraints col2 = new ColumnConstraints();
-        col2.setHgrow(Priority.ALWAYS);
-        col2.setFillWidth(true);
+        // Wrap sections in cards
+        VBox assessmentCard = createCard("📋 Assessment", assessmentSection);
+        VBox questionCard = createCard("❓ Question Text", questionSection);
+        VBox scaleCard = createCard("📊 Answer Scale", scaleSection);
+        VBox previewCard = createCard("👁️ Preview", previewSection);
 
-        formPanel.getColumnConstraints().addAll(col1, col2);
+        mainContainer.getChildren().addAll(assessmentCard, questionCard, scaleCard, previewCard);
 
-        int row = 0;
-
-        // Assessment selection
-        Label assessmentLabel = new Label("Assessment:");
-        assessmentLabel.setFont(Font.font("Segoe UI", 14));
-        assessmentLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        try {
-            List<Assessment> assessments = assessmentController.getAllAssessments();
-            ObservableList<Assessment> assessmentList = FXCollections.observableArrayList(assessments);
-
-            assessmentCombo = new ComboBox<>(assessmentList);
-            assessmentCombo.setPrefHeight(40);
-            assessmentCombo.setMaxWidth(Double.MAX_VALUE);
-            assessmentCombo.setStyle(
-                    "-fx-background-color: white;" +
-                            "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                            "-fx-border-radius: 5;" +
-                            "-fx-background-radius: 5;"
-            );
-
-// Style the button cell (what's displayed when nothing is selected/popup closed)
-            assessmentCombo.setButtonCell(new ListCell<Assessment>() {
-                @Override
-                protected void updateItem(Assessment item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || item == null) {
-                        setText(null);
-                    } else {
-                        setText(item.getTitle() + " (" + item.getType() + ")");
-                        setFont(Font.font("Segoe UI", 14));
-                    }
-                }
-            });
-
-// Style the popup list items
-            assessmentCombo.setCellFactory(lv -> new ListCell<Assessment>() {
-                @Override
-                protected void updateItem(Assessment item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || item == null) {
-                        setText(null);
-                    } else {
-                        setText(item.getTitle() + " (" + item.getType() + ")");
-                        setFont(Font.font("Segoe UI", 14));
-                    }
-                }
-            });
-
-            // Custom converter to display assessment title and type
-            assessmentCombo.setConverter(new StringConverter<Assessment>() {
-                @Override
-                public String toString(Assessment assessment) {
-                    return assessment == null ? "" :
-                            assessment.getTitle() + " (" + assessment.getType() + ")";
-                }
-
-                @Override
-                public Assessment fromString(String string) {
-                    return assessmentCombo.getItems().stream()
-                            .filter(a -> (a.getTitle() + " (" + a.getType() + ")").equals(string))
-                            .findFirst()
-                            .orElse(null);
-                }
-            });
-
-            // If specific assessment ID provided, select it
-            if (assessmentId != -1) {
-                for (Assessment a : assessmentList) {
-                    if (a.getAssessmentId() == assessmentId) {
-                        assessmentCombo.setValue(a);
-                        if (question != null) { // Editing existing question
-                            assessmentCombo.setDisable(true); // Can't change assessment for existing question
-                        }
-                        break;
-                    }
-                }
-            }
-
-            formPanel.add(assessmentLabel, 0, row);
-            formPanel.add(assessmentCombo, 1, row++);
-
-        } catch (SQLException e) {
-            Label errorLabel = new Label("Error loading assessments");
-            errorLabel.setTextFill(Color.web(toHex(ERROR_RED)));
-            formPanel.add(assessmentLabel, 0, row);
-            formPanel.add(errorLabel, 1, row++);
-        }
-
-        // Question Text
-        Label questionLabel = new Label("Question Text:");
-        questionLabel.setFont(Font.font("Segoe UI", 14));
-        questionLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-        questionLabel.setAlignment(Pos.TOP_RIGHT);
-
-        questionTextArea = new TextArea();
-        questionTextArea.setFont(Font.font("Segoe UI", 14));
-        questionTextArea.setWrapText(true);
-        questionTextArea.setPrefRowCount(4);
-        questionTextArea.setStyle(
-                "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8;"
-        );
-
-        formPanel.add(questionLabel, 0, row);
-        formPanel.add(questionTextArea, 1, row++);
-
-        // Scale/Options
-        Label scaleLabel = new Label("Scale/Options:");
-        scaleLabel.setFont(Font.font("Segoe UI", 14));
-        scaleLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        VBox scaleContainer = new VBox(5);
-        scaleContainer.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-
-        scaleField = new TextField();
-        scaleField.setFont(Font.font("Segoe UI", 14));
-        scaleField.setPrefHeight(40);
-        scaleField.setStyle(
-                "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8 12;"
-        );
-
-        Label scaleHint = new Label("Examples: 1-5 or Never,Rarely,Sometimes,Often,Always or Yes,No");
-        scaleHint.setFont(Font.font("Segoe UI", 12));
-        scaleHint.setTextFill(Color.web(toHex(TEXT_LIGHT)));
-
-        scaleContainer.getChildren().addAll(scaleField, scaleHint);
-
-        formPanel.add(scaleLabel, 0, row);
-        formPanel.add(scaleContainer, 1, row++);
-
-        // Assessment Type Display
-        Label typeLabel = new Label("Assessment Type:");
-        typeLabel.setFont(Font.font("Segoe UI", 14));
-        typeLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        typeDisplayLabel = new Label();
-        typeDisplayLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        typeDisplayLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
-
-        // Update type display when assessment selection changes
-        if (assessmentCombo != null) {
-            assessmentCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal != null) {
-                    typeDisplayLabel.setText(newVal.getType());
-                }
-            });
-
-            // Set initial value
-            if (assessmentCombo.getValue() != null) {
-                typeDisplayLabel.setText(assessmentCombo.getValue().getType());
-            }
-        }
-
-        formPanel.add(typeLabel, 0, row);
-        formPanel.add(typeDisplayLabel, 1, row++);
-
-        // Wrap in ScrollPane
-        ScrollPane scrollPane = new ScrollPane(formPanel);
-        scrollPane.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        ScrollPane scrollPane = new ScrollPane(mainContainer);
+        scrollPane.setStyle("-fx-background-color: " + toHex(BACKGROUND_LIGHT) + ";");
         scrollPane.setBorder(null);
         scrollPane.setFitToWidth(true);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
@@ -286,71 +156,570 @@ public class QuestionFormDialog extends Stage {
         return scrollPane;
     }
 
-    private HBox createButtonPanel(boolean isEdit) {
-        HBox buttonPanel = new HBox(15);
-        buttonPanel.setAlignment(Pos.CENTER_RIGHT);
-        buttonPanel.setPadding(new Insets(20, 30, 20, 30));
-        buttonPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+    private VBox createCard(String title, VBox content) {
+        VBox card = new VBox(15);
+        card.setStyle(
+                "-fx-background-color: " + toHex(CARD_WHITE) + ";" +
+                        "-fx-background-radius: 16px;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);"
+        );
+        card.setPadding(new Insets(20));
 
-        Button cancelButton = createButton("Cancel", BUTTON_LIGHT_GREEN);
-        cancelButton.setOnAction(e -> close());
+        Label titleLabel = new Label(title);
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
+        titleLabel.setStyle("-fx-text-fill: " + GRADIENT_END + ";");
 
-        Button saveButton = createButton(isEdit ? "Save Changes" : "Add Question", ACCENT_DARK_GREEN);
-        saveButton.setTextFill(Color.WHITE);
-        saveButton.setOnAction(e -> saveQuestion());
-
-        buttonPanel.getChildren().addAll(cancelButton, saveButton);
-        return buttonPanel;
+        card.getChildren().addAll(titleLabel, content);
+        return card;
     }
 
-    private Button createButton(String text, Color bgColor) {
-        Button button = new Button(text);
-        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        button.setTextFill(bgColor == ACCENT_DARK_GREEN ? Color.WHITE : Color.web(toHex(TEXT_DARK)));
-        button.setStyle(
-                "-fx-background-color: #" + toHex(bgColor) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 12 30;" +
-                        "-fx-cursor: hand;"
+    private VBox createAssessmentSection() {
+        VBox section = new VBox(10);
+
+        try {
+            List<Assessment> assessments = assessmentController.getAllAssessments();
+            ObservableList<Assessment> list = FXCollections.observableArrayList(assessments);
+
+            assessmentCombo = new ComboBox<>(list);
+            assessmentCombo.setPrefHeight(45);
+            assessmentCombo.setMaxWidth(Double.MAX_VALUE);
+            styleComboBox(assessmentCombo);
+
+            assessmentCombo.setButtonCell(new ListCell<Assessment>() {
+                @Override
+                protected void updateItem(Assessment item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? null
+                            : item.getTitle() + " (" + item.getType() + ")");
+                    setFont(Font.font("Segoe UI", 13));
+                }
+            });
+            assessmentCombo.setCellFactory(lv -> new ListCell<Assessment>() {
+                @Override
+                protected void updateItem(Assessment item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? null
+                            : item.getTitle() + " (" + item.getType() + ")");
+                    setFont(Font.font("Segoe UI", 13));
+                }
+            });
+
+            if (assessmentId != -1) {
+                for (Assessment a : list) {
+                    if (a.getAssessmentId() == assessmentId) {
+                        assessmentCombo.setValue(a);
+                        if (question != null) assessmentCombo.setDisable(true);
+                        break;
+                    }
+                }
+            }
+
+            // Type display
+            HBox typeBox = new HBox(10);
+            typeBox.setAlignment(Pos.CENTER_LEFT);
+            Label typeLabel = new Label("Assessment Type:");
+            typeLabel.setFont(Font.font("Segoe UI", 12));
+            typeLabel.setTextFill(TEXT_MUTED);
+
+            typeDisplayLabel = new Label("—");
+            typeDisplayLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+            typeDisplayLabel.setTextFill(Color.web(GRADIENT_END));
+            typeDisplayLabel.setStyle(
+                    "-fx-background-color: " + toHex(SUCCESS_BG) + ";" +
+                            "-fx-background-radius: 20px;" +
+                            "-fx-padding: 5 15;"
+            );
+
+            typeBox.getChildren().addAll(typeLabel, typeDisplayLabel);
+
+            if (assessmentCombo.getValue() != null) {
+                typeDisplayLabel.setText(assessmentCombo.getValue().getType());
+            }
+
+            assessmentCombo.valueProperty().addListener((obs, old, nw) -> {
+                if (nw != null) typeDisplayLabel.setText(nw.getType());
+            });
+
+            section.getChildren().addAll(assessmentCombo, typeBox);
+
+            Label helpText = new Label("Select which assessment this question belongs to");
+            helpText.setFont(Font.font("Segoe UI", 11));
+            helpText.setTextFill(TEXT_MUTED);
+            section.getChildren().add(helpText);
+
+        } catch (SQLException e) {
+            Label errorLabel = new Label("⚠️ Error loading assessments: " + e.getMessage());
+            errorLabel.setTextFill(Color.RED);
+            section.getChildren().add(errorLabel);
+        }
+
+        return section;
+    }
+
+    private VBox createQuestionSection() {
+        VBox section = new VBox(10);
+
+        questionTextArea = new TextArea();
+        questionTextArea.setFont(Font.font("Segoe UI", 14));
+        questionTextArea.setWrapText(true);
+        questionTextArea.setPrefRowCount(4);
+        questionTextArea.setPromptText("Enter your question here...");
+        styleTextArea(questionTextArea);
+
+        section.getChildren().add(questionTextArea);
+
+        // Live preview listener
+        questionTextArea.textProperty().addListener((obs, old, nw) -> {
+            if (previewQuestionText != null) {
+                previewQuestionText.setText(nw.isEmpty() ? "Question preview will appear here" : nw);
+                previewQuestionText.setStyle(nw.isEmpty() ?
+                        "-fx-text-fill: " + toHex(TEXT_MUTED) + ";" :
+                        "-fx-text-fill: " + GRADIENT_END + ";-fx-font-weight: bold;");
+            }
+        });
+
+        return section;
+    }
+
+    private VBox createScaleSection() {
+        VBox section = new VBox(12);
+
+        // Scale ComboBox
+        ObservableList<String> scaleLabels = FXCollections.observableArrayList();
+        for (String[] preset : SCALE_PRESETS) {
+            scaleLabels.add(preset[0]);
+        }
+
+        scaleCombo = new ComboBox<>(scaleLabels);
+        scaleCombo.setPrefHeight(45);
+        scaleCombo.setMaxWidth(Double.MAX_VALUE);
+        scaleCombo.setPromptText("-- Select an answer scale --");
+        styleComboBox(scaleCombo);
+
+        // Custom scale field
+        customScaleField = new TextField();
+        customScaleField.setPromptText("Type options separated by / e.g., Poor/Fair/Good/Very Good/Excellent");
+        customScaleField.setVisible(false);
+        customScaleField.setManaged(false);
+        styleTextField(customScaleField);
+
+        // Preview area
+        scalePreviewLabel = new Label();
+        scalePreviewLabel.setFont(Font.font("Segoe UI", 12));
+        scalePreviewLabel.setWrapText(true);
+        scalePreviewLabel.setStyle(
+                "-fx-background-color: " + toHex(PREVIEW_BG) + ";" +
+                        "-fx-background-radius: 8px;" +
+                        "-fx-padding: 10;" +
+                        "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                        "-fx-border-radius: 8px;"
+        );
+        scalePreviewLabel.setVisible(false);
+        scalePreviewLabel.setManaged(false);
+
+        // Info box
+        VBox infoBox = new VBox(8);
+        infoBox.setStyle(
+                "-fx-background-color: " + toHex(WARNING_BG) + ";" +
+                        "-fx-background-radius: 12px;" +
+                        "-fx-padding: 12;"
         );
 
-        // Hover effect
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(bgColor.darker()) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 30;" +
-                                "-fx-cursor: hand;"
-                )
+        Label infoTitle = new Label("💡 Examples:");
+        infoTitle.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        infoTitle.setTextFill(Color.web(GRADIENT_END));
+
+        HBox examplesBox = new HBox(15);
+        examplesBox.setAlignment(Pos.CENTER_LEFT);
+        String[] examples = {"Never/Rarely/Sometimes/Often/Always", "1-5 numeric", "Yes/No", "1=Never,2=Rarely,3=Sometimes"};
+        for (String example : examples) {
+            Label exampleLabel = new Label(example);
+            exampleLabel.setFont(Font.font("Courier New", 11));
+            exampleLabel.setStyle(
+                    "-fx-background-color: " + toHex(CARD_WHITE) + ";" +
+                            "-fx-background-radius: 20px;" +
+                            "-fx-padding: 4 12;" +
+                            "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                            "-fx-border-radius: 20px;"
+            );
+            examplesBox.getChildren().add(exampleLabel);
+        }
+
+        infoBox.getChildren().addAll(infoTitle, examplesBox);
+
+        // Event handler
+        scaleCombo.setOnAction(e -> {
+            int idx = scaleCombo.getSelectionModel().getSelectedIndex();
+            if (idx < 0) return;
+
+            boolean isCustom = SCALE_PRESETS[idx][1].equals("CUSTOM");
+
+            customScaleField.setVisible(isCustom);
+            customScaleField.setManaged(isCustom);
+
+            if (!isCustom) {
+                String value = SCALE_PRESETS[idx][1];
+                updateScalePreview(value);
+            } else {
+                scalePreviewLabel.setVisible(false);
+                scalePreviewLabel.setManaged(false);
+            }
+
+            // Update preview
+            if (previewScaleLabel != null) {
+                if (!isCustom && SCALE_PRESETS[idx][1] != null) {
+                    updatePreviewScale(SCALE_PRESETS[idx][0]);
+                } else if (isCustom && !customScaleField.getText().isEmpty()) {
+                    updatePreviewScale("Custom: " + customScaleField.getText());
+                }
+            }
+        });
+
+        customScaleField.textProperty().addListener((obs, old, nw) -> {
+            updateScalePreview(nw);
+            if (previewScaleLabel != null && scaleCombo.getSelectionModel().getSelectedIndex() >= 0) {
+                int idx = scaleCombo.getSelectionModel().getSelectedIndex();
+                if (idx >= 0 && SCALE_PRESETS[idx][1].equals("CUSTOM")) {
+                    updatePreviewScale("Custom: " + (nw.isEmpty() ? "No scale entered" : nw));
+                }
+            }
+        });
+
+        section.getChildren().addAll(scaleCombo, customScaleField, scalePreviewLabel, infoBox);
+
+        return section;
+    }
+
+    private VBox createPreviewSection() {
+        VBox section = new VBox(12);
+
+        VBox previewBox = new VBox(10);
+        previewBox.setStyle(
+                "-fx-background-color: " + toHex(CARD_WHITE) + ";" +
+                        "-fx-background-radius: 12px;" +
+                        "-fx-padding: 15;" +
+                        "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                        "-fx-border-radius: 12px;"
         );
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(bgColor) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 30;" +
-                                "-fx-cursor: hand;"
-                )
+
+        previewQuestionText = new Label("Question preview will appear here");
+        previewQuestionText.setFont(Font.font("Segoe UI", 14));
+        previewQuestionText.setWrapText(true);
+        previewQuestionText.setTextFill(TEXT_MUTED);
+
+        Separator separator = new Separator();
+
+        HBox scaleInfoBox = new HBox(10);
+        scaleInfoBox.setAlignment(Pos.CENTER_LEFT);
+        Label scaleInfoLabel = new Label("Scale:");
+        scaleInfoLabel.setFont(Font.font("Segoe UI", 12));
+        scaleInfoLabel.setTextFill(TEXT_MUTED);
+
+        previewScaleLabel = new Label("No scale selected");
+        previewScaleLabel.setFont(Font.font("Segoe UI", 12));
+        previewScaleLabel.setStyle(
+                "-fx-background-color: " + toHex(SUCCESS_BG) + ";" +
+                        "-fx-background-radius: 20px;" +
+                        "-fx-padding: 4 12;"
         );
+
+        scaleInfoBox.getChildren().addAll(scaleInfoLabel, previewScaleLabel);
+
+        previewBox.getChildren().addAll(previewQuestionText, separator, scaleInfoBox);
+        section.getChildren().add(previewBox);
+
+        return section;
+    }
+
+    private HBox createButtonPanel(boolean isEdit) {
+        HBox panel = new HBox(15);
+        panel.setAlignment(Pos.CENTER_RIGHT);
+        panel.setPadding(new Insets(25, 35, 30, 35));
+        panel.setStyle("-fx-background-color: " + toHex(BACKGROUND_LIGHT) + ";");
+
+        Button cancelButton = createModernButton("Cancel", false);
+        cancelButton.setOnAction(e -> close());
+
+        Button saveButton = createModernButton(isEdit ? "Save Changes" : "Add Question", true);
+        saveButton.setOnAction(e -> saveQuestion());
+
+        panel.getChildren().addAll(cancelButton, saveButton);
+        return panel;
+    }
+
+    private Button createModernButton(String text, boolean isPrimary) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+
+        if (isPrimary) {
+            button.setStyle(
+                    "-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, " + GRADIENT_START + ", " + GRADIENT_END + ");" +
+                            "-fx-background-radius: 25px;" +
+                            "-fx-text-fill: white;" +
+                            "-fx-padding: 12 35;" +
+                            "-fx-cursor: hand;"
+            );
+            button.setOnMouseEntered(e ->
+                    button.setStyle(
+                            "-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, " + GRADIENT_END + ", " + GRADIENT_START + ");" +
+                                    "-fx-background-radius: 25px;" +
+                                    "-fx-text-fill: white;" +
+                                    "-fx-padding: 12 35;" +
+                                    "-fx-cursor: hand;"
+                    )
+            );
+        } else {
+            button.setStyle(
+                    "-fx-background-color: transparent;" +
+                            "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                            "-fx-border-radius: 25px;" +
+                            "-fx-text-fill: " + toHex(TEXT_MUTED) + ";" +
+                            "-fx-padding: 12 35;" +
+                            "-fx-cursor: hand;"
+            );
+            button.setOnMouseEntered(e ->
+                    button.setStyle(
+                            "-fx-background-color: " + toHex(PREVIEW_BG) + ";" +
+                                    "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                                    "-fx-border-radius: 25px;" +
+                                    "-fx-text-fill: " + toHex(TEXT_DARK) + ";" +
+                                    "-fx-padding: 12 35;" +
+                                    "-fx-cursor: hand;"
+                    )
+            );
+        }
+
+        button.setOnMouseExited(e -> {
+            if (isPrimary) {
+                button.setStyle(
+                        "-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, " + GRADIENT_START + ", " + GRADIENT_END + ");" +
+                                "-fx-background-radius: 25px;" +
+                                "-fx-text-fill: white;" +
+                                "-fx-padding: 12 35;" +
+                                "-fx-cursor: hand;"
+                );
+            } else {
+                button.setStyle(
+                        "-fx-background-color: transparent;" +
+                                "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                                "-fx-border-radius: 25px;" +
+                                "-fx-text-fill: " + toHex(TEXT_MUTED) + ";" +
+                                "-fx-padding: 12 35;" +
+                                "-fx-cursor: hand;"
+                );
+            }
+        });
 
         return button;
     }
 
-    private void loadQuestionData() {
-        if (question != null) {
-            questionTextArea.setText(question.getText());
-            scaleField.setText(question.getScale());
+    private void styleTextField(TextField field) {
+        field.setStyle(
+                "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                        "-fx-border-radius: 8px;" +
+                        "-fx-background-radius: 8px;" +
+                        "-fx-padding: 10;" +
+                        "-fx-font-family: 'Segoe UI';"
+        );
+
+        field.focusedProperty().addListener((obs, old, nw) -> {
+            if (nw) {
+                field.setStyle(
+                        "-fx-border-color: " + GRADIENT_START + ";" +
+                                "-fx-border-radius: 8px;" +
+                                "-fx-background-radius: 8px;" +
+                                "-fx-padding: 10;" +
+                                "-fx-font-family: 'Segoe UI';" +
+                                "-fx-border-width: 2px;"
+                );
+            } else {
+                field.setStyle(
+                        "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                                "-fx-border-radius: 8px;" +
+                                "-fx-background-radius: 8px;" +
+                                "-fx-padding: 10;" +
+                                "-fx-font-family: 'Segoe UI';" +
+                                "-fx-border-width: 1px;"
+                );
+            }
+        });
+    }
+
+    private void styleTextArea(TextArea field) {
+        field.setStyle(
+                "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                        "-fx-border-radius: 8px;" +
+                        "-fx-background-radius: 8px;" +
+                        "-fx-padding: 10;" +
+                        "-fx-font-family: 'Segoe UI';"
+        );
+
+        field.focusedProperty().addListener((obs, old, nw) -> {
+            if (nw) {
+                field.setStyle(
+                        "-fx-border-color: " + GRADIENT_START + ";" +
+                                "-fx-border-radius: 8px;" +
+                                "-fx-background-radius: 8px;" +
+                                "-fx-padding: 10;" +
+                                "-fx-font-family: 'Segoe UI';" +
+                                "-fx-border-width: 2px;"
+                );
+            } else {
+                field.setStyle(
+                        "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                                "-fx-border-radius: 8px;" +
+                                "-fx-background-radius: 8px;" +
+                                "-fx-padding: 10;" +
+                                "-fx-font-family: 'Segoe UI';" +
+                                "-fx-border-width: 1px;"
+                );
+            }
+        });
+    }
+
+    private void styleComboBox(ComboBox<?> comboBox) {
+        comboBox.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                        "-fx-border-radius: 8px;" +
+                        "-fx-background-radius: 8px;" +
+                        "-fx-font-family: 'Segoe UI';" +
+                        "-fx-font-size: 13px;"
+        );
+
+        comboBox.focusedProperty().addListener((obs, old, nw) -> {
+            if (nw) {
+                comboBox.setStyle(
+                        "-fx-background-color: white;" +
+                                "-fx-border-color: " + GRADIENT_START + ";" +
+                                "-fx-border-radius: 8px;" +
+                                "-fx-background-radius: 8px;" +
+                                "-fx-font-family: 'Segoe UI';" +
+                                "-fx-font-size: 13px;" +
+                                "-fx-border-width: 2px;"
+                );
+            } else {
+                comboBox.setStyle(
+                        "-fx-background-color: white;" +
+                                "-fx-border-color: " + toHex(BORDER_COLOR) + ";" +
+                                "-fx-border-radius: 8px;" +
+                                "-fx-background-radius: 8px;" +
+                                "-fx-font-family: 'Segoe UI';" +
+                                "-fx-font-size: 13px;" +
+                                "-fx-border-width: 1px;"
+                );
+            }
+        });
+    }
+
+    private void updatePreviewScale(String scaleText) {
+        if (previewScaleLabel != null) {
+            previewScaleLabel.setText(scaleText);
         }
     }
 
+    private void loadQuestionData() {
+        if (question == null) return;
+
+        questionTextArea.setText(question.getText());
+
+        String existingScale = question.getScale();
+        if (existingScale == null || existingScale.isEmpty()) return;
+
+        boolean matched = false;
+        for (int i = 0; i < SCALE_PRESETS.length; i++) {
+            if (SCALE_PRESETS[i][1].equals(existingScale)) {
+                scaleCombo.getSelectionModel().select(i);
+                updateScalePreview(existingScale);
+                updatePreviewScale(SCALE_PRESETS[i][0]);
+                matched = true;
+                break;
+            }
+        }
+
+        if (!matched) {
+            for (int i = 0; i < SCALE_PRESETS.length; i++) {
+                if (SCALE_PRESETS[i][1].equals("CUSTOM")) {
+                    scaleCombo.getSelectionModel().select(i);
+                    break;
+                }
+            }
+            customScaleField.setVisible(true);
+            customScaleField.setManaged(true);
+            customScaleField.setText(existingScale);
+            updateScalePreview(existingScale);
+            updatePreviewScale("Custom: " + existingScale);
+        }
+    }
+
+    private void updateScalePreview(String scaleValue) {
+        if (scaleValue == null || scaleValue.isEmpty() || scaleValue.equals("CUSTOM")) {
+            scalePreviewLabel.setVisible(false);
+            scalePreviewLabel.setManaged(false);
+            return;
+        }
+
+        String[] options = parseScaleOptions(scaleValue);
+        if (options.length == 0) {
+            scalePreviewLabel.setVisible(false);
+            scalePreviewLabel.setManaged(false);
+            return;
+        }
+
+        StringBuilder preview = new StringBuilder("📊 Options:  ");
+        for (int i = 0; i < options.length; i++) {
+            preview.append(options[i].trim());
+            if (i < options.length - 1) preview.append("  •  ");
+        }
+
+        scalePreviewLabel.setText(preview.toString());
+        scalePreviewLabel.setVisible(true);
+        scalePreviewLabel.setManaged(true);
+    }
+
+    private String[] parseScaleOptions(String scale) {
+        if (scale == null || scale.isEmpty()) {
+            return new String[0];
+        }
+        scale = scale.trim();
+
+        if (scale.contains("/")) {
+            return scale.split("/");
+        }
+        if (scale.contains(",") && !scale.contains("=")) {
+            return scale.split(",");
+        }
+        if (scale.contains("=")) {
+            String[] pairs = scale.split(",");
+            String[] vals = new String[pairs.length];
+            for (int i = 0; i < pairs.length; i++) {
+                String[] kv = pairs[i].split("=");
+                vals[i] = kv.length > 1 ? kv[1].trim() : kv[0].trim();
+            }
+            return vals;
+        }
+        if (scale.matches("\\d+-\\d+")) {
+            String[] parts = scale.split("-");
+            int start = Integer.parseInt(parts[0]);
+            int end = Integer.parseInt(parts[1]);
+            String[] nums = new String[end - start + 1];
+            for (int i = 0; i <= end - start; i++) nums[i] = String.valueOf(start + i);
+            return nums;
+        }
+
+        return new String[]{scale};
+    }
+
     private void saveQuestion() {
-        // Validate inputs
-        if (questionTextArea.getText().trim().isEmpty()) {
+        String text = questionTextArea.getText().trim();
+        if (text.isEmpty()) {
             showAlert("Validation Error", "Please enter the question text.", Alert.AlertType.WARNING);
             return;
         }
 
-        if (scaleField.getText().trim().isEmpty()) {
-            showAlert("Validation Error", "Please enter the scale or options for the question.", Alert.AlertType.WARNING);
+        String scaleValue = getSelectedScaleValue();
+        if (scaleValue == null || scaleValue.isEmpty()) {
+            showAlert("Validation Error", "Please select an answer scale.", Alert.AlertType.WARNING);
             return;
         }
 
@@ -366,34 +735,22 @@ public class QuestionFormDialog extends Stage {
             }
 
             if (question == null) {
-                // Create new question
-                Question newQuestion = new Question();
-                newQuestion.setAssessmentId(selectedAssessmentId);
-                newQuestion.setText(questionTextArea.getText().trim());
-                newQuestion.setScale(scaleField.getText().trim());
-
-                questionController.createQuestion(newQuestion);
-
-                showAlert("Success", "Question created successfully!", Alert.AlertType.INFORMATION);
-
+                Question newQ = new Question();
+                newQ.setAssessmentId(selectedAssessmentId);
+                newQ.setText(text);
+                newQ.setScale(scaleValue);
+                questionController.createQuestion(newQ);
+                showAlert("Success", "✨ Question created successfully!", Alert.AlertType.INFORMATION);
             } else {
-                // Update existing question
                 question.setAssessmentId(selectedAssessmentId);
-                question.setText(questionTextArea.getText().trim());
-                question.setScale(scaleField.getText().trim());
-
+                question.setText(text);
+                question.setScale(scaleValue);
                 questionController.updateQuestion(question);
-
-                showAlert("Success", "Question updated successfully!", Alert.AlertType.INFORMATION);
+                showAlert("Success", "✅ Question updated successfully!", Alert.AlertType.INFORMATION);
             }
 
             close();
-
-            // Refresh the questions panel
-            if (parentApp != null) {
-                // Navigate to questions panel and refresh
-                parentApp.showQuestionPanel();
-            }
+            if (parentApp != null) parentApp.showQuestionPanel();
 
         } catch (SQLException e) {
             showAlert("Database Error", "Error saving question: " + e.getMessage(), Alert.AlertType.ERROR);
@@ -402,20 +759,45 @@ public class QuestionFormDialog extends Stage {
         }
     }
 
+    private String getSelectedScaleValue() {
+        int idx = scaleCombo.getSelectionModel().getSelectedIndex();
+        if (idx < 0) return null;
+
+        String value = SCALE_PRESETS[idx][1];
+
+        if (value.equals("CUSTOM")) {
+            String custom = customScaleField.getText().trim();
+            return custom.isEmpty() ? null : custom;
+        }
+
+        return value;
+    }
+
     private void showAlert(String title, String content, Alert.AlertType type) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.initOwner(this);
+
+        DialogPane dialogPane = alert.getDialogPane();
+        dialogPane.setStyle(
+                "-fx-background-color: " + toHex(CARD_WHITE) + ";" +
+                        "-fx-background-radius: 12px;" +
+                        "-fx-padding: 20;"
+        );
+
         alert.showAndWait();
     }
 
-    // ================= UTILITY =================
     private String toHex(Color color) {
-        return String.format("%02x%02x%02x",
+        return String.format("#%02x%02x%02x",
                 (int)(color.getRed() * 255),
                 (int)(color.getGreen() * 255),
                 (int)(color.getBlue() * 255));
+    }
+
+    private String toHex(String hexColor) {
+        return hexColor;
     }
 }
