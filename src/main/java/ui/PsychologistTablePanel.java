@@ -12,6 +12,8 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import utils.DatabaseConnection;
 import services.userservice;
+import javafx.application.Platform;
+import javafx.scene.Node;
 
 import java.sql.*;
 
@@ -151,71 +153,153 @@ public class PsychologistTablePanel extends VBox {
     }
 
     private void createTable() {
+
         table = new TableView<>();
+
         table.setStyle(
                 "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
-                        "-fx-border-width: 2;"
+                        "-fx-background-radius: 24;" +
+                        "-fx-border-radius: 24;" +
+                        "-fx-border-color: transparent;" +
+                        "-fx-padding: 10;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 25, 0, 0, 8);"
         );
-        // FIXED: setRowHeight doesn't exist in JavaFX TableView
-        table.setFixedCellSize(40);  // Use setFixedCellSize instead of setRowHeight
+
+        table.setFixedCellSize(65);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
         table.setPlaceholder(new Label("No psychologists found"));
 
-        // Define columns
-        TableColumn<PsychologistModel, Integer> idCol = new TableColumn<>("CIN");
+        // ================= COLUMNS =================
+
+        TableColumn<PsychologistModel, Integer> idCol =
+                new TableColumn<>("CIN");
         idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
-        idCol.setPrefWidth(80);
 
-        TableColumn<PsychologistModel, String> firstNameCol = new TableColumn<>("First Name");
+        TableColumn<PsychologistModel, String> firstNameCol =
+                new TableColumn<>("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
-        firstNameCol.setPrefWidth(150);
 
-        TableColumn<PsychologistModel, String> lastNameCol = new TableColumn<>("Last Name");
+        TableColumn<PsychologistModel, String> lastNameCol =
+                new TableColumn<>("Last Name");
         lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
-        lastNameCol.setPrefWidth(150);
 
-        TableColumn<PsychologistModel, String> phoneCol = new TableColumn<>("Phone");
+        TableColumn<PsychologistModel, String> phoneCol =
+                new TableColumn<>("Phone");
         phoneCol.setCellValueFactory(new PropertyValueFactory<>("phone"));
-        phoneCol.setPrefWidth(120);
 
-        TableColumn<PsychologistModel, String> dobCol = new TableColumn<>("Date of Birth");
+        TableColumn<PsychologistModel, String> dobCol =
+                new TableColumn<>("Date of Birth");
         dobCol.setCellValueFactory(new PropertyValueFactory<>("dob"));
-        dobCol.setPrefWidth(150);
 
-        TableColumn<PsychologistModel, String> emailCol = new TableColumn<>("Email");
+        TableColumn<PsychologistModel, String> emailCol =
+                new TableColumn<>("Email");
         emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
-        emailCol.setPrefWidth(200);
 
-        TableColumn<PsychologistModel, Void> actionCol = new TableColumn<>("Action");
-        actionCol.setPrefWidth(120);
+        TableColumn<PsychologistModel, Void> actionCol =
+                new TableColumn<>("Actions");
         actionCol.setCellFactory(col -> new ActionCell());
 
-        table.getColumns().addAll(idCol, firstNameCol, lastNameCol, phoneCol, dobCol, emailCol, actionCol);
+        table.getColumns().addAll(
+                idCol,
+                firstNameCol,
+                lastNameCol,
+                phoneCol,
+                dobCol,
+                emailCol,
+                actionCol
+        );
 
-        // Style table header
-        table.getColumns().forEach(col -> {
-            col.setStyle(
-                    "-fx-background-color: white;" +
-                            "-fx-text-fill: #" + toHex(ACCENT_GREEN) + ";" +
-                            "-fx-font-size: 14px;" +
-                            "-fx-font-weight: bold;" +
-                            "-fx-alignment: CENTER;"
+        // ================= HEADER STYLE =================
+
+        table.skinProperty().addListener((obs, oldSkin, newSkin) -> {
+
+            Platform.runLater(() -> {
+
+                Node header = table.lookup("TableHeaderRow");
+
+                if (header != null) {
+
+                    header.setStyle(
+                            "-fx-background-color: linear-gradient(to right, #50C878, #2E7D32);" +
+                                    "-fx-background-radius: 24 24 0 0;"
+                    );
+                }
+
+                table.lookupAll(".column-header").forEach(node -> {
+
+                    node.setStyle(
+                            "-fx-background-color: transparent;" +
+                                    "-fx-border-color: transparent;" +
+                                    "-fx-padding: 18 10;"
+                    );
+                });
+
+                table.lookupAll(".column-header .label").forEach(node -> {
+
+                    node.setStyle(
+                            "-fx-text-fill: white;" +
+                                    "-fx-font-size: 14px;" +
+                                    "-fx-font-weight: bold;"
+                    );
+                });
+            });
+        });
+
+        // ================= ROW STYLE =================
+
+        table.setRowFactory(tv -> new TableRow<PsychologistModel>() {
+
+            @Override
+            protected void updateItem(PsychologistModel item, boolean empty) {
+
+                super.updateItem(item, empty);
+
+                if (empty || item == null) {
+
+                    setStyle(
+                            "-fx-background-color: transparent;"
+                    );
+
+                } else {
+
+                    setStyle(
+                            getIndex() % 2 == 0
+                                    ? "-fx-background-color: white;"
+                                    : "-fx-background-color: #F8FBF9;"
+                    );
+                }
+            }
+        });
+
+        // ================= CELL STYLE =================
+
+        table.setStyle(table.getStyle() +
+                "-fx-selection-bar: #D7F5E3;" +
+                "-fx-selection-bar-non-focused: #D7F5E3;"
+        );
+
+        table.lookupAll(".table-cell").forEach(cell -> {
+
+            cell.setStyle(
+                    "-fx-text-fill: #2D3748;" +
+                            "-fx-font-size: 13px;" +
+                            "-fx-padding: 12 10;" +
+                            "-fx-border-color: transparent;"
             );
         });
 
-        // Center align specific columns
+        // ================= COLUMN ALIGNMENT =================
+
         idCol.setStyle("-fx-alignment: CENTER;");
         actionCol.setStyle("-fx-alignment: CENTER;");
 
-        // Left align text columns
         firstNameCol.setStyle("-fx-alignment: CENTER-LEFT;");
         lastNameCol.setStyle("-fx-alignment: CENTER-LEFT;");
         phoneCol.setStyle("-fx-alignment: CENTER-LEFT;");
         dobCol.setStyle("-fx-alignment: CENTER-LEFT;");
         emailCol.setStyle("-fx-alignment: CENTER-LEFT;");
-    }
-
-    private void loadPsychologistsFromDatabase() {
+    }    private void loadPsychologistsFromDatabase() {
         psychologistData = FXCollections.observableArrayList();
 
         try (Connection conn = DatabaseConnection.getConnection()) {

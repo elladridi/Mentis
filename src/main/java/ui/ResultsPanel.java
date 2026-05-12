@@ -803,7 +803,7 @@ public class ResultsPanel extends VBox {
                     String userName = "Unknown User";
                     try {
                         models.user user = userService.getuserById(result.getUserId());
-                        if (user != null) userName = user.getFirstName() + " " + user.getLastName();
+                        if (user != null) userName = user.getFirstname() + " " + user.getLastname();
                     } catch (Exception e) {
                         System.err.println("Error fetching user for ID " + result.getUserId() + ": " + e.getMessage());
                     }

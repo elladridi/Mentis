@@ -15,7 +15,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import utils.DatabaseConnection;
 import services.userservice;
-
+import javafx.scene.Node;
 import java.sql.*;
 
 public class PatientTablePanel extends VBox {
@@ -106,64 +106,96 @@ public class PatientTablePanel extends VBox {
 
     private void createTable() {
         table = new TableView<>();
+
         table.setStyle(
                 "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(ACCENT_GREEN) + ";" +
-                        "-fx-border-width: 2;"
+                        "-fx-background-radius: 24;" +
+                        "-fx-border-radius: 24;" +
+                        "-fx-border-color: transparent;" +
+                        "-fx-padding: 10;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 25, 0, 0, 8);" +
+                        "-fx-selection-bar: #D7F5E3;" +
+                        "-fx-selection-bar-non-focused: #D7F5E3;"
         );
-        // FIXED: setRowHeight is not available in JavaFX TableView
-        // Use setFixedCellSize instead
-        table.setFixedCellSize(40);
+
+        table.setFixedCellSize(65);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         table.setPlaceholder(new Label("No patients found"));
 
-        // Define columns
         TableColumn<PatientModel, Integer> idCol = new TableColumn<>("CIN");
         idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
-        idCol.setPrefWidth(80);
 
         TableColumn<PatientModel, String> firstNameCol = new TableColumn<>("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
-        firstNameCol.setPrefWidth(150);
 
         TableColumn<PatientModel, String> lastNameCol = new TableColumn<>("Last Name");
         lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
-        lastNameCol.setPrefWidth(150);
 
         TableColumn<PatientModel, String> phoneCol = new TableColumn<>("Phone");
         phoneCol.setCellValueFactory(new PropertyValueFactory<>("phone"));
-        phoneCol.setPrefWidth(120);
 
         TableColumn<PatientModel, String> dobCol = new TableColumn<>("Date of Birth");
         dobCol.setCellValueFactory(new PropertyValueFactory<>("dob"));
-        dobCol.setPrefWidth(150);
 
         TableColumn<PatientModel, String> emailCol = new TableColumn<>("Email");
         emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
-        emailCol.setPrefWidth(200);
 
-        TableColumn<PatientModel, Void> actionCol = new TableColumn<>("Action");
-        actionCol.setPrefWidth(120);
+        TableColumn<PatientModel, Void> actionCol = new TableColumn<>("Actions");
         actionCol.setCellFactory(col -> new ActionCell());
 
-        table.getColumns().addAll(idCol, firstNameCol, lastNameCol, phoneCol, dobCol, emailCol, actionCol);
+        table.getColumns().addAll(
+                idCol, firstNameCol, lastNameCol, phoneCol, dobCol, emailCol, actionCol
+        );
 
-        // Style table header
-        table.getColumns().forEach(col -> {
-            col.setStyle(
-                    "-fx-background-color: white;" +
-                            "-fx-text-fill: #" + toHex(ACCENT_GREEN) + ";" +
-                            "-fx-font-size: 14px;" +
-                            "-fx-font-weight: bold;" +
-                            "-fx-alignment: CENTER;"
-            );
+        table.skinProperty().addListener((obs, oldSkin, newSkin) -> {
+            Platform.runLater(() -> {
+                Node header = table.lookup("TableHeaderRow");
+
+                if (header != null) {
+                    header.setStyle(
+                            "-fx-background-color: linear-gradient(to right, #50C878, #2E7D32);" +
+                                    "-fx-background-radius: 24 24 0 0;"
+                    );
+                }
+
+                table.lookupAll(".column-header").forEach(node -> node.setStyle(
+                        "-fx-background-color: transparent;" +
+                                "-fx-border-color: transparent;" +
+                                "-fx-padding: 18 10;"
+                ));
+
+                table.lookupAll(".column-header .label").forEach(node -> node.setStyle(
+                        "-fx-text-fill: white;" +
+                                "-fx-font-size: 14px;" +
+                                "-fx-font-weight: bold;"
+                ));
+            });
         });
 
-        // Center align columns
+        table.setRowFactory(tv -> new TableRow<PatientModel>() {
+            @Override
+            protected void updateItem(PatientModel item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty || item == null) {
+                    setStyle("-fx-background-color: transparent;");
+                } else {
+                    setStyle(getIndex() % 2 == 0
+                            ? "-fx-background-color: white;"
+                            : "-fx-background-color: #F8FBF9;");
+                }
+            }
+        });
+
         idCol.setStyle("-fx-alignment: CENTER;");
         actionCol.setStyle("-fx-alignment: CENTER;");
-    }
 
-    private void loadPatientsFromDatabase() {
+        firstNameCol.setStyle("-fx-alignment: CENTER-LEFT;");
+        lastNameCol.setStyle("-fx-alignment: CENTER-LEFT;");
+        phoneCol.setStyle("-fx-alignment: CENTER-LEFT;");
+        dobCol.setStyle("-fx-alignment: CENTER-LEFT;");
+        emailCol.setStyle("-fx-alignment: CENTER-LEFT;");
+    }    private void loadPatientsFromDatabase() {
         patientData = FXCollections.observableArrayList();
 
         try (Connection conn = DatabaseConnection.getConnection()) {

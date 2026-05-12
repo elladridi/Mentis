@@ -24,6 +24,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 import java.util.Optional;
 
@@ -90,7 +91,8 @@ public class MentisLoginFrame extends Application {
     private RecommendationsPanel recommendationsPanel;
     private SimpleCalendarPanel simpleCalendarPanel;
     private AnalyticsPanel analyticsPanel;
-
+    private PsychologistDashboardPanel psychologistDashboardPanel;
+    private PatientDashboardPanel patientDashboardPanel;
     // Event Panel (created on demand)
     private javafx.scene.layout.BorderPane eventPanel;
 
@@ -119,7 +121,6 @@ public class MentisLoginFrame extends Application {
 
         // Create sidebar (initially not added to layout)
         sidebar = createSidebar();
-
         // Create content area
         contentArea = new StackPane();
         contentArea.setStyle("-fx-background-color: transparent; -fx-padding: 22;");
@@ -135,6 +136,8 @@ public class MentisLoginFrame extends Application {
                 adminDashboardPanel,
                 psychologistTablePanel,
                 patientTablePanel,
+                psychologistDashboardPanel,
+                patientDashboardPanel,
                 assessmentPanel,
                 questionPanel,
                 takeAssessmentPanel,
@@ -223,7 +226,7 @@ public class MentisLoginFrame extends Application {
                             login(
                                     loggedUser.getType(),
                                     loggedUser.getId(),
-                                    loggedUser.getFirstName() + " " + loggedUser.getLastName()
+                                    loggedUser.getFirstname() + " " + loggedUser.getLastname()
                             );
                         } else {
                             System.out.println("❌ Auto-login failed, clearing token");
@@ -248,6 +251,8 @@ public class MentisLoginFrame extends Application {
         adminDashboardPanel = new AdminDashboardPanel(this);
         psychologistTablePanel = new PsychologistTablePanel(this);
         patientTablePanel = new PatientTablePanel(this);
+        psychologistDashboardPanel = new PsychologistDashboardPanel(this);
+        patientDashboardPanel = new PatientDashboardPanel(this);
         assessmentPanel = new AssessmentPanel(this, assessmentController);
         questionPanel = new QuestionPanel(this, questionController, assessmentController);
         takeAssessmentPanel = new TakeAssessmentPanel(this, assessmentController, resultController);
@@ -281,6 +286,8 @@ public class MentisLoginFrame extends Application {
         if (adminDashboardPanel != null) adminDashboardPanel.setVisible(false);
         if (psychologistTablePanel != null) psychologistTablePanel.setVisible(false);
         if (patientTablePanel != null) patientTablePanel.setVisible(false);
+        if (psychologistDashboardPanel != null) psychologistDashboardPanel.setVisible(false);
+        if (patientDashboardPanel != null) patientDashboardPanel.setVisible(false);
         if (assessmentPanel != null) assessmentPanel.setVisible(false);
         if (questionPanel != null) questionPanel.setVisible(false);
         if (takeAssessmentPanel != null) takeAssessmentPanel.setVisible(false);
@@ -736,7 +743,7 @@ public class MentisLoginFrame extends Application {
 
         } else if ("psychologist".equals(currentUserType)) {
 
-            addSidebarSingle("Dashboard", "RESULTS");
+            addSidebarSingle("Dashboard", "PSYCHOLOGIST_DASHBOARD");
 
             addSidebarGroup("Sessions", "📅", new String[][] {
                     {"Manage Sessions", "SESSION_ADMIN"},
@@ -746,7 +753,7 @@ public class MentisLoginFrame extends Application {
             });
 
             addSidebarGroup("Assessments", "📋", new String[][] {
-                    {"Assessments", "RESULTS"}
+                    {"Assessments", "ASSESSMENT"}
             });
 
             addSidebarGroup("Mood / Wellbeing", "🌿", new String[][] {
@@ -827,6 +834,9 @@ public class MentisLoginFrame extends Application {
             case "RESULTS":
                 showResultsPanel();
                 break;
+            case "PSYCHOLOGIST_DASHBOARD":
+                showPsychologistDashboard();
+                break;
             case "TAKE_ASSESSMENT":
                 showTakeAssessmentPanel();
                 break;
@@ -864,7 +874,7 @@ public class MentisLoginFrame extends Application {
                 showRecommendationsPanel();
                 break;
             case "PATIENT_DASHBOARD":
-                showTakeAssessmentPanel();
+                showPatientDashboard();
                 break;
             case "PSYCHOLOGIST":
                 showPsychologistTablePanel();
@@ -1052,8 +1062,26 @@ public class MentisLoginFrame extends Application {
         showQuestionPanel();
         questionPanel.setCurrentAssessmentId(assessmentId);
     }
+    public void showPsychologistDashboard() {
+        System.out.println("🔵 Showing Psychologist Dashboard");
 
-    private void openWellbeingDashboard() {
+        showOnlyPanel(psychologistDashboardPanel);
+
+        if (psychologistDashboardPanel != null) {
+            psychologistDashboardPanel.refreshData();
+        }
+    }
+
+
+    public void showPatientDashboard() {
+        System.out.println("🔵 Showing Patient Dashboard");
+
+        showOnlyPanel(patientDashboardPanel);
+
+        if (patientDashboardPanel != null) {
+            patientDashboardPanel.refreshData();
+        }
+    }    private void openWellbeingDashboard() {
         try {
             javafx.fxml.FXMLLoader loader =
                     new javafx.fxml.FXMLLoader(getClass().getResource("/fxml/HomeView.fxml"));
@@ -1172,10 +1200,10 @@ public class MentisLoginFrame extends Application {
                 showAdminDashboard();
                 break;
             case "patient":
-                showPatientAvailableSessionsPanel();
+                showPatientDashboard();
                 break;
             case "psychologist":
-                showResultsPanel();
+                showPsychologistDashboard();
                 break;
             default:
                 showWelcomePanel();

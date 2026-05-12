@@ -2,14 +2,15 @@ package services;
 
 import models.user;
 import utils.z.DatabaseConnectionMentis;
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.*;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.time.LocalDate;
 
 public class userservice {
+
     private static void closeResources(Connection conn, Statement stmt, ResultSet rs) {
         try {
             if (rs != null) rs.close();
@@ -20,39 +21,59 @@ public class userservice {
         }
     }
 
-    public static boolean registeruser(user user) {
+    private static String hashPassword(String password) {
+        return BCrypt.hashpw(password, BCrypt.gensalt(13));
+    }
 
+    private static boolean verifyPassword(String plainPassword, String dbPassword) {
+        if (dbPassword == null || dbPassword.isEmpty()) return false;
+
+        try {
+            // Symfony/PHP BCrypt uses $2y$
+            // Java jBCrypt expects $2a$
+            if (dbPassword.startsWith("$2y$")) {
+                dbPassword = "$2a$" + dbPassword.substring(4);
+            }
+
+            return BCrypt.checkpw(plainPassword, dbPassword);
+
+        } catch (Exception e) {
+            System.err.println("❌ Password verification error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean registeruser(user user) {
         String sql = "INSERT INTO `user` (firstname, lastname, phone, dateofbirth, type, email, password) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            System.out.println("DEBUG: Attempting to register user...");
-            System.out.println("  Email: " + user.getEmail());
-
-            stmt.setString(1, user.getFirstName());
-            stmt.setString(2, user.getLastName());
+            stmt.setString(1, user.getFirstname());
+            stmt.setString(2, user.getLastname());
             stmt.setString(3, user.getPhone());
-            stmt.setString(4, user.getDateofbirth());
+
+            if (user.getDateofbirth() != null) {
+                stmt.setDate(4, java.sql.Date.valueOf(user.getDateofbirth()));
+            } else {
+                stmt.setNull(4, java.sql.Types.DATE);
+            }
+
             stmt.setString(5, user.getType());
             stmt.setString(6, user.getEmail());
             stmt.setString(7, hashPassword(user.getPassword()));
 
-            int rows = stmt.executeUpdate();
-            System.out.println("DEBUG: Rows affected: " + rows);
-
-            return rows > 0;
+            return stmt.executeUpdate() > 0;
 
         } catch (SQLException e) {
             System.err.println("❌ Error registering user: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
 
-    /* ===================== LOGIN ===================== */
     public static user loginuser(String email, String password) {
-
         String sql = "SELECT * FROM `user` WHERE email = ?";
 
         try (Connection conn = DatabaseConnectionMentis.getConnection();
@@ -64,13 +85,20 @@ public class userservice {
             if (rs.next()) {
                 String dbPassword = rs.getString("password");
 
-                if (dbPassword.equals(hashPassword(password))) {
+                if (verifyPassword(password, dbPassword)) {
+                    LocalDate dob = null;
+                    java.sql.Date sqlDate = rs.getDate("dateofbirth");
+
+                    if (sqlDate != null) {
+                        dob = sqlDate.toLocalDate();
+                    }
+
                     return new user(
                             rs.getInt("id"),
                             rs.getString("firstname"),
                             rs.getString("lastname"),
                             rs.getString("phone"),
-                            rs.getString("dateofbirth"),
+                            dob,
                             rs.getString("type"),
                             rs.getString("email"),
                             rs.getString("password")
@@ -86,9 +114,7 @@ public class userservice {
         }
     }
 
-    /* ===================== EMAIL EXISTS ===================== */
     public static boolean emailExists(String email) {
-
         String sql = "SELECT COUNT(*) FROM `user` WHERE email = ?";
 
         try (Connection conn = DatabaseConnectionMentis.getConnection();
@@ -105,9 +131,7 @@ public class userservice {
         }
     }
 
-    /* ===================== GET BY ID ===================== */
     public static user getuserById(int id) {
-
         String sql = "SELECT * FROM `user` WHERE id = ?";
 
         try (Connection conn = DatabaseConnectionMentis.getConnection();
@@ -117,12 +141,19 @@ public class userservice {
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
+                LocalDate dob = null;
+                java.sql.Date sqlDate = rs.getDate("dateofbirth");
+
+                if (sqlDate != null) {
+                    dob = sqlDate.toLocalDate();
+                }
+
                 return new user(
                         rs.getInt("id"),
                         rs.getString("firstname"),
                         rs.getString("lastname"),
                         rs.getString("phone"),
-                        rs.getString("dateofbirth"),
+                        dob,
                         rs.getString("type"),
                         rs.getString("email"),
                         rs.getString("password")
@@ -135,81 +166,6 @@ public class userservice {
             System.err.println("❌ Get user error: " + e.getMessage());
             return null;
         }
-    }
-
-    /* ===================== UPDATE ===================== */
-    public static boolean updateuser(user user) {
-
-        String sql = "UPDATE `user` SET firstname=?, lastname=?, phone=?, dateofbirth=?, type=?, email=? WHERE id=?";
-
-        try (Connection conn = DatabaseConnectionMentis.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, user.getFirstName());
-            stmt.setString(2, user.getLastName());
-            stmt.setString(3, user.getPhone());
-            stmt.setString(4, user.getDateofbirth());
-            stmt.setString(5, user.getType());
-            stmt.setString(6, user.getEmail());
-            stmt.setInt(7, user.getId());
-
-            return stmt.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            System.err.println("❌ Update error: " + e.getMessage());
-            return false;
-        }
-    }
-
-    /* ===================== DELETE ===================== */
-    public static boolean deleteuser(int id) {
-
-        String sql = "DELETE FROM `user` WHERE id = ?";
-
-        try (Connection conn = DatabaseConnectionMentis.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            return stmt.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            System.err.println("❌ Delete error: " + e.getMessage());
-            return false;
-        }
-    }
-
-    /* ===================== PASSWORD HASH ===================== */
-    private static String hashPassword(String password) {
-
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(password.getBytes());
-
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-
-        } catch (NoSuchAlgorithmException e) {
-            return password;
-        }
-    }
-
-    /* ===================== VALIDATIONS ===================== */
-    public static boolean isValidEmail(String email) {
-        return email != null &&
-                email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
-    }
-
-    public static boolean isValidPhone(String phone) {
-        return phone != null &&
-                phone.matches("^[0-9+\\-\\s()]{8,20}$");
-    }
-
-    public static boolean isValidDate(String date) {
-        return date != null &&
-                date.matches("^\\d{4}-\\d{2}-\\d{2}$");
     }
 
     public static user getuserByEmail(String email) {
@@ -227,12 +183,19 @@ public class userservice {
             rs = stmt.executeQuery();
 
             if (rs.next()) {
+                LocalDate dob = null;
+                java.sql.Date sqlDate = rs.getDate("dateofbirth");
+
+                if (sqlDate != null) {
+                    dob = sqlDate.toLocalDate();
+                }
+
                 return new user(
                         rs.getInt("id"),
                         rs.getString("firstname"),
                         rs.getString("lastname"),
                         rs.getString("phone"),
-                        rs.getString("dateofbirth"),
+                        dob,
                         rs.getString("type"),
                         rs.getString("email"),
                         rs.getString("password")
@@ -249,8 +212,50 @@ public class userservice {
         }
     }
 
-    public static boolean updateUserPassword(String email, String newPassword) {
+    public static boolean updateuser(user user) {
+        String sql = "UPDATE `user` SET firstname=?, lastname=?, phone=?, dateofbirth=?, type=?, email=? WHERE id=?";
 
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, user.getFirstname());
+            stmt.setString(2, user.getLastname());
+            stmt.setString(3, user.getPhone());
+
+            if (user.getDateofbirth() != null) {
+                stmt.setDate(4, java.sql.Date.valueOf(user.getDateofbirth()));
+            } else {
+                stmt.setNull(4, java.sql.Types.DATE);
+            }
+
+            stmt.setString(5, user.getType());
+            stmt.setString(6, user.getEmail());
+            stmt.setInt(7, user.getId());
+
+            return stmt.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            System.err.println("❌ Update error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean deleteuser(int id) {
+        String sql = "DELETE FROM `user` WHERE id = ?";
+
+        try (Connection conn = DatabaseConnectionMentis.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, id);
+            return stmt.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            System.err.println("❌ Delete error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean updateUserPassword(String email, String newPassword) {
         String sql = "UPDATE user SET password=? WHERE email=?";
 
         try (Connection conn = DatabaseConnectionMentis.getConnection();
@@ -274,39 +279,55 @@ public class userservice {
         }
     }
 
+    public static boolean isValidEmail(String email) {
+        return email != null &&
+                email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    }
+
+    public static boolean isValidPhone(String phone) {
+        return phone != null &&
+                phone.matches("^[0-9+\\-\\s()]{8,20}$");
+    }
+
+    public static boolean isValidDate(LocalDate date) {
+        return date != null;
+    }
+
+    public static boolean isValidDate(String date) {
+        return date != null && date.matches("^\\d{4}-\\d{2}-\\d{2}$");
+    }
+
     public static List<user> getAllPatients() {
         List<user> patients = new ArrayList<>();
 
         String sql = "SELECT * FROM `user` WHERE LOWER(type) = 'patient' ORDER BY firstname, lastname";
 
-        System.out.println("🔍 Fetching patients from database...");
-
         try (Connection conn = DatabaseConnectionMentis.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             ResultSet rs = stmt.executeQuery();
-            int count = 0;
 
             while (rs.next()) {
-                // GET EACH FIELD INDIVIDUALLY TO VERIFY
-                int id = rs.getInt("id");
-                String firstName = rs.getString("firstname");
-                String lastName = rs.getString("lastname");
-                String phone = rs.getString("phone");
-                String dob = rs.getString("dateofbirth");
-                String type = rs.getString("type");
-                String email = rs.getString("email");
-                String password = rs.getString("password");
+                LocalDate dob = null;
+                java.sql.Date sqlDate = rs.getDate("dateofbirth");
 
-                // DEBUG: Print what we got from database
-                System.out.println("  - RAW DB RECORD: ID=" + id + ", Name=" + firstName + " " + lastName + ", Type=" + type);
+                if (sqlDate != null) {
+                    dob = sqlDate.toLocalDate();
+                }
 
-                user u = new user(id, firstName, lastName, phone, dob, type, email, password);
+                user u = new user(
+                        rs.getInt("id"),
+                        rs.getString("firstname"),
+                        rs.getString("lastname"),
+                        rs.getString("phone"),
+                        dob,
+                        rs.getString("type"),
+                        rs.getString("email"),
+                        rs.getString("password")
+                );
+
                 patients.add(u);
-                count++;
             }
-
-            System.out.println("✅ Total patients loaded: " + count);
 
         } catch (SQLException e) {
             System.err.println("❌ Error getting patients: " + e.getMessage());
@@ -315,7 +336,6 @@ public class userservice {
 
         return patients;
     }
-    // Add these methods to services/userservice.java
 
     public static boolean saveFaceData(int userId, String facePath) {
         String sql = "UPDATE `user` SET face_data = ?, face_enabled = TRUE WHERE id = ?";
@@ -337,9 +357,6 @@ public class userservice {
         }
     }
 
-    /**
-     * Check if user has face ID enabled
-     */
     public static boolean hasFaceEnabled(int userId) {
         String sql = "SELECT face_enabled FROM `user` WHERE id = ?";
 
@@ -357,9 +374,6 @@ public class userservice {
         }
     }
 
-    /**
-     * Get face data path for user
-     */
     public static String getFaceDataPath(int userId) {
         String sql = "SELECT face_data FROM `user` WHERE id = ?";
 
@@ -372,6 +386,7 @@ public class userservice {
             if (rs.next()) {
                 return rs.getString("face_data");
             }
+
             return null;
 
         } catch (SQLException e) {
@@ -380,9 +395,6 @@ public class userservice {
         }
     }
 
-    /**
-     * Disable face ID for user
-     */
     public static boolean disableFaceID(int userId) {
         String sql = "UPDATE `user` SET face_enabled = FALSE WHERE id = ?";
 
@@ -398,9 +410,6 @@ public class userservice {
         }
     }
 
-    /**
-     * Update face_enabled status without changing face_data
-     */
     public static boolean setFaceEnabled(int userId, boolean enabled) {
         String sql = "UPDATE `user` SET face_enabled = ? WHERE id = ?";
 
@@ -416,5 +425,4 @@ public class userservice {
             return false;
         }
     }
-
 }

@@ -14,6 +14,9 @@ import javafx.stage.StageStyle;
 import models.user;
 import services.userservice;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+
 public class AddPsychologistDialog extends Stage {
 
     private TextField firstNameField;
@@ -113,12 +116,12 @@ public class AddPsychologistDialog extends Stage {
     private void handleAdd() {
         String firstName = firstNameField.getText().trim();
         String lastName = lastNameField.getText().trim();
-        String dob = dobField.getText().trim();
+        String dobString = dobField.getText().trim();  // ✅ Changed variable name
         String email = emailField.getText().trim();
         String phone = phoneField.getText().trim();
 
         // Validation
-        if (firstName.isEmpty() || lastName.isEmpty() || dob.isEmpty()
+        if (firstName.isEmpty() || lastName.isEmpty() || dobString.isEmpty()
                 || email.isEmpty() || phone.isEmpty()) {
             showError("Please fill in all fields.");
             return;
@@ -129,7 +132,7 @@ public class AddPsychologistDialog extends Stage {
             return;
         }
 
-        if (!userservice.isValidDate(dob)) {
+        if (!userservice.isValidDate(dobString)) {
             showError("Date must be YYYY-MM-DD.");
             return;
         }
@@ -139,7 +142,16 @@ public class AddPsychologistDialog extends Stage {
             return;
         }
 
-        // Create and register user
+        // ✅ FIX: Convert String to LocalDate
+        LocalDate dob = null;
+        try {
+            dob = LocalDate.parse(dobString);
+        } catch (DateTimeParseException e) {
+            showError("Invalid date format. Please use YYYY-MM-DD (e.g., 1990-05-15)");
+            return;
+        }
+
+        // ✅ FIX: Create user with LocalDate
         user psych = new user(firstName, lastName, phone, dob,
                 "psychologist", email, "doctor123");
 

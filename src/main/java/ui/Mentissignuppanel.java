@@ -1,33 +1,42 @@
 package ui;
 
+import javafx.animation.FadeTransition;
+import javafx.animation.ScaleTransition;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.effect.GaussianBlur;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Arc;
+import javafx.scene.shape.ArcType;
+import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
-import javafx.concurrent.Task;
+import javafx.util.Duration;
 import models.user;
-import services.userservice;
 import services.CVParserService;
 import services.CVSummarizationService;
+import services.userservice;
 
 import java.io.File;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
-public class Mentissignuppanel extends VBox {
+public class Mentissignuppanel extends StackPane {
 
-    // ⭐ MERGED: Using both your constants and their structure
-    private static final Color BG_COLOR = MentisLoginFrame.BACKGROUND_LIGHT;
-    private static final Color PRIMARY = MentisLoginFrame.ACCENT_DARK_GREEN;
-    private static final Color TEXT_GRAY = Color.GRAY;
-    private static final Color TEXT_BLACK = Color.BLACK;
-    private static final Color WHITE = Color.WHITE;
+    private static final Color PRIMARY = Color.web("#50C878");
+    private static final Color PRIMARY_DARK = Color.web("#2E7D32");
+    private static final Color PRIMARY_MID = Color.web("#3A9B5E");
+    private static final Color INK = Color.web("#1A3C34");
+    private static final Color MUTED = Color.web("#6C757D");
 
-    // Regular fields
     private RoundedTextField firstNameField;
     private RoundedTextField lastNameField;
     private RoundedTextField phoneField;
@@ -38,7 +47,6 @@ public class Mentissignuppanel extends VBox {
     private RoundedButton signUpButton;
     private CheckBox enableFaceIDCheckBox;
 
-    // CV Upload Section (Only for Psychologists)
     private VBox cvUploadSection;
     private Button uploadCVButton;
     private Label cvStatusLabel;
@@ -46,7 +54,6 @@ public class Mentissignuppanel extends VBox {
     private ProgressIndicator aiProgressIndicator;
     private Label cvInfoLabel;
 
-    // Services
     private CVParserService cvParser;
     private CVSummarizationService cvSummarizer;
 
@@ -57,103 +64,138 @@ public class Mentissignuppanel extends VBox {
         this.cvParser = new CVParserService();
         this.cvSummarizer = new CVSummarizationService();
 
-        setStyle("-fx-background-color: #" + toHex(BG_COLOR) + ";");
-        setAlignment(Pos.CENTER);
+        setStyle("-fx-background-color: linear-gradient(to bottom right, #F5F7FA, #E8F5E9);");
         setPadding(new Insets(0));
-        setSpacing(0);
 
         initComponents();
+        startEntranceAnimation();
     }
 
     private void initComponents() {
-        BorderPane mainContainer = new BorderPane();
-        mainContainer.setStyle("-fx-background-color: #" + toHex(BG_COLOR) + ";");
+        Pane background = createBackgroundDecor();
 
-        // Header
-        HBox headerPanel = createHeader();
-        mainContainer.setTop(headerPanel);
+        BorderPane page = new BorderPane();
+        page.setPadding(new Insets(28, 48, 28, 48));
+        page.setStyle("-fx-background-color: transparent;");
 
-        // Center content
-        ScrollPane scrollPane = new ScrollPane();
-        scrollPane.setStyle("-fx-background-color: transparent;");
+        page.setTop(createHeader());
+
+        ScrollPane scrollPane = new ScrollPane(createCenterContent());
         scrollPane.setFitToWidth(true);
-        scrollPane.setBorder(null);
+        scrollPane.setStyle(
+                "-fx-background: transparent;" +
+                        "-fx-background-color: transparent;" +
+                        "-fx-border-color: transparent;"
+        );
 
-        VBox centerPanel = createCenterContent();
-        scrollPane.setContent(centerPanel);
+        page.setCenter(scrollPane);
 
-        mainContainer.setCenter(scrollPane);
+        getChildren().addAll(background, page);
+    }
 
-        getChildren().add(mainContainer);
-        VBox.setVgrow(mainContainer, Priority.ALWAYS);
+    private Pane createBackgroundDecor() {
+        Pane pane = new Pane();
+        pane.setMouseTransparent(true);
+
+        Circle glow1 = new Circle(210);
+        glow1.setFill(Color.web("#50C878", 0.16));
+        glow1.setEffect(new GaussianBlur(70));
+        glow1.setTranslateX(-440);
+        glow1.setTranslateY(-260);
+
+        Circle glow2 = new Circle(260);
+        glow2.setFill(Color.web("#9B5DE5", 0.08));
+        glow2.setEffect(new GaussianBlur(80));
+        glow2.setTranslateX(480);
+        glow2.setTranslateY(270);
+
+        pane.getChildren().addAll(glow1, glow2);
+        return pane;
     }
 
     private HBox createHeader() {
         HBox header = new HBox();
         header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(20, 30, 20, 30));
-        header.setStyle("-fx-background-color: transparent;");
+
+        HBox brand = new HBox(12);
+        brand.setAlignment(Pos.CENTER_LEFT);
+
+        Node logo = loadLogo();
+        if (logo == null) logo = new BrainLogo();
+
+        VBox text = new VBox(1);
+        Label name = new Label("MENTIS");
+        name.setFont(Font.font("Segoe UI", FontWeight.EXTRA_BOLD, 26));
+        name.setTextFill(PRIMARY_DARK);
+
+        Label subtitle = new Label("Mental Health Platform");
+        subtitle.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
+        subtitle.setTextFill(MUTED);
+
+        text.getChildren().addAll(name, subtitle);
+        brand.getChildren().addAll(logo, text);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
         Label backLabel = new Label("← Back");
-        backLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
-        backLabel.setTextFill(Color.web(toHex(PRIMARY)));
-        backLabel.setCursor(javafx.scene.Cursor.HAND);
+        backLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+        backLabel.setTextFill(PRIMARY_DARK);
+        backLabel.setCursor(Cursor.HAND);
         backLabel.setOnMouseClicked(e -> parentApp.showWelcomePanel());
 
-        header.getChildren().add(backLabel);
+        header.getChildren().addAll(brand, spacer, backLabel);
         return header;
     }
 
     private VBox createCenterContent() {
-        VBox center = new VBox(20);
+        VBox center = new VBox(24);
         center.setAlignment(Pos.CENTER);
-        center.setStyle("-fx-background-color: transparent;");
-        center.setPadding(new Insets(20, 50, 40, 50));
+        center.setPadding(new Insets(24, 20, 36, 20));
 
-        // Title
-        Label title = new Label("Create Account");
-        title.setFont(Font.font("Arial", FontWeight.BOLD, 48));
-        title.setTextFill(Color.web(toHex(PRIMARY)));
+        Label badge = new Label("✨ Join Mentis");
+        badge.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        badge.setTextFill(PRIMARY_DARK);
+        badge.setPadding(new Insets(8, 16, 8, 16));
+        badge.setStyle(
+                "-fx-background-color: #F1F8E9;" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-border-color: #C8E6D2;" +
+                        "-fx-border-radius: 999;"
+        );
 
-        // Logo
-        HBox logoContainer = loadLogo();
+        Label title = new Label("Create Your Account");
+        title.setFont(Font.font("Segoe UI", FontWeight.EXTRA_BOLD, 46));
+        title.setTextFill(INK);
 
-        // Form panel
+        Label subtitle = new Label("Start your wellness journey with personalized assessments, sessions, goals, and AI-powered recommendations.");
+        subtitle.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 15));
+        subtitle.setTextFill(MUTED);
+        subtitle.setWrapText(true);
+        subtitle.setMaxWidth(760);
+        subtitle.setAlignment(Pos.CENTER);
+        subtitle.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+
         VBox formPanel = createFormPanel();
 
-        center.getChildren().addAll(title, logoContainer, formPanel);
-        VBox.setVgrow(formPanel, Priority.ALWAYS);
-
+        center.getChildren().addAll(badge, title, subtitle, formPanel);
         return center;
     }
 
-    private HBox loadLogo() {
-        HBox logoContainer = new HBox();
-        logoContainer.setAlignment(Pos.CENTER);
-        logoContainer.setStyle("-fx-background-color: transparent;");
-
-        try {
-            Image logo = new Image(getClass().getResourceAsStream("/resources/logo.png"));
-            ImageView logoView = new ImageView(logo);
-            logoView.setFitWidth(100);
-            logoView.setFitHeight(100);
-            logoView.setPreserveRatio(true);
-            logoContainer.getChildren().add(logoView);
-        } catch (Exception e) {
-            System.err.println("Logo not found: " + e.getMessage());
-        }
-        return logoContainer;
-    }
-
     private VBox createFormPanel() {
-        VBox formPanel = new VBox(15);
-        formPanel.setAlignment(Pos.CENTER);
-        formPanel.setStyle("-fx-background-color: transparent;");
-        formPanel.setPadding(new Insets(20, 0, 20, 0));
-        formPanel.setMaxWidth(900);
+        VBox card = new VBox(18);
+        card.setAlignment(Pos.CENTER);
+        card.setPadding(new Insets(34));
+        card.setMaxWidth(940);
+        card.setStyle(
+                "-fx-background-color: rgba(255,255,255,0.94);" +
+                        "-fx-background-radius: 34;" +
+                        "-fx-border-radius: 34;" +
+                        "-fx-border-color: rgba(255,255,255,0.8);" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 34, 0, 0, 14);"
+        );
 
-        // Row 1: First Name & Last Name
-        HBox row1 = new HBox(20);
+        HBox row1 = new HBox(18);
         row1.setAlignment(Pos.CENTER);
         firstNameField = createField("First Name");
         lastNameField = createField("Last Name");
@@ -161,8 +203,7 @@ public class Mentissignuppanel extends VBox {
         HBox.setHgrow(firstNameField, Priority.ALWAYS);
         HBox.setHgrow(lastNameField, Priority.ALWAYS);
 
-        // Row 2: Phone & Date of Birth
-        HBox row2 = new HBox(20);
+        HBox row2 = new HBox(18);
         row2.setAlignment(Pos.CENTER);
         phoneField = createField("Phone");
         dobField = createField("YYYY-MM-DD");
@@ -170,25 +211,16 @@ public class Mentissignuppanel extends VBox {
         HBox.setHgrow(phoneField, Priority.ALWAYS);
         HBox.setHgrow(dobField, Priority.ALWAYS);
 
-        // Row 3: User Type & Email
-        HBox row3 = new HBox(20);
+        HBox row3 = new HBox(18);
         row3.setAlignment(Pos.CENTER);
 
         typeComboBox = new ComboBox<>();
         typeComboBox.getItems().addAll("Select Type", "Patient", "Psychologist", "Admin");
         typeComboBox.setValue("Select Type");
-        typeComboBox.setPrefWidth(300);
-        typeComboBox.setPrefHeight(55);
-        typeComboBox.setStyle(
-                "-fx-background-color: white;" +
-                        "-fx-background-radius: 15;" +
-                        "-fx-border-radius: 15;" +
-                        "-fx-padding: 8 15;" +
-                        "-fx-font-family: 'Arial';" +
-                        "-fx-font-size: 16px;"
-        );
+        typeComboBox.setPrefHeight(56);
+        typeComboBox.setMaxWidth(Double.MAX_VALUE);
+        styleCombo(typeComboBox);
 
-        // Add listener for type selection - to show/hide CV section
         typeComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
             toggleCVSection("Psychologist".equals(newVal));
         });
@@ -198,75 +230,74 @@ public class Mentissignuppanel extends VBox {
         HBox.setHgrow(typeComboBox, Priority.ALWAYS);
         HBox.setHgrow(emailField, Priority.ALWAYS);
 
-        // Row 4: Password
         HBox row4 = new HBox();
         row4.setAlignment(Pos.CENTER);
         passwordField = new RoundedPasswordField();
-        passwordField.setPrefWidth(620);
-        passwordField.setPrefHeight(55);
         passwordField.setPromptText("Password");
+        passwordField.setPrefHeight(56);
+        passwordField.setMaxWidth(Double.MAX_VALUE);
         row4.getChildren().add(passwordField);
         HBox.setHgrow(passwordField, Priority.ALWAYS);
 
-        // ===== CV UPLOAD SECTION - ONLY FOR PSYCHOLOGISTS =====
         cvUploadSection = createCVUploadSection();
-        cvUploadSection.setVisible(false); // Initially hidden
+        cvUploadSection.setVisible(false);
         cvUploadSection.setManaged(false);
 
-        // Face ID Option
-        HBox rowFace = new HBox(10);
-        rowFace.setAlignment(Pos.CENTER_LEFT);
+        HBox optionsRow = new HBox(12);
+        optionsRow.setAlignment(Pos.CENTER_LEFT);
+        optionsRow.setMaxWidth(Double.MAX_VALUE);
+
         enableFaceIDCheckBox = new CheckBox("Enable Face ID for faster login");
-        enableFaceIDCheckBox.setFont(Font.font("Arial", 14));
-        enableFaceIDCheckBox.setTextFill(Color.web(toHex(PRIMARY.darker())));
-        Tooltip faceTooltip = new Tooltip("After registration, you can use your face to login");
-        enableFaceIDCheckBox.setTooltip(faceTooltip);
-        rowFace.getChildren().add(enableFaceIDCheckBox);
+        enableFaceIDCheckBox.setFont(Font.font("Segoe UI", 14));
+        enableFaceIDCheckBox.setTextFill(INK);
+        enableFaceIDCheckBox.setTooltip(new Tooltip("After registration, you can use your face to login"));
 
-        // Sign Up Button
-        HBox row5 = new HBox();
-        row5.setAlignment(Pos.CENTER);
-        row5.setPadding(new Insets(20, 0, 10, 0));
-        signUpButton = new RoundedButton("Sign Up");
-        signUpButton.setPrefWidth(300);
-        signUpButton.setPrefHeight(60);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label secureNote = new Label("Private by design");
+        secureNote.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        secureNote.setTextFill(PRIMARY_DARK);
+        secureNote.setPadding(new Insets(7, 13, 7, 13));
+        secureNote.setStyle("-fx-background-color: #F1F8E9; -fx-background-radius: 999;");
+
+        optionsRow.getChildren().addAll(enableFaceIDCheckBox, spacer, secureNote);
+
+        signUpButton = new RoundedButton("Create Account");
+        signUpButton.setPrefWidth(320);
+        signUpButton.setPrefHeight(58);
         signUpButton.setOnAction(e -> handleSignup());
-        row5.getChildren().add(signUpButton);
 
-        // Login link
+        HBox buttonRow = new HBox(signUpButton);
+        buttonRow.setAlignment(Pos.CENTER);
+        buttonRow.setPadding(new Insets(10, 0, 0, 0));
+
         Label loginLink = new Label("Already have an account? Login");
-        loginLink.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
-        loginLink.setTextFill(Color.web(toHex(PRIMARY)));
-        loginLink.setCursor(javafx.scene.Cursor.HAND);
+        loginLink.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+        loginLink.setTextFill(PRIMARY_DARK);
+        loginLink.setCursor(Cursor.HAND);
         loginLink.setOnMouseClicked(e -> parentApp.showLoginPanel());
         loginLink.setAlignment(Pos.CENTER);
         loginLink.setMaxWidth(Double.MAX_VALUE);
 
-        formPanel.getChildren().addAll(
+        card.getChildren().addAll(
                 row1, row2, row3, row4,
-                cvUploadSection, // This will only show for psychologists
-                rowFace, row5, loginLink
+                cvUploadSection,
+                optionsRow,
+                buttonRow,
+                loginLink
         );
 
-        return formPanel;
+        return card;
     }
 
-    /**
-     * Toggle CV section visibility based on user type
-     */
     private void toggleCVSection(boolean show) {
         cvUploadSection.setVisible(show);
         cvUploadSection.setManaged(show);
 
-        if (show) {
-            // Clear any previous CV data when switching to psychologist
-            clearCVData();
-        }
+        if (show) clearCVData();
     }
 
-    /**
-     * Clear CV-related data
-     */
     private void clearCVData() {
         cvStatusLabel.setText("No file selected");
         if (summaryArea != null) {
@@ -277,52 +308,61 @@ public class Mentissignuppanel extends VBox {
     }
 
     private VBox createCVUploadSection() {
-        VBox panel = new VBox(10);
+        VBox panel = new VBox(12);
+        panel.setPadding(new Insets(20));
         panel.setStyle(
-                "-fx-background-color: #f0f8ff;" +
-                        "-fx-background-radius: 10;" +
-                        "-fx-border-radius: 10;" +
-                        "-fx-border-color: #" + toHex(PRIMARY) + ";" +
-                        "-fx-border-width: 2;" +
-                        "-fx-padding: 15;"
+                "-fx-background-color: linear-gradient(to bottom right, #F0FAF4, #E8F5E9);" +
+                        "-fx-background-radius: 22;" +
+                        "-fx-border-radius: 22;" +
+                        "-fx-border-color: #C8E6D2;" +
+                        "-fx-border-width: 1.5;"
         );
 
-        // Header with icon
-        HBox headerBox = new HBox(10);
+        HBox headerBox = new HBox(12);
         headerBox.setAlignment(Pos.CENTER_LEFT);
 
+        StackPane iconBox = new StackPane();
+        iconBox.setPrefSize(48, 48);
+        iconBox.setMaxSize(48, 48);
+        iconBox.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, #50C878, #2E7D32);" +
+                        "-fx-background-radius: 16;"
+        );
+
         Label iconLabel = new Label("📄");
-        iconLabel.setFont(Font.font("Arial", 24));
+        iconLabel.setFont(Font.font("Segoe UI Emoji", 24));
+        iconBox.getChildren().add(iconLabel);
 
-        cvInfoLabel = new Label("Psychologist CV Upload (Optional)");
-        cvInfoLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
-        cvInfoLabel.setTextFill(Color.web(toHex(PRIMARY)));
+        VBox titleBox = new VBox(3);
+        cvInfoLabel = new Label("Psychologist CV Upload");
+        cvInfoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 17));
+        cvInfoLabel.setTextFill(PRIMARY_DARK);
 
-        headerBox.getChildren().addAll(iconLabel, cvInfoLabel);
-
-        // Description
-        Label descLabel = new Label("Upload your CV to auto-fill your professional information. You can still fill manually.");
-        descLabel.setFont(Font.font("Arial", 12));
-        descLabel.setTextFill(Color.GRAY);
+        Label descLabel = new Label("Upload your CV to auto-fill professional information using AI.");
+        descLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
+        descLabel.setTextFill(MUTED);
         descLabel.setWrapText(true);
 
-        // CV Upload Row
-        HBox cvUploadBox = new HBox(10);
+        titleBox.getChildren().addAll(cvInfoLabel, descLabel);
+        headerBox.getChildren().addAll(iconBox, titleBox);
+
+        HBox cvUploadBox = new HBox(12);
         cvUploadBox.setAlignment(Pos.CENTER_LEFT);
 
-        uploadCVButton = new Button("📄 Upload CV (PDF/DOCX)");
+        uploadCVButton = new Button("Upload CV");
+        uploadCVButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        uploadCVButton.setTextFill(Color.WHITE);
+        uploadCVButton.setCursor(Cursor.HAND);
         uploadCVButton.setStyle(
-                "-fx-background-color: #" + toHex(PRIMARY) + ";" +
-                        "-fx-text-fill: white;" +
-                        "-fx-font-size: 13px;" +
-                        "-fx-padding: 8 15;" +
-                        "-fx-background-radius: 8;"
+                "-fx-background-color: linear-gradient(to right, #50C878, #2E7D32);" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-padding: 9 20;"
         );
         uploadCVButton.setOnAction(e -> handleCVUpload());
 
         cvStatusLabel = new Label("No file selected");
-        cvStatusLabel.setFont(Font.font("Arial", 11));
-        cvStatusLabel.setTextFill(Color.GRAY);
+        cvStatusLabel.setFont(Font.font("Segoe UI", 12));
+        cvStatusLabel.setTextFill(MUTED);
 
         aiProgressIndicator = new ProgressIndicator();
         aiProgressIndicator.setPrefSize(25, 25);
@@ -330,23 +370,30 @@ public class Mentissignuppanel extends VBox {
 
         cvUploadBox.getChildren().addAll(uploadCVButton, cvStatusLabel, aiProgressIndicator);
 
-        // Summary area (initially hidden)
         summaryArea = new TextArea();
-        summaryArea.setPrefRowCount(3);
+        summaryArea.setPrefRowCount(4);
         summaryArea.setWrapText(true);
         summaryArea.setPromptText("AI summary will appear here after upload...");
         summaryArea.setEditable(true);
         summaryArea.setVisible(false);
         summaryArea.setManaged(false);
+        summaryArea.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 16;" +
+                        "-fx-border-radius: 16;" +
+                        "-fx-border-color: #C8E6D2;" +
+                        "-fx-font-family: 'Segoe UI';" +
+                        "-fx-font-size: 13px;"
+        );
 
-        panel.getChildren().addAll(headerBox, descLabel, cvUploadBox, summaryArea);
+        panel.getChildren().addAll(headerBox, cvUploadBox, summaryArea);
 
         return panel;
     }
 
     private void handleCVUpload() {
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Upload CV (Optional)");
+        fileChooser.setTitle("Upload CV");
         fileChooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("PDF Files", "*.pdf"),
                 new FileChooser.ExtensionFilter("Word Documents", "*.docx"),
@@ -369,49 +416,31 @@ public class Mentissignuppanel extends VBox {
 
         Task<Void> processingTask = new Task<Void>() {
             @Override
-            protected Void call() throws Exception {
+            protected Void call() {
                 try {
-                    // Extract text from CV
                     String cvText = cvParser.extractTextFromCV(cvFile);
-
-                    // Get AI summary
                     CVSummarizationService.CVSummary summary = cvSummarizer.summarizeCV(cvText);
 
-                    // Update UI on JavaFX thread
                     javafx.application.Platform.runLater(() -> {
-                        // Auto-fill the fields with extracted data
-                        if (!summary.getFirstname().isEmpty()) {
-                            firstNameField.setText(summary.getFirstname());
-                        }
-                        if (!summary.getLastname().isEmpty()) {
-                            lastNameField.setText(summary.getLastname());
-                        }
-                        if (!summary.getEmail().isEmpty()) {
-                            emailField.setText(summary.getEmail());
-                        }
-                        if (!summary.getPhone().isEmpty()) {
-                            phoneField.setText(summary.getPhone());
-                        }
-                        if (!summary.getDateofbirth().isEmpty()) {
-                            dobField.setText(summary.getDateofbirth());
-                        }
+                        if (!summary.getFirstname().isEmpty()) firstNameField.setText(summary.getFirstname());
+                        if (!summary.getLastname().isEmpty()) lastNameField.setText(summary.getLastname());
+                        if (!summary.getEmail().isEmpty()) emailField.setText(summary.getEmail());
+                        if (!summary.getPhone().isEmpty()) phoneField.setText(summary.getPhone());
+                        if (!summary.getDateofbirth().isEmpty()) dobField.setText(summary.getDateofbirth());
 
-                        // Create summary message
                         StringBuilder extracted = new StringBuilder("✅ CV Processed!\n\n");
                         extracted.append("Extracted Information:\n");
                         extracted.append("• Name: ").append(summary.getFirstname()).append(" ").append(summary.getLastname()).append("\n");
                         extracted.append("• Email: ").append(summary.getEmail().isEmpty() ? "Not found" : summary.getEmail()).append("\n");
                         extracted.append("• Phone: ").append(summary.getPhone().isEmpty() ? "Not found" : summary.getPhone()).append("\n");
                         extracted.append("• DOB: ").append(summary.getDateofbirth().isEmpty() ? "Not found" : summary.getDateofbirth()).append("\n\n");
-                        extracted.append("You can edit any field below:");
+                        extracted.append("You can edit any field below.");
 
                         summaryArea.setText(extracted.toString());
+                        cvStatusLabel.setText("✓ CV processed and form auto-filled.");
 
-                        cvStatusLabel.setText("✓ CV processed! Form auto-filled.");
-
-                        // Show success message
                         if (!summary.getFirstname().isEmpty() || !summary.getLastname().isEmpty()) {
-                            showInfo("CV processed successfully! Form has been auto-filled. You can edit any information.");
+                            showInfo("CV processed successfully! Form has been auto-filled.");
                         } else {
                             showAlert("Warning",
                                     "Could not extract much information from the CV. Please fill in the fields manually.",
@@ -441,7 +470,7 @@ public class Mentissignuppanel extends VBox {
     private RoundedTextField createField(String placeholder) {
         RoundedTextField field = new RoundedTextField();
         field.setPromptText(placeholder);
-        field.setPrefHeight(55);
+        field.setPrefHeight(56);
         return field;
     }
 
@@ -451,13 +480,12 @@ public class Mentissignuppanel extends VBox {
         String fn = firstNameField.getText().trim();
         String ln = lastNameField.getText().trim();
         String phone = phoneField.getText().trim();
-        String dob = dobField.getText().trim();
+        String dobString = dobField.getText().trim();
         String email = emailField.getText().trim();
         String password = passwordField.getText();
         String type = typeComboBox.getValue();
         boolean enableFaceID = enableFaceIDCheckBox.isSelected();
 
-        // Validation
         if (type == null || type.equals("Select Type")) {
             showError("Please select a user type");
             signUpButton.setDisable(false);
@@ -465,7 +493,7 @@ public class Mentissignuppanel extends VBox {
         }
 
         if (fn.isEmpty() || ln.isEmpty() || phone.isEmpty() ||
-                dob.isEmpty() || email.isEmpty() || password.isEmpty()) {
+                dobString.isEmpty() || email.isEmpty() || password.isEmpty()) {
             showError("All fields are required");
             signUpButton.setDisable(false);
             return;
@@ -483,10 +511,17 @@ public class Mentissignuppanel extends VBox {
             return;
         }
 
-        // Create user object
+        LocalDate dob;
+        try {
+            dob = LocalDate.parse(dobString);
+        } catch (DateTimeParseException e) {
+            showError("Invalid date format. Please use YYYY-MM-DD format.");
+            signUpButton.setDisable(false);
+            return;
+        }
+
         user u = new user(fn, ln, phone, dob, type, email, password);
 
-        // Register user
         if (userservice.registeruser(u)) {
             showSuccess("Account created successfully!");
 
@@ -508,7 +543,6 @@ public class Mentissignuppanel extends VBox {
 
     private void openFaceIDRegistration(int userId) {
         try {
-            // UNCOMMENT THIS - FaceIDDialog exists!
             FaceIDDialog dialog = new FaceIDDialog(parentApp, true, userId);
             dialog.setOnHidden(e -> parentApp.showLoginPanel());
             dialog.show();
@@ -552,108 +586,176 @@ public class Mentissignuppanel extends VBox {
         alert.showAndWait();
     }
 
-    private String toHex(Color color) {
-        return String.format("%02x%02x%02x",
-                (int)(color.getRed() * 255),
-                (int)(color.getGreen() * 255),
-                (int)(color.getBlue() * 255));
+    private void styleCombo(ComboBox<String> combo) {
+        combo.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 16;" +
+                        "-fx-border-radius: 16;" +
+                        "-fx-border-color: #E9ECEF;" +
+                        "-fx-border-width: 1.5;" +
+                        "-fx-padding: 8 14;" +
+                        "-fx-font-family: 'Segoe UI';" +
+                        "-fx-font-size: 15px;"
+        );
     }
 
-    // ================= CUSTOM UI COMPONENTS =================
+    private Node loadLogo() {
+        try {
+            String[] paths = {"/logo.png", "/resources/logo.png", "/images/logo.png"};
+
+            for (String path : paths) {
+                if (getClass().getResourceAsStream(path) == null) continue;
+
+                Image image = new Image(getClass().getResourceAsStream(path));
+
+                if (!image.isError()) {
+                    ImageView imageView = new ImageView(image);
+                    imageView.setFitWidth(58);
+                    imageView.setFitHeight(58);
+                    imageView.setPreserveRatio(true);
+                    return imageView;
+                }
+            }
+        } catch (Exception e) {
+            // fallback below
+        }
+
+        return null;
+    }
+
+    private void startEntranceAnimation() {
+        setOpacity(0);
+        FadeTransition fade = new FadeTransition(Duration.millis(800), this);
+        fade.setFromValue(0);
+        fade.setToValue(1);
+        fade.play();
+    }
+
     class RoundedButton extends Button {
         RoundedButton(String text) {
-            super(text);
+            super(text + "  →");
             setTextFill(Color.WHITE);
-            setCursor(javafx.scene.Cursor.HAND);
-            setStyle(
-                    "-fx-background-color: #" + toHex(PRIMARY) + ";" +
-                            "-fx-background-radius: 15;" +
-                            "-fx-padding: 12 30;"
-            );
-            setOnMouseEntered(e ->
-                    setStyle(
-                            "-fx-background-color: #" + toHex(PRIMARY.darker()) + ";" +
-                                    "-fx-background-radius: 15;"
-                    )
-            );
-            setOnMouseExited(e ->
-                    setStyle(
-                            "-fx-background-color: #" + toHex(PRIMARY) + ";" +
-                                    "-fx-background-radius: 15;"
-                    )
-            );
+            setCursor(Cursor.HAND);
+            setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
+
+            String base =
+                    "-fx-background-color: linear-gradient(to right, #50C878, #2E7D32);" +
+                            "-fx-background-radius: 999;" +
+                            "-fx-effect: dropshadow(gaussian, rgba(80,200,120,0.35), 18, 0, 0, 7);";
+
+            String hover =
+                    "-fx-background-color: linear-gradient(to right, #3A9B5E, #2E7D32);" +
+                            "-fx-background-radius: 999;" +
+                            "-fx-translate-y: -2;" +
+                            "-fx-effect: dropshadow(gaussian, rgba(80,200,120,0.48), 24, 0, 0, 9);";
+
+            setStyle(base);
+            setOnMouseEntered(e -> setStyle(hover));
+            setOnMouseExited(e -> setStyle(base));
+
+            setOnMousePressed(e -> {
+                ScaleTransition scale = new ScaleTransition(Duration.millis(90), this);
+                scale.setToX(0.97);
+                scale.setToY(0.97);
+                scale.play();
+            });
+
+            setOnMouseReleased(e -> {
+                ScaleTransition scale = new ScaleTransition(Duration.millis(120), this);
+                scale.setToX(1);
+                scale.setToY(1);
+                scale.play();
+            });
         }
     }
 
     class RoundedTextField extends TextField {
         RoundedTextField() {
             super();
-            setStyle(
+            setFont(Font.font("Segoe UI", 15));
+
+            String base =
                     "-fx-background-color: white;" +
-                            "-fx-background-radius: 15;" +
-                            "-fx-border-radius: 15;" +
-                            "-fx-border-color: transparent;" +
-                            "-fx-padding: 12 20;" +
-                            "-fx-prompt-text-fill: #808080;" +
-                            "-fx-font-family: 'Arial';" +
-                            "-fx-font-size: 16px;"
-            );
-            focusedProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal) {
-                    setStyle(
-                            "-fx-background-color: white;" +
-                                    "-fx-background-radius: 15;" +
-                                    "-fx-border-radius: 15;" +
-                                    "-fx-border-color: #" + toHex(PRIMARY) + ";" +
-                                    "-fx-border-width: 2;" +
-                                    "-fx-padding: 12 20;"
-                    );
-                } else {
-                    setStyle(
-                            "-fx-background-color: white;" +
-                                    "-fx-background-radius: 15;" +
-                                    "-fx-border-radius: 15;" +
-                                    "-fx-border-color: transparent;" +
-                                    "-fx-padding: 12 20;"
-                    );
-                }
-            });
+                            "-fx-background-radius: 16;" +
+                            "-fx-border-radius: 16;" +
+                            "-fx-border-color: #E9ECEF;" +
+                            "-fx-border-width: 1.5;" +
+                            "-fx-padding: 13 18;" +
+                            "-fx-prompt-text-fill: #9AA4AE;";
+
+            String focus =
+                    "-fx-background-color: white;" +
+                            "-fx-background-radius: 16;" +
+                            "-fx-border-radius: 16;" +
+                            "-fx-border-color: #50C878;" +
+                            "-fx-border-width: 2;" +
+                            "-fx-padding: 13 18;" +
+                            "-fx-effect: dropshadow(gaussian, rgba(80,200,120,0.18), 12, 0, 0, 4);";
+
+            setStyle(base);
+            focusedProperty().addListener((obs, oldVal, focused) -> setStyle(focused ? focus : base));
         }
     }
 
     class RoundedPasswordField extends PasswordField {
         RoundedPasswordField() {
             super();
-            setStyle(
+            setFont(Font.font("Segoe UI", 15));
+
+            String base =
                     "-fx-background-color: white;" +
-                            "-fx-background-radius: 15;" +
-                            "-fx-border-radius: 15;" +
-                            "-fx-border-color: transparent;" +
-                            "-fx-padding: 12 20;" +
-                            "-fx-prompt-text-fill: #808080;" +
-                            "-fx-font-family: 'Arial';" +
-                            "-fx-font-size: 16px;"
-            );
-            focusedProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal) {
-                    setStyle(
-                            "-fx-background-color: white;" +
-                                    "-fx-background-radius: 15;" +
-                                    "-fx-border-radius: 15;" +
-                                    "-fx-border-color: #" + toHex(PRIMARY) + ";" +
-                                    "-fx-border-width: 2;" +
-                                    "-fx-padding: 12 20;"
-                    );
-                } else {
-                    setStyle(
-                            "-fx-background-color: white;" +
-                                    "-fx-background-radius: 15;" +
-                                    "-fx-border-radius: 15;" +
-                                    "-fx-border-color: transparent;" +
-                                    "-fx-padding: 12 20;"
-                    );
-                }
-            });
+                            "-fx-background-radius: 16;" +
+                            "-fx-border-radius: 16;" +
+                            "-fx-border-color: #E9ECEF;" +
+                            "-fx-border-width: 1.5;" +
+                            "-fx-padding: 13 18;" +
+                            "-fx-prompt-text-fill: #9AA4AE;";
+
+            String focus =
+                    "-fx-background-color: white;" +
+                            "-fx-background-radius: 16;" +
+                            "-fx-border-radius: 16;" +
+                            "-fx-border-color: #50C878;" +
+                            "-fx-border-width: 2;" +
+                            "-fx-padding: 13 18;" +
+                            "-fx-effect: dropshadow(gaussian, rgba(80,200,120,0.18), 12, 0, 0, 4);";
+
+            setStyle(base);
+            focusedProperty().addListener((obs, oldVal, focused) -> setStyle(focused ? focus : base));
         }
+    }
+
+    class BrainLogo extends StackPane {
+        BrainLogo() {
+            setPrefSize(58, 58);
+            setMaxSize(58, 58);
+            setMinSize(58, 58);
+
+            Circle bg = new Circle(29);
+            bg.setFill(Color.web("#F1F8E9"));
+            bg.setStroke(Color.web("#C8E6D2"));
+            bg.setStrokeWidth(1.5);
+
+            Arc leftArc = arc(18, 29, 13, 17, 90, 180, PRIMARY_DARK);
+            Arc rightArc = arc(40, 29, 13, 17, 270, 180, PRIMARY_DARK);
+            Arc topArc = arc(29, 22, 17, 12, 180, 180, PRIMARY);
+
+            getChildren().addAll(bg, leftArc, rightArc, topArc);
+        }
+    }
+
+    private Arc arc(double x, double y, double rx, double ry, double start, double length, Color color) {
+        Arc arc = new Arc();
+        arc.setCenterX(x);
+        arc.setCenterY(y);
+        arc.setRadiusX(rx);
+        arc.setRadiusY(ry);
+        arc.setStartAngle(start);
+        arc.setLength(length);
+        arc.setType(ArcType.OPEN);
+        arc.setStroke(color);
+        arc.setStrokeWidth(2.7);
+        arc.setFill(null);
+        return arc;
     }
 }

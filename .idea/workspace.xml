@@ -4,11 +4,158 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="93d57f2a-9194-4037-9a46-f53006d514dc" name="Changes" comment="" />
+    <list default="true" id="93d57f2a-9194-4037-9a46-f53006d514dc" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/models/user.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/models/user.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/services/userservice.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/services/userservice.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/test/TestMentisDB.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/test/TestMentisDB.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/AddPsychologistDialog.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/AddPsychologistDialog.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/AdminDashboardPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/AdminDashboardPanel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/ContentUploadPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/ContentUploadPanel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/FaceIDDialog.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/FaceIDDialog.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/MentisLoginFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/MentisLoginFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/MentisLoginPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/MentisLoginPanel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/MentisWelcomePanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/MentisWelcomePanel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/Mentissignuppanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/Mentissignuppanel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/PatientTablePanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/PatientTablePanel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/PsychologistTablePanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/PsychologistTablePanel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/ResultsPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/ResultsPanel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/UpdatePatientDialog.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/UpdatePatientDialog.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ui/UpdatePsychologistDialog.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/UpdatePsychologistDialog.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/MainApp.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/MainApp.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/controllers/EventController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/controllers/EventController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/controllers/RegistrationController$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/controllers/RegistrationController$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/controllers/RegistrationController$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/controllers/RegistrationController$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/controllers/RegistrationController$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/controllers/RegistrationController$3.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/controllers/RegistrationController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/controllers/RegistrationController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/services/EmailService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/services/EmailService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/views/ComponentFactory.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/views/ComponentFactory.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/views/EventDetailView.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/views/EventDetailView.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/views/EventListView.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/views/EventListView.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/views/RegistrationFormView.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/views/RegistrationFormView.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/views/StatisticsView.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/mentalhealth/app/views/StatisticsView.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/controller/AssessmentResultController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/controller/AssessmentResultController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/controller/ContentNodeController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/controller/ContentNodeController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/controllers/GoalController$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/controllers/GoalController$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/controllers/GoalController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/controllers/GoalController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/controllers/HomeController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/controllers/HomeController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/controllers/MoodController$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/controllers/MoodController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/controllers/MoodController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/fxml/HomeView.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/fxml/HomeView.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/fxml/MoodView.fxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/models/ContentNode.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/models/ContentNode.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/models/user.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/models/user.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/services/AnalyticsService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/services/AnalyticsService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/services/ContentNodeService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/services/ContentNodeService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/services/FaceRecognitionService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/services/FaceRecognitionService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/services/GeminiService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/services/GeminiService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/services/GeolocationService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/services/GeolocationService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/services/GoalService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/services/GoalService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/services/MoodService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/services/MoodService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/services/RecommendationService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/services/RecommendationService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/services/TextToSpeechService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/services/TextToSpeechService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/services/userservice.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/services/userservice.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/test/TestMentisDB.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/test/TestMentisDB.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AIQuestionGeneratorDialog$GeneratedQuestionRow.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AIQuestionGeneratorDialog$GeneratedQuestionRow.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AIQuestionGeneratorDialog$ParsedQuestion.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AIQuestionGeneratorDialog$ParsedQuestion.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AIQuestionGeneratorDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AIQuestionGeneratorDialog.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AccessLogsPanel$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AccessLogsPanel$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AccessLogsPanel$ContentPathStatsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AccessLogsPanel$ContentPathStatsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AccessLogsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AccessLogsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AddPsychologistDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AddPsychologistDialog.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AddReviewDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AddReviewDialog.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AdminDashboardPanel$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AdminDashboardPanel$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AdminDashboardPanel$UserSearchResult.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AdminDashboardPanel$UserSearchResult.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AdminDashboardPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AdminDashboardPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AssessmentFormDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AssessmentFormDialog.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AssessmentPanel$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AssessmentPanel$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AssessmentPanel$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AssessmentPanel$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AssessmentPanel$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AssessmentPanel$3.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AssessmentPanel$4$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AssessmentPanel$4.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AssessmentPanel$4.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AssessmentPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AssessmentPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ContentUploadPanel$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ContentUploadPanel$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ContentUploadPanel$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ContentUploadPanel$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ContentUploadPanel$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ContentUploadPanel$3.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ContentUploadPanel$4.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ContentUploadPanel$4.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ContentUploadPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ContentUploadPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/FaceIDDialog$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/FaceIDDialog$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/FaceIDDialog$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/FaceIDDialog$3.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/FaceIDDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/FaceIDDialog.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ForgotPasswordDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ForgotPasswordDialog.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/MentisLoginFrame$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/MentisLoginFrame$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/MentisLoginFrame$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/MentisLoginFrame$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/MentisLoginFrame$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/MentisLoginFrame$3.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/MentisLoginFrame$4.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/MentisLoginFrame$4.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/MentisLoginFrame$5.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/MentisLoginFrame$5.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/MentisLoginFrame.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/MentisLoginFrame.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/MentisLoginPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/MentisLoginPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/MentisWelcomePanel$BrainLogo.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/MentisWelcomePanel$BrainLogo.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/MentisWelcomePanel$RoundedButton.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/MentisWelcomePanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/MentisWelcomePanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/Mentissignuppanel$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/Mentissignuppanel$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/Mentissignuppanel$RoundedButton.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/Mentissignuppanel$RoundedButton.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/Mentissignuppanel$RoundedPasswordField.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/Mentissignuppanel$RoundedPasswordField.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/Mentissignuppanel$RoundedTextField.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/Mentissignuppanel$RoundedTextField.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/Mentissignuppanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/Mentissignuppanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/MyReviewsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/MyReviewsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PatientAvailableSessionsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PatientAvailableSessionsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PatientMySessionsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PatientMySessionsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PatientTablePanel$ActionCell.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PatientTablePanel$ActionCell.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PatientTablePanel$PatientModel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PatientTablePanel$PatientModel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PatientTablePanel$SimpleIntegerProperty.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PatientTablePanel$SimpleIntegerProperty.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PatientTablePanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PatientTablePanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PsychologistTablePanel$ActionCell.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PsychologistTablePanel$ActionCell.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PsychologistTablePanel$PsychologistModel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PsychologistTablePanel$PsychologistModel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PsychologistTablePanel$SimpleIntegerProperty.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PsychologistTablePanel$SimpleIntegerProperty.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PsychologistTablePanel$SimpleStringProperty.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PsychologistTablePanel$SimpleStringProperty.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PsychologistTablePanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PsychologistTablePanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/QRCodeScannerDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/QRCodeScannerDialog.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/QuestionFormDialog$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/QuestionFormDialog$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/QuestionFormDialog$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/QuestionFormDialog$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/QuestionFormDialog$3.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/QuestionFormDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/QuestionFormDialog.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/QuestionPanel$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/QuestionPanel$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/QuestionPanel$ActionButtonCell.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/QuestionPanel$ActionButtonCell.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/QuestionPanel$QuestionModel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/QuestionPanel$QuestionModel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/QuestionPanel$SimpleIntegerProperty.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/QuestionPanel$SimpleIntegerProperty.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/QuestionPanel$SimpleStringProperty.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/QuestionPanel$SimpleStringProperty.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/QuestionPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/QuestionPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/RecommendationsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/RecommendationsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ReservationsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ReservationsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$3.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$4.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$5.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$ActionButtonCell.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$ActionButtonCell.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$ResultModel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$ResultModel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$SimpleBooleanProperty.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$SimpleBooleanProperty.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$SimpleIntegerProperty.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$SimpleIntegerProperty.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$SimpleStringProperty.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ResultsPanel$SimpleStringProperty.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ResultsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ResultsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionFormDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionFormDialog.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$6$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$6$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$7$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$7$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SimpleCalendarPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SimpleCalendarPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/TakeAssessmentPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/TakeAssessmentPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/UpdatePatientDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/UpdatePatientDialog.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/UpdatePsychologistDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/UpdatePsychologistDialog.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/utils/commands/UpdateContentNodeCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/utils/commands/UpdateContentNodeCommand.class" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -19,12 +166,15 @@
     &quot;assignee&quot;: &quot;Maram04666&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/elladridi/PIDEV.git&quot;,
-    &quot;accountId&quot;: &quot;9a7513d4-3446-44a6-8577-e8f36ce7aaeb&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/elladridi/Mentis.git",
+    "accountId": "f420d343-346e-4016-81aa-752e398f0e73"
   }
-}</component>
+}]]></component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
 }</component>
@@ -33,22 +183,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.MentisLoginFrame.executor&quot;: &quot;Debug&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.MentisLoginFrame.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "kotlin-language-version-configured": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="MentisLoginFrame" type="Application" factoryName="Application">
       <option name="MAIN_CLASS_NAME" value="ui.MentisLoginFrame" />
@@ -58,21 +209,12 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration default="true" type="JetRunConfigurationType">
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
-      <option name="filePath" />
-      <method v="2" />
-    </configuration>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.26199.169" />
-        <option value="bundled-js-predefined-d6986cc7102b-9c94529fcfe0-JavaScript-IU-252.26199.169" />
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.25557.131" />
+        <option value="bundled-js-predefined-d6986cc7102b-b598e85cdad2-JavaScript-IU-252.25557.131" />
       </set>
     </attachedChunks>
   </component>
@@ -85,6 +227,7 @@
       <updated>1772444530876</updated>
       <workItem from="1772444532123" duration="4991000" />
       <workItem from="1772484934416" duration="1350000" />
+      <workItem from="1778617436506" duration="8315000" />
     </task>
     <servers />
   </component>

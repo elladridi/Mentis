@@ -25,7 +25,6 @@ public class TestMentisDB {
         showUsers();
 
         // Test 4: Register a new user
-        testRegistration();
 
         // Test 5: Show users again
         showUsers();
@@ -122,39 +121,7 @@ public class TestMentisDB {
         System.out.println();
     }
 
-    private static void testRegistration() {
-        System.out.println("─────────────────────────────────────────────────────");
-        System.out.println("TEST 3: User Registration");
-        System.out.println("─────────────────────────────────────────────────────");
-
-        long timestamp = System.currentTimeMillis();
-        user newUser = new user(
-                "Alice",
-                "Johnson",
-                "+9876543210",
-                "1992-08-25",
-                "Doctor",
-                "alice" + timestamp + "@mentis.com",
-                "secure123"
-        );
-
-        System.out.println("Registering:");
-        System.out.println("   Name: " + newUser.getFirstName() + " " + newUser.getLastName());
-        System.out.println("   Email: " + newUser.getEmail());
-        System.out.println("   Type: " + newUser.getType());
-        System.out.println();
-
-        boolean success = userservice.registeruser(newUser);
-
-        if (success) {
-            System.out.println("✅ Registration successful!");
-        } else {
-            System.out.println("❌ Registration failed!");
-        }
-        System.out.println();
-    }
-
-    private static void testLogin() {
+       private static void testLogin() {
         System.out.println("─────────────────────────────────────────────────────");
         System.out.println("TEST 4: Login Test");
         System.out.println("─────────────────────────────────────────────────────");
@@ -175,7 +142,7 @@ public class TestMentisDB {
 
                 if (loggedIn != null) {
                     System.out.println("✅ Login successful!");
-                    System.out.println("   Welcome: " + loggedIn.getFirstName() + " " + loggedIn.getLastName());
+                    System.out.println("   Welcome: " + loggedIn.getFirstname() + " " + loggedIn.getLastname());
                 } else {
                     System.out.println("❌ Login failed!");
                 }

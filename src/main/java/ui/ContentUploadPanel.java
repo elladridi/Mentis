@@ -115,7 +115,7 @@ public class ContentUploadPanel extends VBox {
             System.out.println("  - Total patients: " + allPatients.size());
 
             for (user u : allPatients) {
-                System.out.println("    ✓ ID: " + u.getId() + " | Name: " + u.getFirstName() + " " + u.getLastName() + " | Email: " + u.getEmail());
+                System.out.println("    ✓ ID: " + u.getId() + " | Name: " + u.getFirstname() + " " + u.getLastname() + " | Email: " + u.getEmail());
             }
 
             if (allPatients.isEmpty()) {
@@ -655,7 +655,7 @@ public class ContentUploadPanel extends VBox {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    setText(item.getFirstName() + " " + item.getLastName() + " (ID: " + item.getId() + ")");
+                    setText(item.getFirstname() + " " + item.getLastname() + " (ID: " + item.getId() + ")");
                 }
             }
         });
@@ -666,7 +666,7 @@ public class ContentUploadPanel extends VBox {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    setText(item.getFirstName() + " " + item.getLastName());
+                    setText(item.getFirstname() + " " + item.getLastname());
                 }
             }
         });
@@ -695,7 +695,7 @@ public class ContentUploadPanel extends VBox {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    setText("✓ " + item.getFirstName() + " " + item.getLastName() + " (ID: " + item.getId() + ")");
+                    setText("✓ " + item.getFirstname() + " " + item.getLastname() + " (ID: " + item.getId() + ")");
                     setFont(Font.font("Arial", 12));
                 }
             }
@@ -875,7 +875,7 @@ public class ContentUploadPanel extends VBox {
 
             if (!exists) {
                 assignedPatientsListView.getItems().add(selected);
-                System.out.println("✅ ADDED patient: " + selected.getFirstName() + " " + selected.getLastName() +
+                System.out.println("✅ ADDED patient: " + selected.getFirstname() + " " + selected.getLastname() +
                         " (ID: " + selected.getId() + ")");
             }
             patientAssignmentCombo.getSelectionModel().clearSelection();
@@ -886,7 +886,7 @@ public class ContentUploadPanel extends VBox {
         user selected = assignedPatientsListView.getSelectionModel().getSelectedItem();
         if (selected != null) {
             assignedPatientsListView.getItems().remove(selected);
-            System.out.println("✅ REMOVED patient: " + selected.getFirstName() + " " + selected.getLastName() +
+            System.out.println("✅ REMOVED patient: " + selected.getFirstname() + " " + selected.getLastname() +
                     " (ID: " + selected.getId() + ")");
         }
     }
@@ -1098,7 +1098,7 @@ public class ContentUploadPanel extends VBox {
         try {
             user u = userservice.getuserById(userId);
             if (u != null) {
-                return u.getFirstName() + " " + u.getLastName();
+                return u.getFirstname() + " " + u.getLastname();
             }
         } catch (Exception e) {
             // Ignore

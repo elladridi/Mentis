@@ -13,6 +13,9 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import models.user;
 import services.userservice;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 public class UpdatePsychologistDialog extends Stage {
 
@@ -143,11 +146,11 @@ public class UpdatePsychologistDialog extends Stage {
         String firstName = firstNameField.getText().trim();
         String lastName = lastNameField.getText().trim();
         String phone = phoneField.getText().trim();
-        String dob = dobField.getText().trim();
+        String dobString = dobField.getText().trim();
         String email = emailField.getText().trim();
 
         if (firstName.isEmpty() || lastName.isEmpty() ||
-                phone.isEmpty() || dob.isEmpty() || email.isEmpty()) {
+                phone.isEmpty() || dobString.isEmpty() || email.isEmpty()) {
             showError("Please fill in all fields.");
             return;
         }
@@ -157,16 +160,25 @@ public class UpdatePsychologistDialog extends Stage {
             return;
         }
 
-        if (!userservice.isValidDate(dob)) {
-            showError("Date must be YYYY-MM-DD.");
+        if (!userservice.isValidDate(dobString)) {
+            showError("Date must be in YYYY-MM-DD format.");
+            return;
+        }
+
+        // ✅ FIX: Convert String to LocalDate
+        LocalDate dob = null;
+        try {
+            dob = LocalDate.parse(dobString);
+        } catch (DateTimeParseException e) {
+            showError("Invalid date format. Please use YYYY-MM-DD.");
             return;
         }
 
         // Update user object
-        u.setFirstName(firstName);
-        u.setLastName(lastName);
+        u.setFirstname(firstName);
+        u.setLastname(lastName);
         u.setPhone(phone);
-        u.setDateofbirth(dob);
+        u.setDateofbirth(dob);  // Now passing LocalDate, not String
         u.setEmail(email);
 
         // Save to database

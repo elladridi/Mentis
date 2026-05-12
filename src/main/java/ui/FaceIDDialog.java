@@ -249,7 +249,7 @@ public class FaceIDDialog extends Stage {
                                 parentApp.login(
                                         loggedUser.getType(),
                                         loggedUser.getId(),
-                                        loggedUser.getFirstName() + " " + loggedUser.getLastName()
+                                        loggedUser.getFirstname() + " " + loggedUser.getLastname()
                                 );
                                 isRunning = false;
                                 stopCamera();
