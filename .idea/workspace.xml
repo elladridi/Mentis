@@ -4,19 +4,27 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="93d57f2a-9194-4037-9a46-f53006d514dc" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/resources/css/mentis-styles.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/services/SessionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/services/SessionService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/ui/AnalyticsPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/AnalyticsPanel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/ui/MyReviewsPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/MyReviewsPanel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/ui/PatientAvailableSessionsPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/PatientAvailableSessionsPanel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/ui/PatientMySessionsPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/PatientMySessionsPanel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/ui/RecommendationsPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/RecommendationsPanel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/ui/ReservationsPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/ReservationsPanel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/ui/SessionFormDialog.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/SessionFormDialog.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/ui/SessionPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/SessionPanel.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/ui/SimpleCalendarPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/ui/SimpleCalendarPanel.java" afterDir="false" />
+    <list default="true" id="93d57f2a-9194-4037-9a46-f53006d514dc" name="Changes" comment="final java version -maram-">
+      <change beforePath="$PROJECT_DIR$/target/classes/services/SessionService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/services/SessionService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/AnalyticsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AnalyticsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/MyReviewsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/MyReviewsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PatientAvailableSessionsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PatientAvailableSessionsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/PatientMySessionsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PatientMySessionsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/RecommendationsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/RecommendationsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ReservationsPanel$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ReservationsPanel$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/ReservationsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ReservationsPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionFormDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionFormDialog.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$3.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$4.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$4.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$5.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$5.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$6$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$6$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$6.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$6.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$7$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$7$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$7.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$7.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ui/SimpleCalendarPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SimpleCalendarPanel.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -99,10 +107,23 @@
       <workItem from="1772444532123" duration="4991000" />
       <workItem from="1772484934416" duration="1110000" />
     </task>
+    <task id="LOCAL-00001" summary="final java version -maram-">
+      <option name="closed" value="true" />
+      <created>1778670213385</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1778670213385</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="final java version -maram-" />
+    <option name="LAST_COMMIT_MESSAGE" value="final java version -maram-" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/PI_java_fin$MentisLoginFrame.ic" NAME="MentisLoginFrame Coverage Results" MODIFIED="1772444631103" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
