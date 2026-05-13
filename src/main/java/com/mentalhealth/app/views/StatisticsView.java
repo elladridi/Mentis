@@ -20,293 +20,550 @@ import java.util.Map;
 
 public class StatisticsView {
 
+    private static final String PRIMARY = "#50C878";
+    private static final String PRIMARY_DARK = "#2E7D32";
+    private static final String BLUE = "#4FACFE";
+    private static final String PURPLE = "#9B5DE5";
+    private static final String ORANGE = "#F39C12";
+    private static final String RED = "#D62828";
+    private static final String INK = "#1A3C34";
+    private static final String MUTED = "#6C757D";
+    private static final String BORDER = "#DDE5E2";
+
     public ScrollPane buildStatisticsView() {
-        VBox container = new VBox(25);
-        container.setPadding(new Insets(30));
-        container.setStyle("-fx-background-color: #FFFFFF;");
 
-        // Page title
-        Label title = ComponentFactory.pageTitle("📊 Event Statistics Dashboard");
+        VBox page = new VBox(24);
+        page.setPadding(new Insets(30));
+        page.setStyle("-fx-background-color: transparent;");
 
-        // Summary stats row
-        HBox summaryRow = buildSummaryStats();
+        VBox hero = buildHero();
+        HBox summaryCards = buildSummaryCards();
 
-        // Charts grid
         GridPane chartsGrid = new GridPane();
-        chartsGrid.setHgap(20);
-        chartsGrid.setVgap(20);
+        chartsGrid.setHgap(22);
+        chartsGrid.setVgap(22);
 
-        // Row 1: Pie chart + Bar chart
-        VBox eventTypePie = buildEventTypeChart();
-        VBox revenueBar = buildRevenueByEventChart();
-        chartsGrid.add(eventTypePie, 0, 0);
-        chartsGrid.add(revenueBar, 1, 0);
+        VBox eventTypeChart = buildEventTypeChart();
+        VBox revenueChart = buildRevenueChart();
+        VBox registrationsChart = buildRegistrationsChart();
+        VBox ticketChart = buildTicketTypeChart();
+        VBox statusChart = buildStatusChart();
 
-        // Row 2: Line chart (registrations over time)
-        VBox registrationsLine = buildRegistrationsOverTimeChart();
-        chartsGrid.add(registrationsLine, 0, 1, 2, 1);
+        chartsGrid.add(eventTypeChart, 0, 0);
+        chartsGrid.add(revenueChart, 1, 0);
 
-        // Row 3: Ticket type distribution + Status distribution
-        VBox ticketTypePie = buildTicketTypeChart();
-        VBox statusPie = buildStatusChart();
-        chartsGrid.add(ticketTypePie, 0, 2);
-        chartsGrid.add(statusPie, 1, 2);
+        chartsGrid.add(registrationsChart, 0, 1, 2, 1);
 
-        container.getChildren().addAll(title, summaryRow, chartsGrid);
+        chartsGrid.add(ticketChart, 0, 2);
+        chartsGrid.add(statusChart, 1, 2);
 
-        ScrollPane scrollPane = new ScrollPane(container);
+        page.getChildren().addAll(
+                hero,
+                summaryCards,
+                chartsGrid
+        );
+
+        ScrollPane scrollPane = new ScrollPane(page);
+
         scrollPane.setFitToWidth(true);
-        scrollPane.setStyle("-fx-background: #FFFFFF; -fx-background-color: #FFFFFF;");
+
+        scrollPane.setStyle(
+                "-fx-background: transparent;" +
+                        "-fx-background-color: transparent;" +
+                        "-fx-border-color: transparent;"
+        );
+
         return scrollPane;
     }
 
-    private HBox buildSummaryStats() {
-        HBox stats = new HBox(20);
-        stats.setAlignment(Pos.CENTER_LEFT);
-        stats.setPadding(new Insets(20));
-        stats.setStyle("-fx-background-color: #F1F6F4; -fx-background-radius: 15;" +
-                "-fx-border-color: #DDE5E2; -fx-border-radius: 15;");
+    // =================== HERO ===================
+
+    private VBox buildHero() {
+
+        VBox hero = new VBox(10);
+
+        hero.setPadding(new Insets(28));
+
+        hero.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, " +
+                        PRIMARY + ", " + PRIMARY_DARK + ");" +
+                        "-fx-background-radius: 28;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(47,93,82,0.20), 24, 0, 0, 8);"
+        );
+
+        Label title = new Label("Events Analytics Dashboard");
+
+        title.setStyle(
+                "-fx-text-fill: white;" +
+                        "-fx-font-size: 32px;" +
+                        "-fx-font-weight: 900;"
+        );
+
+        Label subtitle = new Label(
+                "Track registrations, revenue, event engagement, attendance, and platform growth in real time."
+        );
+
+        subtitle.setWrapText(true);
+
+        subtitle.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.88);" +
+                        "-fx-font-size: 14px;"
+        );
+
+        HBox pills = new HBox(10);
+
+        pills.getChildren().addAll(
+                heroBadge("Live Metrics"),
+                heroBadge("Shared Symfony + Java DB"),
+                heroBadge("Real-Time Analytics")
+        );
+
+        hero.getChildren().addAll(title, subtitle, pills);
+
+        return hero;
+    }
+
+    private Label heroBadge(String text) {
+
+        Label badge = new Label(text);
+
+        badge.setStyle(
+                "-fx-background-color: rgba(255,255,255,0.22);" +
+                        "-fx-text-fill: white;" +
+                        "-fx-padding: 7 14;" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-font-size: 11px;" +
+                        "-fx-font-weight: bold;"
+        );
+
+        return badge;
+    }
+
+    // =================== SUMMARY ===================
+
+    private HBox buildSummaryCards() {
 
         int totalEvents = Event.count();
         int totalParticipants = Event.totalParticipants();
         int totalRegistrations = EventRegistration.totalCount();
-        int confirmedRegistrations = EventRegistration.confirmedCount();
-        double totalRevenue = EventRegistration.totalRevenue();
-        double avgTicketPrice = totalRegistrations > 0 ? totalRevenue / confirmedRegistrations : 0;
+        int confirmed = EventRegistration.confirmedCount();
+        double revenue = EventRegistration.totalRevenue();
 
-        stats.getChildren().addAll(
-                buildStatCard("📅", "Total Events", String.valueOf(totalEvents), "#2F5D52"),
-                buildStatCard("👥", "Participants", String.valueOf(totalParticipants), "#3E6F64"),
-                buildStatCard("🎟", "Registrations", String.valueOf(totalRegistrations), "#9BC7B5"),
-                buildStatCard("✅", "Confirmed", String.valueOf(confirmedRegistrations), "#3E6F64"),
-                buildStatCard("💵", "Total Revenue", String.format("$%.2f", totalRevenue), "#2F5D52"),
-                buildStatCard("📊", "Avg. Ticket", String.format("$%.2f", avgTicketPrice), "#6B7280")
+        double avgTicket =
+                confirmed > 0
+                        ? revenue / confirmed
+                        : 0;
+
+        HBox row = new HBox(18);
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        row.getChildren().addAll(
+                statCard("Events", String.valueOf(totalEvents), PRIMARY),
+                statCard("Participants", String.valueOf(totalParticipants), BLUE),
+                statCard("Registrations", String.valueOf(totalRegistrations), PURPLE),
+                statCard("Confirmed", String.valueOf(confirmed), ORANGE),
+                statCard("Revenue", String.format("$%.2f", revenue), PRIMARY_DARK),
+                statCard("Avg Ticket", String.format("$%.2f", avgTicket), RED)
         );
 
-        return stats;
+        return row;
     }
 
-    private VBox buildStatCard(String icon, String label, String value, String color) {
-        VBox card = new VBox(5);
-        card.setAlignment(Pos.CENTER);
-        card.setPadding(new Insets(15, 25, 15, 25));
-        card.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 10;" +
-                "-fx-border-color: #DDE5E2; -fx-border-radius: 10;");
+    private VBox statCard(String title, String value, String color) {
 
-        Label iconLbl = new Label(icon);
-        iconLbl.setStyle("-fx-font-size: 24px;");
+        VBox card = new VBox(8);
+
+        card.setPadding(new Insets(18));
+        card.setPrefWidth(170);
+
+        card.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, #FFFFFF, #F8FBFA);" +
+                        "-fx-background-radius: 22;" +
+                        "-fx-border-color: " + BORDER + ";" +
+                        "-fx-border-radius: 22;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(47,93,82,0.08), 14, 0, 0, 5);"
+        );
 
         Label valueLbl = new Label(value);
-        valueLbl.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 20px; -fx-font-weight: bold;");
 
-        Label labelLbl = new Label(label);
-        labelLbl.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 11px;");
+        valueLbl.setStyle(
+                "-fx-text-fill: " + color + ";" +
+                        "-fx-font-size: 26px;" +
+                        "-fx-font-weight: 900;"
+        );
 
-        card.getChildren().addAll(iconLbl, valueLbl, labelLbl);
+        Label titleLbl = new Label(title);
+
+        titleLbl.setStyle(
+                "-fx-text-fill: " + MUTED + ";" +
+                        "-fx-font-size: 12px;"
+        );
+
+        card.getChildren().addAll(valueLbl, titleLbl);
+
         return card;
     }
 
-    private VBox buildEventTypeChart() {
-        VBox container = new VBox(10);
-        container.setPadding(new Insets(20));
-        container.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 15;" +
-                "-fx-border-color: #DDE5E2; -fx-border-radius: 15;");
+    // =================== CHART CONTAINERS ===================
 
-        Label title = ComponentFactory.sectionTitle("🏷 Events by Type");
+    private VBox chartCard(String titleText) {
 
-        PieChart pieChart = new PieChart();
-        pieChart.setTitle("");
-        pieChart.setLegendVisible(true);
-        pieChart.setPrefSize(350, 300);
+        VBox card = new VBox(16);
 
-        // Get data from database
-        Map<String, Integer> data = getEventCountByType();
-        for (Map.Entry<String, Integer> entry : data.entrySet()) {
-            pieChart.getData().add(new PieChart.Data(entry.getKey() + " (" + entry.getValue() + ")", entry.getValue()));
-        }
+        card.setPadding(new Insets(24));
 
-        container.getChildren().addAll(title, pieChart);
-        return container;
+        card.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, #FFFFFF, #F8FBFA);" +
+                        "-fx-background-radius: 26;" +
+                        "-fx-border-color: " + BORDER + ";" +
+                        "-fx-border-radius: 26;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(47,93,82,0.08), 16, 0, 0, 5);"
+        );
+
+        Label title = new Label(titleText);
+
+        title.setStyle(
+                "-fx-text-fill: " + INK + ";" +
+                        "-fx-font-size: 19px;" +
+                        "-fx-font-weight: 900;"
+        );
+
+        card.getChildren().add(title);
+
+        return card;
     }
 
-    private VBox buildRevenueByEventChart() {
-        VBox container = new VBox(10);
-        container.setPadding(new Insets(20));
-        container.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 15;" +
-                "-fx-border-color: #DDE5E2; -fx-border-radius: 15;");
+    // =================== EVENT TYPES ===================
 
-        Label title = ComponentFactory.sectionTitle("💰 Revenue by Event");
+    private VBox buildEventTypeChart() {
+
+        VBox card = chartCard("Events by Type");
+
+        PieChart chart = new PieChart();
+        chart.setLegendVisible(true);
+        chart.setLabelsVisible(true);
+        chart.setPrefSize(420, 320);
+
+        Map<String, Integer> data = getEventCountByType();
+
+        for (Map.Entry<String, Integer> entry : data.entrySet()) {
+
+            chart.getData().add(
+                    new PieChart.Data(
+                            entry.getKey() + " (" + entry.getValue() + ")",
+                            entry.getValue()
+                    )
+            );
+        }
+
+        card.getChildren().add(chart);
+
+        return card;
+    }
+
+    // =================== REVENUE ===================
+
+    private VBox buildRevenueChart() {
+
+        VBox card = chartCard("Revenue by Event");
 
         CategoryAxis xAxis = new CategoryAxis();
         NumberAxis yAxis = new NumberAxis();
+
         xAxis.setLabel("Event");
-        yAxis.setLabel("Revenue ($)");
+        yAxis.setLabel("Revenue");
 
-        BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
-        barChart.setTitle("");
-        barChart.setLegendVisible(false);
-        barChart.setPrefSize(350, 300);
+        BarChart<String, Number> chart =
+                new BarChart<>(xAxis, yAxis);
 
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
-        series.setName("Revenue");
+        chart.setLegendVisible(false);
+        chart.setPrefSize(420, 320);
+
+        XYChart.Series<String, Number> series =
+                new XYChart.Series<>();
 
         List<Event> events = Event.findAll();
+
         for (Event event : events) {
-            double revenue = EventRegistration.revenueByEvent(event.getId());
+
+            double revenue =
+                    EventRegistration.revenueByEvent(event.getId());
+
             if (revenue > 0) {
-                String shortTitle = event.getTitle().length() > 15 ?
-                        event.getTitle().substring(0, 15) + "..." : event.getTitle();
-                series.getData().add(new XYChart.Data<>(shortTitle, revenue));
+
+                String title =
+                        event.getTitle().length() > 14
+                                ? event.getTitle().substring(0, 14) + "..."
+                                : event.getTitle();
+
+                series.getData().add(
+                        new XYChart.Data<>(title, revenue)
+                );
             }
         }
 
-        barChart.getData().add(series);
-        container.getChildren().addAll(title, barChart);
-        return container;
+        chart.getData().add(series);
+
+        card.getChildren().add(chart);
+
+        return card;
     }
 
-    private VBox buildRegistrationsOverTimeChart() {
-        VBox container = new VBox(10);
-        container.setPadding(new Insets(20));
-        container.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 15;" +
-                "-fx-border-color: #DDE5E2; -fx-border-radius: 15;");
+    // =================== REGISTRATIONS OVER TIME ===================
 
-        Label title = ComponentFactory.sectionTitle("📈 Registrations Over Time (Last 30 Days)");
+    private VBox buildRegistrationsChart() {
+
+        VBox card =
+                chartCard("Registrations Over Time (Last 30 Days)");
 
         CategoryAxis xAxis = new CategoryAxis();
         NumberAxis yAxis = new NumberAxis();
+
         xAxis.setLabel("Date");
         yAxis.setLabel("Registrations");
 
-        LineChart<String, Number> lineChart = new LineChart<>(xAxis, yAxis);
-        lineChart.setTitle("");
-        lineChart.setPrefSize(750, 300);
+        LineChart<String, Number> chart =
+                new LineChart<>(xAxis, yAxis);
 
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
-        series.setName("Daily Registrations");
+        chart.setPrefHeight(340);
+
+        XYChart.Series<String, Number> series =
+                new XYChart.Series<>();
 
         Map<String, Integer> data = getRegistrationsByDate();
+
         for (Map.Entry<String, Integer> entry : data.entrySet()) {
-            series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+
+            series.getData().add(
+                    new XYChart.Data<>(
+                            entry.getKey(),
+                            entry.getValue()
+                    )
+            );
         }
 
-        lineChart.getData().add(series);
-        container.getChildren().addAll(title, lineChart);
-        return container;
+        chart.getData().add(series);
+
+        card.getChildren().add(chart);
+
+        return card;
     }
+
+    // =================== TICKET TYPES ===================
 
     private VBox buildTicketTypeChart() {
-        VBox container = new VBox(10);
-        container.setPadding(new Insets(20));
-        container.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 15;" +
-                "-fx-border-color: #DDE5E2; -fx-border-radius: 15;");
 
-        Label title = ComponentFactory.sectionTitle("🎫 Ticket Types Distribution");
+        VBox card = chartCard("Ticket Type Distribution");
 
-        PieChart pieChart = new PieChart();
-        pieChart.setPrefSize(350, 300);
+        PieChart chart = new PieChart();
+        chart.setPrefSize(420, 320);
 
-        Map<String, Integer> data = getTicketTypeDistribution();
+        Map<String, Integer> data =
+                getTicketTypeDistribution();
+
         for (Map.Entry<String, Integer> entry : data.entrySet()) {
-            pieChart.getData().add(new PieChart.Data(entry.getKey() + " (" + entry.getValue() + ")", entry.getValue()));
+
+            chart.getData().add(
+                    new PieChart.Data(
+                            entry.getKey() + " (" + entry.getValue() + ")",
+                            entry.getValue()
+                    )
+            );
         }
 
-        container.getChildren().addAll(title, pieChart);
-        return container;
+        card.getChildren().add(chart);
+
+        return card;
     }
 
+    // =================== STATUS ===================
+
     private VBox buildStatusChart() {
-        VBox container = new VBox(10);
-        container.setPadding(new Insets(20));
-        container.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 15;" +
-                "-fx-border-color: #DDE5E2; -fx-border-radius: 15;");
 
-        Label title = ComponentFactory.sectionTitle("📊 Registration Status");
+        VBox card = chartCard("Registration Status");
 
-        PieChart pieChart = new PieChart();
-        pieChart.setPrefSize(350, 300);
+        PieChart chart = new PieChart();
+        chart.setPrefSize(420, 320);
 
-        Map<String, Integer> data = getStatusDistribution();
+        Map<String, Integer> data =
+                getStatusDistribution();
+
         for (Map.Entry<String, Integer> entry : data.entrySet()) {
-            String statusEmoji = switch (entry.getKey()) {
+
+            String emoji = switch (entry.getKey()) {
                 case "CONFIRMED" -> "✅ ";
                 case "PENDING" -> "⏳ ";
                 case "CANCELLED" -> "❌ ";
                 default -> "";
             };
-            pieChart.getData().add(new PieChart.Data(statusEmoji + entry.getKey() + " (" + entry.getValue() + ")", entry.getValue()));
+
+            chart.getData().add(
+                    new PieChart.Data(
+                            emoji + entry.getKey() +
+                                    " (" + entry.getValue() + ")",
+                            entry.getValue()
+                    )
+            );
         }
 
-        container.getChildren().addAll(title, pieChart);
-        return container;
+        card.getChildren().add(chart);
+
+        return card;
     }
 
-    // =================== DATA FETCHING METHODS ===================
+    // =================== DATABASE METHODS ===================
 
     private Map<String, Integer> getEventCountByType() {
+
         Map<String, Integer> data = new LinkedHashMap<>();
-        String sql = "SELECT event_type, COUNT(*) as count FROM events GROUP BY event_type ORDER BY count DESC";
-        try (Statement st = DatabaseConnection.getConnection().createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
+
+        String sql =
+                "SELECT event_type, COUNT(*) as count " +
+                        "FROM events GROUP BY event_type ORDER BY count DESC";
+
+        try (
+                Statement st =
+                        DatabaseConnection.getConnection().createStatement();
+
+                ResultSet rs = st.executeQuery(sql)
+        ) {
+
             while (rs.next()) {
-                data.put(rs.getString("event_type"), rs.getInt("count"));
+
+                data.put(
+                        rs.getString("event_type"),
+                        rs.getInt("count")
+                );
             }
+
         } catch (Exception e) {
-            System.err.println("Error fetching event type stats: " + e.getMessage());
+
+            System.err.println(
+                    "Error fetching event type stats: " +
+                            e.getMessage()
+            );
         }
+
         return data;
     }
 
     private Map<String, Integer> getRegistrationsByDate() {
+
         Map<String, Integer> data = new LinkedHashMap<>();
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MM/dd");
 
-        // Initialize last 30 days with 0
+        DateTimeFormatter dtf =
+                DateTimeFormatter.ofPattern("MM/dd");
+
         for (int i = 29; i >= 0; i--) {
-            data.put(LocalDate.now().minusDays(i).format(dtf), 0);
+
+            data.put(
+                    LocalDate.now().minusDays(i).format(dtf),
+                    0
+            );
         }
 
-        String sql = "SELECT DATE(registration_date) as reg_date, COUNT(*) as count " +
-                "FROM event_registrations " +
-                "WHERE registration_date >= DATE_SUB(NOW(), INTERVAL 30 DAY) " +
-                "GROUP BY DATE(registration_date) ORDER BY reg_date";
-        try (Statement st = DatabaseConnection.getConnection().createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
+        String sql =
+                "SELECT DATE(registration_date) as reg_date, COUNT(*) as count " +
+                        "FROM event_registrations " +
+                        "WHERE registration_date >= DATE_SUB(NOW(), INTERVAL 30 DAY) " +
+                        "GROUP BY DATE(registration_date) ORDER BY reg_date";
+
+        try (
+                Statement st =
+                        DatabaseConnection.getConnection().createStatement();
+
+                ResultSet rs = st.executeQuery(sql)
+        ) {
+
             while (rs.next()) {
-                LocalDate date = rs.getDate("reg_date").toLocalDate();
-                data.put(date.format(dtf), rs.getInt("count"));
+
+                LocalDate date =
+                        rs.getDate("reg_date").toLocalDate();
+
+                data.put(
+                        date.format(dtf),
+                        rs.getInt("count")
+                );
             }
+
         } catch (Exception e) {
-            System.err.println("Error fetching registration stats: " + e.getMessage());
+
+            System.err.println(
+                    "Error fetching registrations chart: " +
+                            e.getMessage()
+            );
         }
+
         return data;
     }
 
     private Map<String, Integer> getTicketTypeDistribution() {
+
         Map<String, Integer> data = new LinkedHashMap<>();
-        String sql = "SELECT ticket_type, COUNT(*) as count FROM event_registrations GROUP BY ticket_type ORDER BY count DESC";
-        try (Statement st = DatabaseConnection.getConnection().createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
+
+        String sql =
+                "SELECT ticket_type, COUNT(*) as count " +
+                        "FROM event_registrations " +
+                        "GROUP BY ticket_type ORDER BY count DESC";
+
+        try (
+                Statement st =
+                        DatabaseConnection.getConnection().createStatement();
+
+                ResultSet rs = st.executeQuery(sql)
+        ) {
+
             while (rs.next()) {
-                data.put(rs.getString("ticket_type"), rs.getInt("count"));
+
+                data.put(
+                        rs.getString("ticket_type"),
+                        rs.getInt("count")
+                );
             }
+
         } catch (Exception e) {
-            System.err.println("Error fetching ticket type stats: " + e.getMessage());
+
+            System.err.println(
+                    "Error fetching ticket distribution: " +
+                            e.getMessage()
+            );
         }
+
         return data;
     }
 
     private Map<String, Integer> getStatusDistribution() {
+
         Map<String, Integer> data = new LinkedHashMap<>();
-        String sql = "SELECT status, COUNT(*) as count FROM event_registrations GROUP BY status ORDER BY count DESC";
-        try (Statement st = DatabaseConnection.getConnection().createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
+
+        String sql =
+                "SELECT status, COUNT(*) as count " +
+                        "FROM event_registrations " +
+                        "GROUP BY status ORDER BY count DESC";
+
+        try (
+                Statement st =
+                        DatabaseConnection.getConnection().createStatement();
+
+                ResultSet rs = st.executeQuery(sql)
+        ) {
+
             while (rs.next()) {
-                data.put(rs.getString("status"), rs.getInt("count"));
+
+                data.put(
+                        rs.getString("status"),
+                        rs.getInt("count")
+                );
             }
+
         } catch (Exception e) {
-            System.err.println("Error fetching status stats: " + e.getMessage());
+
+            System.err.println(
+                    "Error fetching status stats: " +
+                            e.getMessage()
+            );
         }
+
         return data;
     }
 }

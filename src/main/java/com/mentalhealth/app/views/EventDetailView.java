@@ -19,6 +19,17 @@ import java.util.function.Consumer;
 
 public class EventDetailView {
 
+    private static final String PRIMARY = "#50C878";
+    private static final String PRIMARY_DARK = "#2E7D32";
+    private static final String INK = "#1A3C34";
+    private static final String TEXT = "#2D3748";
+    private static final String MUTED = "#6C757D";
+    private static final String BORDER = "#DDE5E2";
+    private static final String RED = "#D62828";
+    private static final String ORANGE = "#F39C12";
+    private static final String BLUE = "#4FACFE";
+    private static final String PURPLE = "#9B5DE5";
+
     public VBox buildDetail(Event event, int regCount, int totalTickets,
                             double revenue, List<EventRegistration> registrations,
                             Runnable onBack, Runnable onAddReg,
@@ -27,187 +38,260 @@ public class EventDetailView {
 
         UserSession session = UserSession.getInstance();
 
-        VBox detail = new VBox(20);
-        detail.setPadding(new Insets(30));
-        detail.setStyle("-fx-background-color: #FFFFFF;");
+        VBox detail = new VBox(22);
+        detail.setPadding(new Insets(30, 34, 34, 34));
+        detail.setStyle("-fx-background-color: transparent;");
 
-        Button backBtn = ComponentFactory.styledButton("← Back to Events", "#6B7280");
+        Button backBtn = ComponentFactory.styledButton("Back to Events", "#6C757D");
         backBtn.setOnAction(e -> onBack.run());
 
-        Label title = ComponentFactory.pageTitle(event.getTitle());
-        title.setWrapText(true);
-
-        // Info card
-        VBox infoCard = ComponentFactory.darkCard();
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy 'at' HH:mm");
-        infoCard.getChildren().addAll(
-                ComponentFactory.detailRow("📅 Date & Time", event.getDateTime().format(dtf)),
-                ComponentFactory.detailRow("📍 Location", event.getLocation()),
-                ComponentFactory.detailRow("🏷 Type", event.getEventType()),
-                ComponentFactory.detailRow("📊 Status", event.getStatus()),
-                ComponentFactory.detailRow("👥 Capacity",
-                        event.getCurrentParticipants() + " / " + event.getMaxParticipants() +
-                                " (" + event.getAvailableSpots() + " spots left)"),
-                ComponentFactory.detailRow("💰 Price",
-                        event.isFree() ? "Free" : String.format("$%.2f", event.getPrice())),
-                ComponentFactory.detailRow("📝 Description",
-                        event.getDescription() != null ? event.getDescription() : "N/A"));
-
-        // Map card (or online event card)
+        VBox hero = buildHero(event);
+        VBox infoCard = buildInfoCard(event);
         VBox mapCard = buildMapCard(event);
 
-        // Add basic cards
-        detail.getChildren().addAll(backBtn, title, infoCard, mapCard);
+        detail.getChildren().addAll(backBtn, hero, infoCard, mapCard);
 
-        // ===== PATIENT VIEW =====
         if (session.isPatient()) {
-            // Check if patient is already registered
-            VBox patientStatusCard = buildPatientStatusCard(event, registrations);
-            detail.getChildren().add(patientStatusCard);
+            detail.getChildren().add(buildPatientStatusCard(event, registrations));
         }
 
-        // ===== ADMIN/PSYCHOLOGIST VIEW =====
         if (session.canManageEvents()) {
-            // Registration summary
-            VBox summaryCard = ComponentFactory.darkCard();
-            summaryCard.getChildren().add(ComponentFactory.sectionTitle("🎟 Registration Summary"));
+            VBox summaryCard = buildSummaryCard(event, regCount, totalTickets, revenue, onAddReg);
+            VBox registrationsCard = buildRegistrationsList(registrations, onEditReg, onDeleteReg);
 
-            HBox summaryRow = new HBox(30);
-            summaryRow.setAlignment(Pos.CENTER_LEFT);
-            summaryRow.getChildren().addAll(
-                    ComponentFactory.statItem("🎟 Bookings", String.valueOf(regCount)),
-                    ComponentFactory.verticalSeparator(),
-                    ComponentFactory.statItem("🎫 Tickets", String.valueOf(totalTickets)),
-                    ComponentFactory.verticalSeparator(),
-                    ComponentFactory.statItem("💵 Revenue", String.format("$%.2f", revenue)),
-                    ComponentFactory.verticalSeparator(),
-                    ComponentFactory.statItem("🟢 Available",
-                            String.valueOf(event.getAvailableSpots())));
-            summaryCard.getChildren().add(summaryRow);
-
-            Button addRegBtn = ComponentFactory.styledButton("+ New Registration", "#9BC7B5");
-            addRegBtn.setOnAction(e -> onAddReg.run());
-            if (!event.isAvailable()) {
-                addRegBtn.setDisable(true);
-                addRegBtn.setText("🔴 SOLD OUT");
-            }
-            summaryCard.getChildren().add(addRegBtn);
-
-            detail.getChildren().add(summaryCard);
-
-            // Registration list - ONLY for admin/psychologist
-            VBox regCard = ComponentFactory.darkCard();
-            regCard.getChildren().add(ComponentFactory.sectionTitle("📋 All Registrations (" + registrations.size() + ")"));
-
-            if (registrations.isEmpty()) {
-                Label noReg = new Label("No registrations yet.");
-                noReg.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 13px;");
-                regCard.getChildren().add(noReg);
-            } else {
-                for (EventRegistration reg : registrations) {
-                    regCard.getChildren().add(buildRegistrationCard(reg, onEditReg, onDeleteReg));
-                }
-            }
-
-            detail.getChildren().add(regCard);
+            detail.getChildren().addAll(summaryCard, registrationsCard);
         }
 
         return detail;
     }
 
-    // ========== PATIENT STATUS CARD ==========
-    private VBox buildPatientStatusCard(Event event, List<EventRegistration> registrations) {
-        UserSession session = UserSession.getInstance();
-        VBox statusCard = ComponentFactory.darkCard();
+    // =================== HERO ===================
 
-        // Check if patient is registered
+    private VBox buildHero(Event event) {
+        VBox hero = new VBox(14);
+        hero.setPadding(new Insets(26));
+        hero.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, " +
+                        getTypeColor(event.getEventType()) + ", " + PRIMARY_DARK + ");" +
+                        "-fx-background-radius: 28;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(47,93,82,0.20), 24, 0, 0, 8);"
+        );
+
+        HBox top = new HBox(10);
+        top.setAlignment(Pos.CENTER_LEFT);
+
+        Label typeBadge = whiteBadge(getTypeEmoji(event.getEventType()) + " " + safe(event.getEventType(), "EVENT"));
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label statusBadge = whiteBadge(getStatusEmoji(event.getStatus()) + " " + safe(event.getStatus(), "UPCOMING"));
+
+        top.getChildren().addAll(typeBadge, spacer, statusBadge);
+
+        Label title = new Label(safe(event.getTitle(), "Untitled Event"));
+        title.setWrapText(true);
+        title.setStyle(
+                "-fx-text-fill: white;" +
+                        "-fx-font-size: 32px;" +
+                        "-fx-font-weight: 900;"
+        );
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy 'at' HH:mm");
+        Label date = new Label("Date: " + (event.getDateTime() != null ? event.getDateTime().format(dtf) : "No date"));
+        date.setWrapText(true);
+        date.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.90);" +
+                        "-fx-font-size: 14px;" +
+                        "-fx-font-weight: bold;"
+        );
+
+        Label location = new Label("Location: " + safe(event.getLocation(), "No location"));
+        location.setWrapText(true);
+        location.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.82);" +
+                        "-fx-font-size: 13px;"
+        );
+
+        hero.getChildren().addAll(top, title, date, location);
+        return hero;
+    }
+
+    // =================== INFO CARD ===================
+
+    private VBox buildInfoCard(Event event) {
+        VBox card = modernCard();
+        card.getChildren().add(sectionTitle("Event Overview"));
+
+        HBox stats = new HBox(14);
+        stats.setAlignment(Pos.CENTER_LEFT);
+
+        stats.getChildren().addAll(
+                metricCard("Capacity", event.getCurrentParticipants() + "/" + event.getMaxParticipants(), PRIMARY),
+                metricCard("Available", String.valueOf(event.getAvailableSpots()), BLUE),
+                metricCard("Price", event.isFree() ? "FREE" : String.format("$%.2f", event.getPrice()), PURPLE),
+                metricCard("Occupancy", String.format("%.0f%%", event.getOccupancyPercentage()), ORANGE)
+        );
+
+        ProgressBar occupancy = new ProgressBar(calculateProgress(event));
+        occupancy.setMaxWidth(Double.MAX_VALUE);
+        occupancy.setPrefHeight(9);
+        occupancy.setStyle(
+                "-fx-accent: " + getCapacityColor(event) + ";" +
+                        "-fx-control-inner-background: #E9ECEF;"
+        );
+
+        Label descriptionTitle = label("Description", INK, 15, true);
+        Label description = label(
+                safe(event.getDescription(), "No description available."),
+                MUTED,
+                13,
+                false
+        );
+        description.setWrapText(true);
+
+        VBox details = new VBox(9);
+        details.getChildren().addAll(
+                detailLine("Type", safe(event.getEventType(), "N/A")),
+                detailLine("Status", safe(event.getStatus(), "N/A")),
+                detailLine("Location", safe(event.getLocation(), "N/A")),
+                detailLine("Created At", event.getCreatedAt() != null ? event.getCreatedAt().toString() : "N/A"),
+                detailLine("Updated At", event.getUpdatedAt() != null ? event.getUpdatedAt().toString() : "N/A")
+        );
+
+        card.getChildren().addAll(stats, occupancy, descriptionTitle, description, details);
+        return card;
+    }
+
+    // =================== PATIENT STATUS ===================
+
+    private VBox buildPatientStatusCard(Event event, List<EventRegistration> registrations) {
+        VBox card = modernCard();
+        UserSession session = UserSession.getInstance();
+
         EventRegistration myRegistration = null;
+
         for (EventRegistration reg : registrations) {
-            if (reg.getEmail() != null && reg.getEmail().equals(session.getUserEmail())) {
+            if (reg.getEmail() != null &&
+                    session.getUserEmail() != null &&
+                    reg.getEmail().equalsIgnoreCase(session.getUserEmail())) {
                 myRegistration = reg;
                 break;
             }
         }
 
         if (myRegistration != null) {
-            // Patient is registered
-            statusCard.getChildren().add(ComponentFactory.sectionTitle("✅ You're Registered!"));
+            card.getChildren().add(sectionTitle("You Are Registered"));
 
-            VBox regInfo = new VBox(10);
-            regInfo.setPadding(new Insets(15));
-            regInfo.setStyle("-fx-background-color: #E8F5E9; -fx-background-radius: 10;");
+            VBox inner = softPanel("#E8F5E9");
 
-            Label confirmLabel = new Label("🎟 Confirmation #: REG-" + String.format("%06d", myRegistration.getId()));
-            confirmLabel.setStyle("-fx-text-fill: #2F5D52; -fx-font-size: 16px; -fx-font-weight: bold;");
+            Label confirm = label(
+                    "Confirmation: " + myRegistration.getFormattedConfirmationNumber(),
+                    PRIMARY_DARK,
+                    16,
+                    true
+            );
 
-            Label statusLabel = new Label(myRegistration.getStatusEmoji() + " Status: " + myRegistration.getStatus());
-            statusLabel.setStyle("-fx-text-fill: #3E6F64; -fx-font-size: 14px;");
-
-            Label ticketLabel = new Label("🎫 " + myRegistration.getTicketType() + " × " + myRegistration.getNumberOfTickets());
-            ticketLabel.setStyle("-fx-text-fill: #3E6F64; -fx-font-size: 14px;");
+            Label status = label(
+                    myRegistration.getStatusEmoji() + " Status: " + safe(myRegistration.getStatus(), "N/A"),
+                    getStatusColor(myRegistration.getStatus()),
+                    14,
+                    true
+            );
 
             DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MMM dd, yyyy 'at' HH:mm");
-            Label dateLabel = new Label("📅 Registered on: " +
-                    (myRegistration.getRegistrationDate() != null ?
-                            myRegistration.getRegistrationDate().format(dtf) : "N/A"));
-            dateLabel.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 13px;");
 
-            regInfo.getChildren().addAll(confirmLabel, statusLabel, ticketLabel, dateLabel);
-            statusCard.getChildren().add(regInfo);
+            inner.getChildren().addAll(
+                    confirm,
+                    status,
+                    label("Ticket: " + myRegistration.getTicketType() + " x " + myRegistration.getNumberOfTickets(), TEXT, 13, false),
+                    label("Registered on: " + (myRegistration.getRegistrationDate() != null ? myRegistration.getRegistrationDate().format(dtf) : "N/A"), MUTED, 13, false),
+                    label("Your QR code and ticket details are available in your ticket section.", MUTED, 12, false)
+            );
 
-            // Hint
-            Label hint = new Label("📧 Check your email for the QR code and ticket details");
-            hint.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 12px;");
-            hint.setPadding(new Insets(10, 0, 0, 0));
-            statusCard.getChildren().add(hint);
-
+            card.getChildren().add(inner);
         } else {
-            // Patient is NOT registered
-            statusCard.getChildren().add(ComponentFactory.sectionTitle("🎟 Registration"));
+            card.getChildren().add(sectionTitle("Registration"));
+
+            VBox inner = softPanel(event.isAvailable() ? "#F1F8E9" : "#FFEBEE");
 
             if (event.isAvailable()) {
-                VBox availInfo = new VBox(10);
-                availInfo.setAlignment(Pos.CENTER);
-                availInfo.setPadding(new Insets(20));
-                availInfo.setStyle("-fx-background-color: #F1F6F4; -fx-background-radius: 10;");
-
-                Label spotsLabel = new Label("🟢 " + event.getAvailableSpots() + " spots available");
-                spotsLabel.setStyle("-fx-text-fill: #3E6F64; -fx-font-size: 16px; -fx-font-weight: bold;");
-
-                Label priceLabel = new Label(event.isFree() ? "🆓 This event is FREE!" :
-                        String.format("💰 Price: $%.2f", event.getPrice()));
-                priceLabel.setStyle("-fx-text-fill: #2F5D52; -fx-font-size: 14px;");
-
-                Label infoLabel = new Label("Click 'Register Now' from the events list to sign up!");
-                infoLabel.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 13px;");
-
-                availInfo.getChildren().addAll(spotsLabel, priceLabel, infoLabel);
-                statusCard.getChildren().add(availInfo);
+                inner.getChildren().addAll(
+                        label(event.getAvailableSpots() + " spots available", PRIMARY_DARK, 17, true),
+                        label(event.isFree() ? "This event is free." : String.format("Price: $%.2f", event.getPrice()), TEXT, 13, false),
+                        label("Go back to the events list and click Register Now to join.", MUTED, 13, false)
+                );
             } else {
-                VBox soldOutInfo = new VBox(10);
-                soldOutInfo.setAlignment(Pos.CENTER);
-                soldOutInfo.setPadding(new Insets(20));
-                soldOutInfo.setStyle("-fx-background-color: #FFEBEE; -fx-background-radius: 10;");
+                inner.getChildren().addAll(
+                        label("Sold Out", RED, 18, true),
+                        label("This event has reached maximum capacity.", MUTED, 13, false)
+                );
+            }
 
-                Label soldOutLabel = new Label("🔴 SOLD OUT");
-                soldOutLabel.setStyle("-fx-text-fill: #D62828; -fx-font-size: 18px; -fx-font-weight: bold;");
+            card.getChildren().add(inner);
+        }
 
-                Label infoLabel = new Label("This event has reached maximum capacity.");
-                infoLabel.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 13px;");
+        return card;
+    }
 
-                soldOutInfo.getChildren().addAll(soldOutLabel, infoLabel);
-                statusCard.getChildren().add(soldOutInfo);
+    // =================== SUMMARY ===================
+
+    private VBox buildSummaryCard(Event event, int regCount, int totalTickets, double revenue, Runnable onAddReg) {
+        VBox card = modernCard();
+        card.getChildren().add(sectionTitle("Registration Summary"));
+
+        HBox row = new HBox(14);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.getChildren().addAll(
+                metricCard("Bookings", String.valueOf(regCount), PRIMARY),
+                metricCard("Tickets", String.valueOf(totalTickets), BLUE),
+                metricCard("Revenue", String.format("$%.2f", revenue), ORANGE),
+                metricCard("Available", String.valueOf(event.getAvailableSpots()), PURPLE)
+        );
+
+        Button addRegBtn = ComponentFactory.styledButton("+ New Registration", PRIMARY_DARK);
+        addRegBtn.setOnAction(e -> onAddReg.run());
+
+        if (!event.isAvailable()) {
+            addRegBtn.setDisable(true);
+            addRegBtn.setText("Sold Out");
+        }
+
+        card.getChildren().addAll(row, addRegBtn);
+        return card;
+    }
+
+    private VBox buildRegistrationsList(List<EventRegistration> registrations,
+                                        Consumer<EventRegistration> onEditReg,
+                                        Consumer<EventRegistration> onDeleteReg) {
+
+        VBox card = modernCard();
+        card.getChildren().add(sectionTitle("All Registrations (" + registrations.size() + ")"));
+
+        if (registrations.isEmpty()) {
+            VBox empty = softPanel("#F6FBF7");
+            empty.setAlignment(Pos.CENTER);
+            empty.getChildren().addAll(
+                    label("No registrations yet.", INK, 15, true),
+                    label("Registrations will appear here once users book the event.", MUTED, 13, false)
+            );
+            card.getChildren().add(empty);
+        } else {
+            for (EventRegistration reg : registrations) {
+                card.getChildren().add(buildRegistrationCard(reg, onEditReg, onDeleteReg));
             }
         }
 
-        return statusCard;
+        return card;
     }
 
-    // ========== BUILD MAP CARD ==========
+    // =================== MAP ===================
+
     private VBox buildMapCard(Event event) {
-        VBox mapCard = ComponentFactory.darkCard();
+        VBox mapCard = modernCard();
 
         String location = event.getLocation();
+
         if (isOnlineEvent(location)) {
             return buildOnlineEventCard(mapCard, location);
         }
@@ -215,105 +299,84 @@ public class EventDetailView {
         return buildPhysicalEventCard(mapCard, event);
     }
 
-    // ========== CHECK IF ONLINE EVENT ==========
     private boolean isOnlineEvent(String location) {
         if (location == null || location.trim().isEmpty()) {
             return false;
         }
 
-        String locationLower = location.toLowerCase();
-        return locationLower.contains("online") ||
-                locationLower.contains("en ligne") ||
-                locationLower.contains("virtual") ||
-                locationLower.contains("zoom") ||
-                locationLower.contains("teams") ||
-                locationLower.contains("meet") ||
-                locationLower.contains("webinar") ||
-                locationLower.contains("webex") ||
-                locationLower.contains("discord") ||
-                locationLower.contains("skype");
+        String value = location.toLowerCase();
+
+        return value.contains("online") ||
+                value.contains("en ligne") ||
+                value.contains("virtual") ||
+                value.contains("zoom") ||
+                value.contains("teams") ||
+                value.contains("meet") ||
+                value.contains("webinar") ||
+                value.contains("webex") ||
+                value.contains("discord") ||
+                value.contains("skype");
     }
 
-    // ========== ONLINE EVENT CARD ==========
     private VBox buildOnlineEventCard(VBox mapCard, String location) {
-        HBox titleRow = new HBox(10);
-        titleRow.setAlignment(Pos.CENTER_LEFT);
-        Label mapTitle = ComponentFactory.sectionTitle("💻 Online Event");
-        titleRow.getChildren().add(mapTitle);
-        mapCard.getChildren().add(titleRow);
+        mapCard.getChildren().add(sectionTitle("Online Event"));
 
-        VBox onlineInfo = new VBox(10);
+        VBox onlineInfo = softPanel("#F1F8E9");
         onlineInfo.setAlignment(Pos.CENTER);
-        onlineInfo.setPadding(new Insets(30));
-        onlineInfo.setStyle("-fx-background-color: #F1F6F4; -fx-background-radius: 10;");
 
         Label icon = new Label("🌐");
-        icon.setStyle("-fx-font-size: 50px;");
+        icon.setStyle("-fx-font-size: 46px;");
 
-        Label text = new Label("This is an online event");
-        text.setStyle("-fx-text-fill: #2F5D52; -fx-font-size: 16px; -fx-font-weight: bold;");
-
-        Label locationText = new Label(location != null ? location : "Link will be provided");
-        locationText.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 13px;");
+        Label text = label("This is an online event", PRIMARY_DARK, 17, true);
+        Label locationText = label(safe(location, "Meeting link will be provided."), MUTED, 13, false);
         locationText.setWrapText(true);
-        locationText.setMaxWidth(350);
+        locationText.setMaxWidth(420);
 
-        Label hint = new Label("📧 Check your email for the meeting link after registration");
-        hint.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 12px;");
-        hint.setWrapText(true);
+        Label hint = label("Registered users should check their email for access details.", MUTED, 12, false);
 
         onlineInfo.getChildren().addAll(icon, text, locationText, hint);
         mapCard.getChildren().add(onlineInfo);
 
-        if (location != null && containsUrl(location)) {
-            HBox buttonRow = new HBox(10);
-            buttonRow.setAlignment(Pos.CENTER);
-            buttonRow.setPadding(new Insets(10, 0, 0, 0));
-
-            Button joinBtn = ComponentFactory.styledButton("🔗 Join Meeting", "#2F5D52");
-            joinBtn.setOnAction(e -> {
-                try {
-                    String url = extractUrl(location);
-                    Desktop.getDesktop().browse(new URI(url));
-                } catch (Exception ex) {
-                    System.err.println("Could not open link: " + ex.getMessage());
-                }
-            });
-            buttonRow.getChildren().add(joinBtn);
-            mapCard.getChildren().add(buttonRow);
+        if (containsUrl(location)) {
+            Button joinBtn = ComponentFactory.styledButton("Join Meeting", PRIMARY_DARK);
+            joinBtn.setOnAction(e -> openUrl(extractUrl(location)));
+            mapCard.getChildren().add(joinBtn);
         }
 
         return mapCard;
     }
 
-    // ========== PHYSICAL EVENT CARD (WITH MAP) ==========
     private VBox buildPhysicalEventCard(VBox mapCard, Event event) {
-        HBox titleRow = new HBox(10);
-        titleRow.setAlignment(Pos.CENTER_LEFT);
-        Label mapTitle = ComponentFactory.sectionTitle("📍 Event Location");
-        titleRow.getChildren().add(mapTitle);
-        mapCard.getChildren().add(titleRow);
+        mapCard.getChildren().add(sectionTitle("Event Location"));
 
-        Label locationLabel = new Label(event.getLocation());
-        locationLabel.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 13px;");
+        Label locationLabel = label(safe(event.getLocation(), "No location specified."), MUTED, 13, false);
         locationLabel.setWrapText(true);
         mapCard.getChildren().add(locationLabel);
 
         if (event.getLocation() == null || event.getLocation().trim().isEmpty()) {
-            Label noLocation = new Label("📍 No location specified");
-            noLocation.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 13px;");
+            VBox noLocation = softPanel("#F6FBF7");
+            noLocation.setAlignment(Pos.CENTER);
+            noLocation.getChildren().addAll(
+                    label("No location specified", INK, 15, true),
+                    label("Add a location to enable map preview.", MUTED, 13, false)
+            );
             mapCard.getChildren().add(noLocation);
             return mapCard;
         }
 
         StackPane mapContainer = new StackPane();
-        mapContainer.setPrefSize(400, 250);
-        mapContainer.setMaxWidth(500);
-        mapContainer.setStyle("-fx-background-color: #F1F6F4; -fx-background-radius: 10;");
+        mapContainer.setPrefSize(520, 260);
+        mapContainer.setMaxWidth(560);
+        mapContainer.setStyle(
+                "-fx-background-color: #F1F8E9;" +
+                        "-fx-background-radius: 20;" +
+                        "-fx-border-color: #DDE5E2;" +
+                        "-fx-border-radius: 20;"
+        );
         mapContainer.setAlignment(Pos.CENTER);
 
         ProgressIndicator loading = new ProgressIndicator();
-        loading.setMaxSize(50, 50);
+        loading.setMaxSize(48, 48);
         mapContainer.getChildren().add(loading);
 
         if (GoogleMapsService.isConfigured()) {
@@ -322,104 +385,342 @@ public class EventDetailView {
             showMapPlaceholder(mapContainer);
         }
 
-        mapCard.getChildren().add(mapContainer);
+        HBox buttons = new HBox(10);
+        buttons.setAlignment(Pos.CENTER_LEFT);
 
-        HBox buttonsRow = new HBox(10);
-        buttonsRow.setAlignment(Pos.CENTER_LEFT);
-        buttonsRow.setPadding(new Insets(10, 0, 0, 0));
+        Button openMaps = ComponentFactory.smallButton("Open in Maps", PRIMARY_DARK);
+        openMaps.setOnAction(e -> openUrl(GoogleMapsService.getSearchUrl(event.getLocation())));
 
-        Button openMapsBtn = ComponentFactory.smallButton("🗺️ Open in Google Maps", "#2F5D52");
-        openMapsBtn.setOnAction(e -> {
-            try {
-                String url = GoogleMapsService.getSearchUrl(event.getLocation());
-                Desktop.getDesktop().browse(new URI(url));
-            } catch (Exception ex) {
-                System.err.println("Could not open browser: " + ex.getMessage());
-            }
-        });
+        Button directions = ComponentFactory.smallButton("Directions", PRIMARY);
+        directions.setOnAction(e -> openUrl(GoogleMapsService.getDirectionsUrl(event.getLocation())));
 
-        Button directionsBtn = ComponentFactory.smallButton("🧭 Get Directions", "#3E6F64");
-        directionsBtn.setOnAction(e -> {
-            try {
-                String url = GoogleMapsService.getDirectionsUrl(event.getLocation());
-                Desktop.getDesktop().browse(new URI(url));
-            } catch (Exception ex) {
-                System.err.println("Could not open browser: " + ex.getMessage());
-            }
-        });
+        buttons.getChildren().addAll(openMaps, directions);
 
-        buttonsRow.getChildren().addAll(openMapsBtn, directionsBtn);
-        mapCard.getChildren().add(buttonsRow);
-
+        mapCard.getChildren().addAll(mapContainer, buttons);
         return mapCard;
     }
 
-    // ========== LOAD MAP IMAGE ==========
     private void loadMapImage(StackPane mapContainer, String location) {
-        Image mapImage = GoogleMapsService.getMapImage(location, 400, 250, 15);
+        Image mapImage = GoogleMapsService.getMapImage(location, 520, 260, 15);
 
-        if (mapImage != null) {
-            ImageView mapView = new ImageView();
-            mapView.setFitWidth(400);
-            mapView.setFitHeight(250);
-            mapView.setPreserveRatio(true);
-            mapView.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);");
+        if (mapImage == null) {
+            showMapPlaceholder(mapContainer);
+            return;
+        }
 
-            mapImage.progressProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal.doubleValue() >= 1.0 && !mapImage.isError()) {
-                    mapView.setImage(mapImage);
-                    mapContainer.getChildren().clear();
-                    mapContainer.getChildren().add(mapView);
-                }
-            });
+        ImageView mapView = new ImageView();
+        mapView.setFitWidth(520);
+        mapView.setFitHeight(260);
+        mapView.setPreserveRatio(false);
+        mapView.setStyle("-fx-background-radius: 20;");
 
-            mapImage.errorProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal) {
-                    System.err.println("❌ Map load error: " + mapImage.getException());
-                    mapContainer.getChildren().clear();
-                    VBox errorBox = new VBox(5);
-                    errorBox.setAlignment(Pos.CENTER);
-                    Label errorIcon = new Label("🗺️");
-                    errorIcon.setStyle("-fx-font-size: 30px;");
-                    Label errorLabel = new Label("Could not load map");
-                    errorLabel.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 13px;");
-                    errorBox.getChildren().addAll(errorIcon, errorLabel);
-                    mapContainer.getChildren().add(errorBox);
-                }
-            });
-
-            if (mapImage.getProgress() >= 1.0 && !mapImage.isError()) {
+        mapImage.progressProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue.doubleValue() >= 1.0 && !mapImage.isError()) {
                 mapView.setImage(mapImage);
                 mapContainer.getChildren().clear();
                 mapContainer.getChildren().add(mapView);
             }
-        } else {
-            showMapPlaceholder(mapContainer);
+        });
+
+        mapImage.errorProperty().addListener((obs, oldValue, error) -> {
+            if (error) {
+                showMapPlaceholder(mapContainer);
+            }
+        });
+
+        if (mapImage.getProgress() >= 1.0 && !mapImage.isError()) {
+            mapView.setImage(mapImage);
+            mapContainer.getChildren().clear();
+            mapContainer.getChildren().add(mapView);
         }
     }
 
-    // ========== MAP PLACEHOLDER ==========
     private void showMapPlaceholder(StackPane mapContainer) {
         mapContainer.getChildren().clear();
+
         VBox placeholder = new VBox(10);
         placeholder.setAlignment(Pos.CENTER);
-        Label icon = new Label("🗺️");
-        icon.setStyle("-fx-font-size: 40px;");
-        Label text = new Label("Map preview not available");
-        text.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 13px;");
-        Label hint = new Label("Click buttons below to view location");
-        hint.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 11px;");
-        placeholder.getChildren().addAll(icon, text, hint);
+
+        Label icon = new Label("🗺");
+        icon.setStyle("-fx-font-size: 42px;");
+
+        placeholder.getChildren().addAll(
+                icon,
+                label("Map preview not available", INK, 15, true),
+                label("Use the buttons below to open the location externally.", MUTED, 12, false)
+        );
+
         mapContainer.getChildren().add(placeholder);
     }
 
-    // ========== URL HELPERS ==========
+    // =================== REGISTRATION CARD ===================
+
+    public VBox buildRegistrationCard(EventRegistration reg,
+                                      Consumer<EventRegistration> onEdit,
+                                      Consumer<EventRegistration> onDelete) {
+
+        VBox card = new VBox(10);
+        card.setPadding(new Insets(16));
+        card.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, #FFFFFF, #F8FBFA);" +
+                        "-fx-background-radius: 18;" +
+                        "-fx-border-color: #DDE5E2;" +
+                        "-fx-border-radius: 18;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(47,93,82,0.06), 10, 0, 0, 3);"
+        );
+
+        HBox top = new HBox(10);
+        top.setAlignment(Pos.CENTER_LEFT);
+
+        Label user = label("User: " + safe(reg.getUserName(), "Unknown"), INK, 14, true);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label status = miniPill(
+                reg.getStatusEmoji() + " " + safe(reg.getStatus(), "N/A"),
+                getStatusBg(reg.getStatus()),
+                getStatusColor(reg.getStatus())
+        );
+
+        top.getChildren().addAll(user, spacer, status);
+
+        Label confirmation = label("Confirmation: " + reg.getFormattedConfirmationNumber(), PRIMARY_DARK, 13, true);
+
+        HBox contact = new HBox(18);
+        contact.setAlignment(Pos.CENTER_LEFT);
+        contact.getChildren().addAll(
+                label("Email: " + safe(reg.getEmail(), "N/A"), MUTED, 12, false),
+                label("Phone: " + safe(reg.getPhone(), "N/A"), MUTED, 12, false)
+        );
+
+        HBox ticket = new HBox(12);
+        ticket.setAlignment(Pos.CENTER_LEFT);
+        ticket.getChildren().addAll(
+                miniPill("Ticket: " + safe(reg.getTicketType(), "STANDARD"), "#E8F5E9", PRIMARY_DARK),
+                miniPill("Qty: " + reg.getNumberOfTickets(), "#EAF5FF", BLUE),
+                miniPill(reg.isFreeTicket() ? "Free" : String.format("$%.2f", reg.getTotalPrice()), "#FFF7E6", ORANGE)
+        );
+
+        Label payment = label("Payment: " + safe(reg.getPaymentMethod(), "N/A"), MUTED, 12, false);
+
+        card.getChildren().addAll(top, confirmation, contact, ticket, payment);
+
+        if (reg.getSpecialRequests() != null && !reg.getSpecialRequests().trim().isEmpty()) {
+            Label requests = label("Notes: " + reg.getSpecialRequests(), MUTED, 12, false);
+            requests.setWrapText(true);
+            card.getChildren().add(requests);
+        }
+
+        if (reg.getRegistrationDate() != null) {
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
+            card.getChildren().add(label("Registered on: " + reg.getRegistrationDate().format(dtf), MUTED, 11, false));
+        }
+
+        if (onEdit != null && onDelete != null) {
+            HBox actions = new HBox(8);
+            actions.setAlignment(Pos.CENTER_RIGHT);
+
+            Button edit = ComponentFactory.smallButton("Edit", BLUE);
+            edit.setOnAction(e -> onEdit.accept(reg));
+
+            Button delete = ComponentFactory.smallButton("Delete", RED);
+            delete.setOnAction(e -> onDelete.accept(reg));
+
+            actions.getChildren().addAll(edit, delete);
+            card.getChildren().add(actions);
+        }
+
+        return card;
+    }
+
+    // =================== HELPERS ===================
+
+    private VBox modernCard() {
+        VBox card = new VBox(16);
+        card.setPadding(new Insets(24));
+        card.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, #FFFFFF, #F8FBFA);" +
+                        "-fx-background-radius: 26;" +
+                        "-fx-border-color: #DDE5E2;" +
+                        "-fx-border-radius: 26;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(47,93,82,0.10), 18, 0, 0, 6);"
+        );
+        return card;
+    }
+
+    private VBox softPanel(String bg) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(18));
+        panel.setStyle(
+                "-fx-background-color: " + bg + ";" +
+                        "-fx-background-radius: 18;" +
+                        "-fx-border-color: #DDE5E2;" +
+                        "-fx-border-radius: 18;"
+        );
+        return panel;
+    }
+
+    private Label sectionTitle(String text) {
+        Label label = new Label(text);
+        label.setStyle(
+                "-fx-text-fill: " + INK + ";" +
+                        "-fx-font-size: 20px;" +
+                        "-fx-font-weight: 900;"
+        );
+        return label;
+    }
+
+    private VBox metricCard(String label, String value, String color) {
+        VBox card = new VBox(5);
+        card.setAlignment(Pos.CENTER_LEFT);
+        card.setPadding(new Insets(15));
+        card.setMaxWidth(Double.MAX_VALUE);
+        card.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 18;" +
+                        "-fx-border-color: #EDF2F7;" +
+                        "-fx-border-radius: 18;"
+        );
+
+        Label valueLabel = label(value, color, 22, true);
+        Label nameLabel = label(label, MUTED, 12, false);
+
+        card.getChildren().addAll(valueLabel, nameLabel);
+        HBox.setHgrow(card, Priority.ALWAYS);
+
+        return card;
+    }
+
+    private HBox detailLine(String label, String value) {
+        HBox row = new HBox(12);
+        row.setAlignment(Pos.TOP_LEFT);
+
+        Label name = label(label + ":", PRIMARY_DARK, 13, true);
+        name.setMinWidth(110);
+
+        Label val = label(value, TEXT, 13, false);
+        val.setWrapText(true);
+
+        row.getChildren().addAll(name, val);
+        return row;
+    }
+
+    private Label label(String text, String color, int size, boolean bold) {
+        Label label = new Label(text);
+        label.setStyle(
+                "-fx-text-fill: " + color + ";" +
+                        "-fx-font-size: " + size + "px;" +
+                        (bold ? "-fx-font-weight: bold;" : "")
+        );
+        return label;
+    }
+
+    private Label whiteBadge(String text) {
+        Label badge = new Label(text);
+        badge.setStyle(
+                "-fx-background-color: rgba(255,255,255,0.22);" +
+                        "-fx-text-fill: white;" +
+                        "-fx-padding: 7 14;" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-font-size: 11px;" +
+                        "-fx-font-weight: bold;"
+        );
+        return badge;
+    }
+
+    private Label miniPill(String text, String bg, String color) {
+        Label pill = new Label(text);
+        pill.setStyle(
+                "-fx-background-color: " + bg + ";" +
+                        "-fx-text-fill: " + color + ";" +
+                        "-fx-padding: 6 12;" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-font-size: 11px;" +
+                        "-fx-font-weight: bold;"
+        );
+        return pill;
+    }
+
+    private double calculateProgress(Event event) {
+        if (event.getMaxParticipants() <= 0) return 0;
+        return Math.min(1.0, (double) event.getCurrentParticipants() / event.getMaxParticipants());
+    }
+
+    private String getCapacityColor(Event event) {
+        double progress = calculateProgress(event);
+        if (progress >= 0.9) return RED;
+        if (progress >= 0.65) return ORANGE;
+        return PRIMARY;
+    }
+
+    private String getTypeColor(String type) {
+        if (type == null) return PRIMARY;
+        return switch (type) {
+            case "WORKSHOP" -> BLUE;
+            case "GROUP_THERAPY" -> PRIMARY;
+            case "SEMINAR" -> PURPLE;
+            case "SOCIAL" -> ORANGE;
+            default -> PRIMARY;
+        };
+    }
+
+    private String getTypeEmoji(String type) {
+        if (type == null) return "📅";
+        return switch (type) {
+            case "WORKSHOP" -> "🛠";
+            case "GROUP_THERAPY" -> "👥";
+            case "SEMINAR" -> "🎓";
+            case "SOCIAL" -> "🎉";
+            default -> "📅";
+        };
+    }
+
+    private String getStatusEmoji(String status) {
+        if (status == null) return "⚪";
+        return switch (status) {
+            case "UPCOMING" -> "🟢";
+            case "ONGOING" -> "🔵";
+            case "COMPLETED" -> "⚫";
+            case "CANCELLED" -> "🔴";
+            default -> "⚪";
+        };
+    }
+
+    private String getStatusColor(String status) {
+        if (status == null) return "#9CA3AF";
+
+        return switch (status) {
+            case "CONFIRMED", "UPCOMING" -> PRIMARY_DARK;
+            case "PENDING", "ONGOING" -> ORANGE;
+            case "CANCELLED" -> RED;
+            case "COMPLETED" -> MUTED;
+            default -> "#9CA3AF";
+        };
+    }
+
+    private String getStatusBg(String status) {
+        if (status == null) return "#F3F4F6";
+
+        return switch (status) {
+            case "CONFIRMED", "UPCOMING" -> "#E8F5E9";
+            case "PENDING", "ONGOING" -> "#FFF7E6";
+            case "CANCELLED" -> "#FFECEC";
+            case "COMPLETED" -> "#F3F4F6";
+            default -> "#F3F4F6";
+        };
+    }
+
     private boolean containsUrl(String text) {
-        return text != null && (text.contains("http") || text.contains("www.") || text.contains(".com"));
+        return text != null &&
+                (text.contains("http") || text.contains("www.") || text.contains(".com"));
     }
 
     private String extractUrl(String text) {
+        if (text == null) return "";
+
         String[] words = text.split("\\s+");
+
         for (String word : words) {
             if (word.contains("http") || word.contains("www.")) {
                 if (!word.startsWith("http")) {
@@ -428,85 +729,20 @@ public class EventDetailView {
                 return word;
             }
         }
+
         return text;
     }
 
-    // ========== REGISTRATION CARD (for admin/psychologist only) ==========
-    public VBox buildRegistrationCard(EventRegistration reg,
-                                      Consumer<EventRegistration> onEdit,
-                                      Consumer<EventRegistration> onDelete) {
-        VBox card = new VBox(8);
-        card.setPadding(new Insets(15));
-        card.setStyle("-fx-background-color: #F1F6F4; -fx-background-radius: 10;" +
-                "-fx-border-color: #DDE5E2; -fx-border-radius: 10;");
-
-        HBox topRow = new HBox(10);
-        topRow.setAlignment(Pos.CENTER_LEFT);
-        Label userLbl = new Label("👤 " + reg.getUserName());
-        userLbl.setStyle("-fx-text-fill: #1E1E1E; -fx-font-size: 14px; -fx-font-weight: bold;");
-        Region sp = new Region();
-        HBox.setHgrow(sp, Priority.ALWAYS);
-        Label dateLbl = ComponentFactory.subText(
-                reg.getRegistrationDate() != null ?
-                        reg.getRegistrationDate().format(
-                                DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")) : "");
-        topRow.getChildren().addAll(userLbl, sp, dateLbl);
-
-        String statusColor = switch (reg.getStatus()) {
-            case "CONFIRMED" -> "#3E6F64";
-            case "PENDING" -> "#AFCFC2";
-            case "CANCELLED" -> "#D62828";
-            default -> "#9CA3AF";
-        };
-        Label statusLbl = new Label(reg.getStatusEmoji() + " " + reg.getStatus());
-        statusLbl.setStyle("-fx-text-fill:" + statusColor +
-                "; -fx-font-size: 13px; -fx-font-weight: bold;");
-
-        HBox contactRow = new HBox(20);
-        contactRow.setAlignment(Pos.CENTER_LEFT);
-        contactRow.getChildren().addAll(
-                ComponentFactory.infoText("📧 " + reg.getEmail()),
-                ComponentFactory.infoText("📱 " +
-                        (reg.getPhone() != null ? reg.getPhone() : "N/A")));
-
-        HBox ticketRow = new HBox(20);
-        ticketRow.setAlignment(Pos.CENTER_LEFT);
-        Label typeLbl = new Label("🎫 " + reg.getTicketType());
-        typeLbl.setStyle("-fx-text-fill:" +
-                ("VIP".equals(reg.getTicketType()) ? "#2F5D52" : "#3E6F64") +
-                "; -fx-font-size: 12px; -fx-font-weight: bold;");
-        Label countLbl = ComponentFactory.infoText("× " + reg.getNumberOfTickets() + " ticket(s)");
-        Label priceLbl = new Label(
-                reg.isFreeTicket() ? "🆓 Free" :
-                        String.format("💰 $%.2f", reg.getTotalPrice()));
-        priceLbl.setStyle("-fx-text-fill: #2F5D52; -fx-font-size: 12px; -fx-font-weight: bold;");
-        ticketRow.getChildren().addAll(typeLbl, countLbl, priceLbl);
-
-        HBox payRow = new HBox(20);
-        payRow.setAlignment(Pos.CENTER_LEFT);
-        payRow.getChildren().add(ComponentFactory.infoText("💳 " +
-                (reg.getPaymentMethod() != null ? reg.getPaymentMethod() : "N/A")));
-        if (reg.getSpecialRequests() != null && !reg.getSpecialRequests().isEmpty()) {
-            Label reqLbl = new Label("📝 " + reg.getSpecialRequests());
-            reqLbl.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 11px;");
-            reqLbl.setWrapText(true);
-            payRow.getChildren().add(reqLbl);
+    private void openUrl(String url) {
+        try {
+            if (url == null || url.trim().isEmpty()) return;
+            Desktop.getDesktop().browse(new URI(url));
+        } catch (Exception e) {
+            System.err.println("Could not open URL: " + e.getMessage());
         }
+    }
 
-        card.getChildren().addAll(topRow, statusLbl, contactRow, ticketRow, payRow);
-
-        // Action buttons - only for admin/psychologist
-        if (onEdit != null && onDelete != null) {
-            HBox actions = new HBox(8);
-            actions.setAlignment(Pos.CENTER_RIGHT);
-            Button editBtn = ComponentFactory.smallButton("✏ Edit", "#3E6F64");
-            editBtn.setOnAction(e -> onEdit.accept(reg));
-            Button delBtn = ComponentFactory.smallButton("🗑 Delete", "#D62828");
-            delBtn.setOnAction(e -> onDelete.accept(reg));
-            actions.getChildren().addAll(editBtn, delBtn);
-            card.getChildren().add(actions);
-        }
-
-        return card;
+    private String safe(String value, String fallback) {
+        return value == null || value.trim().isEmpty() ? fallback : value;
     }
 }

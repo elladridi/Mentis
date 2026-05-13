@@ -4,28 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="93d57f2a-9194-4037-9a46-f53006d514dc" name="Changes" comment="final java version -maram-">
-      <change beforePath="$PROJECT_DIR$/target/classes/services/SessionService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/services/SessionService.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/AnalyticsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/AnalyticsPanel.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/MyReviewsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/MyReviewsPanel.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/PatientAvailableSessionsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PatientAvailableSessionsPanel.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/PatientMySessionsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/PatientMySessionsPanel.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/RecommendationsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/RecommendationsPanel.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/ReservationsPanel$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ReservationsPanel$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/ReservationsPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/ReservationsPanel.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionFormDialog.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionFormDialog.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$2.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$3.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$4.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$4.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$5.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$5.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$6$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$6$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$6.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$6.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$7$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$7$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel$7.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel$7.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/SessionPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SessionPanel.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ui/SimpleCalendarPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ui/SimpleCalendarPanel.class" afterDir="false" />
-    </list>
+    <list default="true" id="93d57f2a-9194-4037-9a46-f53006d514dc" name="Changes" comment="final java version -maram-" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -62,6 +41,7 @@
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "main",
     "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/benot/OneDrive/Desktop/final/Mentis",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -92,8 +72,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.26199.169" />
-        <option value="bundled-js-predefined-d6986cc7102b-9c94529fcfe0-JavaScript-IU-252.26199.169" />
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.25557.131" />
       </set>
     </attachedChunks>
   </component>

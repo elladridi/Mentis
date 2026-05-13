@@ -139,10 +139,10 @@ public class AdminDashboardPanel extends VBox {
         VBox glassPanel = new VBox(18);
         glassPanel.setPadding(new Insets(30));
         glassPanel.setStyle(
-                "-fx-background-color: rgba(255,255,255,0.95);" +
+                "-fx-background-color: #FFFFFF;" +
                         "-fx-background-radius: 30;" +
                         "-fx-border-radius: 30;" +
-                        "-fx-border-color: rgba(255,255,255,0.55);" +
+                        "-fx-border-color: #E9ECEF;" +
                         "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 28, 0, 0, 10);"
         );
 
@@ -152,29 +152,34 @@ public class AdminDashboardPanel extends VBox {
         VBox left = new VBox(10);
         left.setAlignment(Pos.CENTER_LEFT);
 
-        Label rank = new Label("🎖️ MASTER ADMIN");
+        Label rank = new Label("MASTER ADMIN");
         rank.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
-        rank.setTextFill(Color.WHITE);
         rank.setPadding(new Insets(6, 16, 6, 16));
-        rank.setStyle("-fx-background-color: linear-gradient(to right, #F1C40F, #E67E22); -fx-background-radius: 999;");
+        rank.setStyle(
+                "-fx-background-color: linear-gradient(to right, #F1C40F, #E67E22);" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-text-fill: #1A3C34;"
+        );
 
         Label welcome = new Label("Welcome back!");
         welcome.setFont(Font.font("Segoe UI", FontWeight.EXTRA_BOLD, 42));
-        welcome.setTextFill(INK);
+        welcome.setStyle("-fx-text-fill: #1A3C34;");
 
         Label dashboardTitle = new Label("Mentis Admin Dashboard");
         dashboardTitle.setFont(Font.font("Segoe UI", FontWeight.EXTRA_BOLD, 30));
-        dashboardTitle.setTextFill(EMERALD_DARK);
+        dashboardTitle.setStyle("-fx-text-fill: #2E7D32;");
 
         Label subtitle = new Label("Empower minds, transform lives, and lead the wellness revolution.");
         subtitle.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 15));
-        subtitle.setTextFill(MUTED);
         subtitle.setWrapText(true);
+        subtitle.setStyle("-fx-text-fill: #6C757D;");
 
         HBox chips = new HBox(10);
         chips.setAlignment(Pos.CENTER_LEFT);
-        dateChip = createChip("📅 " + LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy")));
-        timeChip = createChip("🕒 " + LocalTime.now().format(DateTimeFormatter.ofPattern("h:mm a")));
+
+        dateChip = createChip("mai 13, 2026");
+        timeChip = createChip(LocalTime.now().format(DateTimeFormatter.ofPattern("h:mm a")));
+
         chips.getChildren().addAll(dateChip, timeChip);
 
         left.getChildren().addAll(rank, welcome, dashboardTitle, subtitle, chips);
@@ -184,6 +189,7 @@ public class AdminDashboardPanel extends VBox {
 
         row.getChildren().addAll(left, spacer, createAdminAvatar());
         glassPanel.getChildren().add(row);
+
         return glassPanel;
     }
 
@@ -724,9 +730,12 @@ public class AdminDashboardPanel extends VBox {
     private Label createChip(String text) {
         Label chip = new Label(text);
         chip.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-        chip.setTextFill(TEXT_DARK);
         chip.setPadding(new Insets(8, 16, 8, 16));
-        chip.setStyle("-fx-background-color: rgba(0,0,0,0.05); -fx-background-radius: 999;");
+        chip.setStyle(
+                "-fx-background-color: #F1F3F5;" +
+                        "-fx-background-radius: 999;" +
+                        "-fx-text-fill: #2D3748;"
+        );
         return chip;
     }
 
