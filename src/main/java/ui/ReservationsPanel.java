@@ -4,6 +4,7 @@ import controller.SessionController;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -19,95 +20,121 @@ public class ReservationsPanel extends VBox {
     private MentisLoginFrame parentApp;
     private SessionController sessionController;
     private TableView<Session> reservationsTable;
-    private SimpleCalendarPanel calendarPanel; // ⭐ NEW: Calendar panel
+    private SimpleCalendarPanel calendarPanel;
     private Label userInfoLabel;
     private Button toggleViewButton;
-    private boolean isTableView = true; // ⭐ Track current view
+    private boolean isTableView = true;
 
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
-    // Colors
-    private static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
-    private static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
-    private static final Color BUTTON_LIGHT_GREEN = Color.rgb(160, 200, 180);
-    private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
-    private static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
-    private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
-    private static final Color STATUS_CONFIRMED = Color.rgb(52, 152, 219);
-    private static final Color STATUS_COMPLETED = Color.rgb(39, 174, 96);
-    private static final Color STATUS_CANCELLED = Color.rgb(192, 57, 43);
+    // Symfony-style green colors
+    private static final Color PAGE_BG = Color.web("#F8F9FA");
+    private static final Color SOFT_GREEN_BG = Color.web("#F1F8E9");
+    private static final Color EMERALD = Color.web("#50C878");
+    private static final Color EMERALD_DARK = Color.web("#2E7D32");
+    private static final Color EMERALD_MID = Color.web("#3A9B5E");
+    private static final Color INK = Color.web("#1A3C34");
+    private static final Color MUTED = Color.web("#6C757D");
+    private static final Color LINE = Color.web("#E9ECEF");
+    private static final Color STATUS_RESERVED = Color.web("#3498DB");
+    private static final Color STATUS_COMPLETED = Color.web("#27AE60");
+    private static final Color STATUS_CANCELLED = Color.web("#E74C3C");
 
     public ReservationsPanel(MentisLoginFrame parentApp, SessionController sessionController) {
         this.parentApp = parentApp;
         this.sessionController = sessionController;
 
-        setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        setPadding(new Insets(30));
-        setSpacing(20);
+        setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
+        setPadding(new Insets(44, 56, 44, 56));
+        setSpacing(28);
 
         createHeader();
         createTable();
-        createCalendarPanel(); // ⭐ NEW: Initialize calendar panel
+        createCalendarPanel();
         refreshData();
     }
 
     private void createHeader() {
-        HBox headerBox = new HBox();
-        headerBox.setAlignment(Pos.CENTER_LEFT);
-        headerBox.setPadding(new Insets(0, 0, 20, 0));
+        VBox headerBox = new VBox(8);
+        headerBox.setPadding(new Insets(0, 0, 24, 0));
 
-        VBox titleBox = new VBox(10);
-        Label titleLabel = new Label("Session Reservations");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 32));
-        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        Label titleLabel = new Label("📋 Session Reservations");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 40));
+        titleLabel.setTextFill(EMERALD_DARK);
 
-        Label subtitleLabel = new Label("View all patient reservations");
-        subtitleLabel.setFont(Font.font("Segoe UI", 16));
-        subtitleLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        Label subtitleLabel = new Label("View and manage all patient session reservations");
+        subtitleLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 16));
+        subtitleLabel.setTextFill(MUTED);
 
-        titleBox.getChildren().addAll(titleLabel, subtitleLabel);
+        HBox actionBar = new HBox();
+        actionBar.setAlignment(Pos.CENTER_RIGHT);
+        actionBar.setPadding(new Insets(20, 0, 0, 0));
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // ⭐ NEW: Toggle View Button
-        toggleViewButton = new Button("📅 Switch to Calendar View");
-        toggleViewButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        toggleViewButton.setTextFill(Color.WHITE);
-        toggleViewButton.setStyle("-fx-background-color: #" + toHex(ACCENT_DARK_GREEN) + "; -fx-background-radius: 5; -fx-padding: 10 20; -fx-cursor: hand;");
+        toggleViewButton = createOutlineButton("📅 Calendar View");
         toggleViewButton.setOnAction(e -> toggleView());
 
         userInfoLabel = new Label(parentApp.getUserName() + " (" + parentApp.getUserType() + ")");
-        userInfoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        userInfoLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        userInfoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        userInfoLabel.setTextFill(MUTED);
+        userInfoLabel.setPadding(new Insets(0, 0, 0, 20));
 
-        headerBox.getChildren().addAll(titleBox, spacer, toggleViewButton, userInfoLabel);
+        actionBar.getChildren().addAll(spacer, toggleViewButton, userInfoLabel);
+
+        headerBox.getChildren().addAll(titleLabel, subtitleLabel, actionBar);
         getChildren().add(headerBox);
     }
 
     private void createTable() {
         reservationsTable = new TableView<>();
-        reservationsTable.setStyle("-fx-background-color: white; -fx-border-color: #" + toHex(BORDER_LIGHT) + ";");
-        reservationsTable.setFixedCellSize(50);
-        reservationsTable.setPlaceholder(new Label("No reservations found"));
+        reservationsTable.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 20px;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0, 0, 5);"
+        );
+        reservationsTable.setFixedCellSize(60);
+        reservationsTable.setPlaceholder(createEmptyTableLabel());
 
         // Session Title Column
         TableColumn<Session, String> titleCol = new TableColumn<>("Session Title");
-        titleCol.setCellValueFactory(cellData -> {
-            Session session = cellData.getValue();
-            return new javafx.beans.property.SimpleStringProperty(session.getTitle());
+        titleCol.setCellValueFactory(new PropertyValueFactory<>("title"));
+        titleCol.setPrefWidth(220);
+        titleCol.setStyle(columnStyle());
+        titleCol.setCellFactory(column -> new TableCell<Session, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+                    setTextFill(INK);
+                }
+            }
         });
-        titleCol.setPrefWidth(200);
 
         // Patient ID Column
-        TableColumn<Session, String> patientCol = new TableColumn<>("Patient ID");
-        patientCol.setCellValueFactory(cellData -> {
-            Session session = cellData.getValue();
-            String patientId = session.getReservedBy() != null ? String.valueOf(session.getReservedBy()) : "-";
-            return new javafx.beans.property.SimpleStringProperty(patientId);
-        });
+        TableColumn<Session, Integer> patientCol = new TableColumn<>("Patient ID");
+        patientCol.setCellValueFactory(new PropertyValueFactory<>("reservedBy"));
         patientCol.setPrefWidth(100);
+        patientCol.setStyle(columnStyle());
+        patientCol.setCellFactory(column -> new TableCell<Session, Integer>() {
+            @Override
+            protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText("-");
+                } else {
+                    setText(String.valueOf(item));
+                    setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+                    setTextFill(MUTED);
+                }
+            }
+        });
 
         // Date Column
         TableColumn<Session, String> dateCol = new TableColumn<>("Date");
@@ -115,7 +142,21 @@ public class ReservationsPanel extends VBox {
             Session session = cellData.getValue();
             return new javafx.beans.property.SimpleStringProperty(session.getSessionDate().format(dateFormatter));
         });
-        dateCol.setPrefWidth(100);
+        dateCol.setPrefWidth(110);
+        dateCol.setStyle(columnStyle());
+        dateCol.setCellFactory(column -> new TableCell<Session, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+                    setTextFill(MUTED);
+                }
+            }
+        });
 
         // Time Column
         TableColumn<Session, String> timeCol = new TableColumn<>("Time");
@@ -124,23 +165,59 @@ public class ReservationsPanel extends VBox {
             String timeRange = session.getStartTime().format(timeFormatter) + " - " + session.getEndTime().format(timeFormatter);
             return new javafx.beans.property.SimpleStringProperty(timeRange);
         });
-        timeCol.setPrefWidth(150);
+        timeCol.setPrefWidth(130);
+        timeCol.setStyle(columnStyle());
+        timeCol.setCellFactory(column -> new TableCell<Session, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+                    setTextFill(MUTED);
+                }
+            }
+        });
 
         // Location Column
         TableColumn<Session, String> locationCol = new TableColumn<>("Location");
-        locationCol.setCellValueFactory(cellData -> {
-            Session session = cellData.getValue();
-            return new javafx.beans.property.SimpleStringProperty(session.getLocation());
+        locationCol.setCellValueFactory(new PropertyValueFactory<>("location"));
+        locationCol.setPrefWidth(140);
+        locationCol.setStyle(columnStyle());
+        locationCol.setCellFactory(column -> new TableCell<Session, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+                    setTextFill(MUTED);
+                }
+            }
         });
-        locationCol.setPrefWidth(150);
 
         // Type Column
         TableColumn<Session, String> typeCol = new TableColumn<>("Type");
-        typeCol.setCellValueFactory(cellData -> {
-            Session session = cellData.getValue();
-            return new javafx.beans.property.SimpleStringProperty(session.getSessionType());
-        });
+        typeCol.setCellValueFactory(new PropertyValueFactory<>("sessionType"));
         typeCol.setPrefWidth(100);
+        typeCol.setStyle(columnStyle());
+        typeCol.setCellFactory(column -> new TableCell<Session, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setText(null);
+                } else {
+                    setGraphic(createBadge(item, getTypeColor(item)));
+                    setText(null);
+                }
+            }
+        });
 
         // Status Column
         TableColumn<Session, String> statusCol = new TableColumn<>("Status");
@@ -149,25 +226,22 @@ public class ReservationsPanel extends VBox {
             String status = session.getReservedBy() != null ? "Reserved" : "Available";
             return new javafx.beans.property.SimpleStringProperty(status);
         });
+        statusCol.setPrefWidth(100);
+        statusCol.setStyle(columnStyle());
         statusCol.setCellFactory(column -> new TableCell<Session, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
+                    setGraphic(null);
                     setText(null);
-                    setStyle("");
                 } else {
-                    setText(item);
-                    if ("Reserved".equals(item)) {
-                        setTextFill(Color.web(toHex(STATUS_CONFIRMED)));
-                        setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-                    } else {
-                        setTextFill(Color.web(toHex(TEXT_LIGHT)));
-                    }
+                    Color color = "Reserved".equals(item) ? STATUS_RESERVED : MUTED;
+                    setGraphic(createBadge(item, color));
+                    setText(null);
                 }
             }
         });
-        statusCol.setPrefWidth(100);
 
         reservationsTable.getColumns().addAll(titleCol, patientCol, dateCol, timeCol, locationCol, typeCol, statusCol);
 
@@ -175,35 +249,98 @@ public class ReservationsPanel extends VBox {
         getChildren().add(reservationsTable);
     }
 
-    // ⭐ NEW: Create calendar panel
-    private void createCalendarPanel() {
-        calendarPanel = new SimpleCalendarPanel(parentApp);
-        calendarPanel.setVisible(false); // Hidden by default
-        calendarPanel.setManaged(false);
-        getChildren().add(calendarPanel);
+    private Label createEmptyTableLabel() {
+        Label label = new Label("📭 No reservations found");
+        label.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        label.setTextFill(MUTED);
+        return label;
     }
 
-    // ⭐ NEW: Toggle between table and calendar views
+    private Label createBadge(String text, Color bgColor) {
+        Label badge = new Label(text);
+        badge.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11));
+        badge.setTextFill(Color.WHITE);
+        badge.setPadding(new Insets(5, 14, 5, 14));
+        badge.setStyle("-fx-background-color: " + cssColor(bgColor) + "; -fx-background-radius: 999px;");
+        return badge;
+    }
+
+    private Color getTypeColor(String type) {
+        if (type == null) return Color.web("#7F8C8D");
+        switch (type.toLowerCase()) {
+            case "individual": return Color.web("#5B8C5A");
+            case "group": return Color.web("#27AE60");
+            case "family": return Color.web("#8E44AD");
+            case "couple": return Color.web("#E67E22");
+            case "online": return Color.web("#3498DB");
+            default: return Color.web("#7F8C8D");
+        }
+    }
+
+    private String columnStyle() {
+        return "-fx-alignment: CENTER-LEFT;" +
+                "-fx-font-size: 13px;" +
+                "-fx-border-color: " + cssColor(LINE) + ";" +
+                "-fx-border-width: 0 0 1 0;";
+    }
+
+    private void createCalendarPanel() {
+        calendarPanel = new SimpleCalendarPanel(parentApp);
+        calendarPanel.setVisible(false);
+        calendarPanel.setManaged(false);
+        calendarPanel.setStyle("-fx-background-color: white; -fx-background-radius: 20px; " + cardShadow());
+        getChildren().add(calendarPanel);
+        VBox.setVgrow(calendarPanel, Priority.ALWAYS);
+    }
+
     private void toggleView() {
         isTableView = !isTableView;
 
         if (isTableView) {
-            // Show table, hide calendar
             reservationsTable.setVisible(true);
             reservationsTable.setManaged(true);
             calendarPanel.setVisible(false);
             calendarPanel.setManaged(false);
-            toggleViewButton.setText("📅 Switch to Calendar View");
-            refreshData(); // Refresh table data
+            toggleViewButton.setText("📅 Calendar View");
+            toggleViewButton.setStyle(createOutlineButtonStyle());
+            refreshData();
         } else {
-            // Show calendar, hide table
             reservationsTable.setVisible(false);
             reservationsTable.setManaged(false);
             calendarPanel.setVisible(true);
             calendarPanel.setManaged(true);
-            calendarPanel.refreshData(); // Refresh calendar data
-            toggleViewButton.setText("📋 Switch to Table View");
+            calendarPanel.refreshData();
+            toggleViewButton.setText("📋 Table View");
+            toggleViewButton.setStyle(createOutlineButtonStyle());
         }
+    }
+
+    private Button createOutlineButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        button.setTextFill(MUTED);
+        button.setStyle(createOutlineButtonStyle());
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: " + cssColor(SOFT_GREEN_BG) + ";" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(EMERALD) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 8px 20px;" +
+                        "-fx-cursor: hand;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(createOutlineButtonStyle()));
+        return button;
+    }
+
+    private String createOutlineButtonStyle() {
+        return "-fx-background-color: white;" +
+                "-fx-background-radius: 999px;" +
+                "-fx-border-color: " + cssColor(LINE) + ";" +
+                "-fx-border-radius: 999px;" +
+                "-fx-border-width: 1.5px;" +
+                "-fx-padding: 8px 20px;" +
+                "-fx-cursor: hand;";
     }
 
     public void refreshData() {
@@ -214,7 +351,15 @@ public class ReservationsPanel extends VBox {
                     .toList();
 
             reservationsTable.getItems().clear();
-            reservationsTable.getItems().addAll(reservedSessions);
+            if (reservedSessions.isEmpty()) {
+                reservationsTable.setPlaceholder(createEmptyTableLabel());
+            } else {
+                reservationsTable.getItems().addAll(reservedSessions);
+            }
+
+            if (calendarPanel != null && calendarPanel.isVisible()) {
+                calendarPanel.refreshData();
+            }
 
         } catch (SQLException e) {
             showAlert("Error", "Failed to load reservations: " + e.getMessage(), Alert.AlertType.ERROR);
@@ -229,10 +374,18 @@ public class ReservationsPanel extends VBox {
         alert.showAndWait();
     }
 
+    private String cssColor(Color color) {
+        return "#" + toHex(color);
+    }
+
+    private String cardShadow() {
+        return "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 5);";
+    }
+
     private String toHex(Color color) {
         return String.format("%02x%02x%02x",
-                (int) (color.getRed() * 255),
-                (int) (color.getGreen() * 255),
-                (int) (color.getBlue() * 255));
+                (int)(color.getRed() * 255),
+                (int)(color.getGreen() * 255),
+                (int)(color.getBlue() * 255));
     }
 }

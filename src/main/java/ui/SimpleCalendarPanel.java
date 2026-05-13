@@ -7,312 +7,253 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import services.CalendarService;
-import services.CalendarService.CalendarEvent;
+import models.Session;
 
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class SimpleCalendarPanel extends VBox {
 
     private MentisLoginFrame parentApp;
-    private CalendarService calendarService;
-    private YearMonth currentYearMonth;
     private GridPane calendarGrid;
-    private Label monthLabel;
-    private Label infoLabel;
-    private ScrollPane scrollPane; // ⭐ Added ScrollPane
+    private Label monthYearLabel;
+    private YearMonth currentYearMonth;
+    private List<Session> sessions;
 
-    private DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy");
+    private Button prevMonthButton;
+    private Button nextMonthButton;
+
+    // Symfony-style green colors
+    private static final Color PAGE_BG = Color.web("#F8F9FA");
+    private static final Color SOFT_GREEN_BG = Color.web("#F1F8E9");
+    private static final Color EMERALD = Color.web("#50C878");
+    private static final Color EMERALD_DARK = Color.web("#2E7D32");
+    private static final Color EMERALD_MID = Color.web("#3A9B5E");
+    private static final Color INK = Color.web("#1A3C34");
+    private static final Color MUTED = Color.web("#6C757D");
+    private static final Color LINE = Color.web("#E9ECEF");
+    private static final Color DAY_HOVER = Color.web("#F1F8E9");
+    private static final Color SESSION_BADGE = Color.web("#E8F5E9");
+
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-    // Colors
-    private static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
-    private static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
-    private static final Color RESERVED_DAY_COLOR = Color.rgb(88, 139, 113);
-    private static final Color TODAY_COLOR = Color.rgb(255, 193, 7);
-    private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
-    private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
 
     public SimpleCalendarPanel(MentisLoginFrame parentApp) {
         this.parentApp = parentApp;
-        this.calendarService = new CalendarService();
+        this.sessions = new ArrayList<>();
         this.currentYearMonth = YearMonth.now();
 
-        setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        setPadding(new Insets(30));
-        setSpacing(20);
+        setStyle("-fx-background-color: white; -fx-background-radius: 20px; " + cardShadow());
+        setPadding(new Insets(20));
+        setSpacing(15);
 
-        // ⭐ Create a content container that will go inside ScrollPane
-        VBox contentContainer = new VBox(20);
-        contentContainer.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-
-        createHeader(contentContainer);
-        createCalendarControls(contentContainer);
-        createCalendarGrid(contentContainer);
-        createInfoPanel(contentContainer);
-
-        // ⭐ Wrap everything in a ScrollPane
-        scrollPane = new ScrollPane(contentContainer);
-        scrollPane.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        scrollPane.setBorder(null);
-        scrollPane.setFitToWidth(true);
-        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-
-        // Make ScrollPane take all available space
-        VBox.setVgrow(scrollPane, Priority.ALWAYS);
-
-        getChildren().add(scrollPane);
-
-        loadCalendarData();
+        createHeader();
+        createCalendarGrid();
+        refreshData();
     }
 
-    private void createHeader(VBox container) {
-        HBox headerBox = new HBox();
-        headerBox.setAlignment(Pos.CENTER_LEFT);
-        headerBox.setPadding(new Insets(0, 0, 20, 0));
+    private void createHeader() {
+        HBox header = new HBox(20);
+        header.setAlignment(Pos.CENTER);
+        header.setPadding(new Insets(0, 0, 15, 0));
 
-        VBox titleBox = new VBox(10);
-        Label titleLabel = new Label("Session Calendar");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 32));
-        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        prevMonthButton = createIconButton("◀");
+        prevMonthButton.setOnAction(e -> changeMonth(-1));
 
-        Label subtitleLabel = new Label("Days with reserved sessions are highlighted");
-        subtitleLabel.setFont(Font.font("Segoe UI", 16));
-        subtitleLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        monthYearLabel = new Label();
+        monthYearLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
+        monthYearLabel.setTextFill(EMERALD_DARK);
+        monthYearLabel.setPrefWidth(200);
+        monthYearLabel.setAlignment(Pos.CENTER);
 
-        titleBox.getChildren().addAll(titleLabel, subtitleLabel);
+        nextMonthButton = createIconButton("▶");
+        nextMonthButton.setOnAction(e -> changeMonth(1));
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        Region leftSpacer = new Region();
+        Region rightSpacer = new Region();
+        HBox.setHgrow(leftSpacer, Priority.ALWAYS);
+        HBox.setHgrow(rightSpacer, Priority.ALWAYS);
 
-        Label userInfoLabel = new Label(parentApp.getUserName());
-        userInfoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        userInfoLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
-
-        headerBox.getChildren().addAll(titleBox, spacer, userInfoLabel);
-        container.getChildren().add(headerBox);
+        header.getChildren().addAll(prevMonthButton, leftSpacer, monthYearLabel, rightSpacer, nextMonthButton);
+        getChildren().add(header);
     }
 
-    private void createCalendarControls(VBox container) {
-        HBox controlsBox = new HBox(20);
-        controlsBox.setAlignment(Pos.CENTER);
-        controlsBox.setPadding(new Insets(10, 0, 20, 0));
-
-        Button prevButton = new Button("◀ Previous");
-        prevButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        prevButton.setTextFill(Color.WHITE);
-        prevButton.setStyle("-fx-background-color: #" + toHex(ACCENT_DARK_GREEN) + "; -fx-background-radius: 5; -fx-padding: 8 20; -fx-cursor: hand;");
-        prevButton.setOnAction(e -> changeMonth(-1));
-
-        monthLabel = new Label(currentYearMonth.format(monthFormatter));
-        monthLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
-        monthLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
-        monthLabel.setMinWidth(250);
-        monthLabel.setAlignment(Pos.CENTER);
-
-        Button nextButton = new Button("Next ▶");
-        nextButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        nextButton.setTextFill(Color.WHITE);
-        nextButton.setStyle("-fx-background-color: #" + toHex(ACCENT_DARK_GREEN) + "; -fx-background-radius: 5; -fx-padding: 8 20; -fx-cursor: hand;");
-        nextButton.setOnAction(e -> changeMonth(1));
-
-        Button todayButton = new Button("Today");
-        todayButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        todayButton.setTextFill(Color.WHITE);
-        todayButton.setStyle("-fx-background-color: #" + toHex(ACCENT_DARK_GREEN) + "; -fx-background-radius: 5; -fx-padding: 8 20; -fx-cursor: hand;");
-        todayButton.setOnAction(e -> goToToday());
-
-        controlsBox.getChildren().addAll(prevButton, monthLabel, nextButton, todayButton);
-        container.getChildren().add(controlsBox);
+    private Button createIconButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
+        button.setTextFill(EMERALD_DARK);
+        button.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 8px 16px;" +
+                        "-fx-cursor: hand;"
+        );
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: " + cssColor(SOFT_GREEN_BG) + ";" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 8px 16px;" +
+                        "-fx-cursor: hand;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 8px 16px;" +
+                        "-fx-cursor: hand;"
+        ));
+        return button;
     }
 
-    private void createCalendarGrid(VBox container) {
+    private void createCalendarGrid() {
         calendarGrid = new GridPane();
-        calendarGrid.setStyle("-fx-background-color: white; -fx-border-color: #" + toHex(BORDER_LIGHT) + "; -fx-border-width: 2;");
-        calendarGrid.setPadding(new Insets(15));
-        calendarGrid.setHgap(5);
-        calendarGrid.setVgap(5);
+        calendarGrid.setHgap(8);
+        calendarGrid.setVgap(8);
+        calendarGrid.setAlignment(Pos.CENTER);
+        calendarGrid.setPadding(new Insets(10));
 
-        // Add day labels
-        String[] days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
-        for (int i = 0; i < 7; i++) {
-            Label dayLabel = new Label(days[i]);
-            dayLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-            dayLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        // Day headers
+        String[] dayNames = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+        for (int i = 0; i < dayNames.length; i++) {
+            Label dayLabel = new Label(dayNames[i]);
+            dayLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+            dayLabel.setTextFill(EMERALD_DARK);
             dayLabel.setAlignment(Pos.CENTER);
-            dayLabel.setMaxWidth(Double.MAX_VALUE);
-            dayLabel.setPadding(new Insets(10));
-            dayLabel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+            dayLabel.setPrefWidth(100);
+            dayLabel.setPadding(new Insets(8));
+            dayLabel.setStyle("-fx-background-color: " + cssColor(SOFT_GREEN_BG) + "; -fx-background-radius: 10px;");
             calendarGrid.add(dayLabel, i, 0);
         }
 
-        // Set column constraints - equal width
-        for (int i = 0; i < 7; i++) {
-            ColumnConstraints cc = new ColumnConstraints();
-            cc.setHgrow(Priority.ALWAYS);
-            cc.setPercentWidth(14.28);
-            calendarGrid.getColumnConstraints().add(cc);
-        }
-
-        // Make grid take full width
-        calendarGrid.setMaxWidth(Double.MAX_VALUE);
-
-        container.getChildren().add(calendarGrid);
+        getChildren().add(calendarGrid);
     }
 
-    private void createInfoPanel(VBox container) {
-        HBox infoPanel = new HBox(30);
-        infoPanel.setAlignment(Pos.CENTER);
-        infoPanel.setPadding(new Insets(15, 0, 0, 0));
-
-        // Legend
-        HBox todayLegend = new HBox(10);
-        todayLegend.setAlignment(Pos.CENTER_LEFT);
-        Label todayDot = new Label("●");
-        todayDot.setFont(Font.font("Segoe UI", 20));
-        todayDot.setTextFill(Color.web(toHex(TODAY_COLOR)));
-        Label todayText = new Label("Today");
-        todayLegend.getChildren().addAll(todayDot, todayText);
-
-        HBox reservedLegend = new HBox(10);
-        reservedLegend.setAlignment(Pos.CENTER_LEFT);
-        Label reservedDot = new Label("●");
-        reservedDot.setFont(Font.font("Segoe UI", 20));
-        reservedDot.setTextFill(Color.web(toHex(RESERVED_DAY_COLOR)));
-        Label reservedText = new Label("Has reserved sessions");
-        reservedLegend.getChildren().addAll(reservedDot, reservedText);
-
-        infoPanel.getChildren().addAll(todayLegend, reservedLegend);
-
-        infoLabel = new Label();
-        infoLabel.setFont(Font.font("Segoe UI", 14));
-        infoLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
-        infoLabel.setPadding(new Insets(10, 0, 0, 0));
-        infoLabel.setAlignment(Pos.CENTER);
-
-        VBox bottomBox = new VBox(10, infoPanel, infoLabel);
-        bottomBox.setAlignment(Pos.CENTER);
-        container.getChildren().add(bottomBox);
+    private void changeMonth(int delta) {
+        currentYearMonth = currentYearMonth.plusMonths(delta);
+        updateCalendar();
     }
 
-    private void loadCalendarData() {
-        try {
-            Map<LocalDate, List<CalendarEvent>> sessionsByDate = calendarService.getSessionsByDate();
-            updateCalendarGrid(sessionsByDate);
+    private void updateCalendar() {
+        monthYearLabel.setText(currentYearMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")));
 
-            int totalReserved = sessionsByDate.values().stream().mapToInt(List::size).sum();
-            infoLabel.setText("Total reserved sessions: " + totalReserved);
-
-        } catch (SQLException e) {
-            showAlert("Error", "Failed to load calendar data: " + e.getMessage(), Alert.AlertType.ERROR);
-        }
-    }
-
-    private void updateCalendarGrid(Map<LocalDate, List<CalendarEvent>> sessionsByDate) {
-        // Clear previous days (keep day labels)
         calendarGrid.getChildren().removeIf(node -> GridPane.getRowIndex(node) != null && GridPane.getRowIndex(node) > 0);
 
         LocalDate firstOfMonth = currentYearMonth.atDay(1);
-        int dayOfWeek = firstOfMonth.getDayOfWeek().getValue() - 1; // 0 for Monday
+        int dayOfWeekValue = firstOfMonth.getDayOfWeek().getValue();
+        int startOffset = dayOfWeekValue - 1;
 
         int daysInMonth = currentYearMonth.lengthOfMonth();
         int row = 1;
-        int col = dayOfWeek;
+        int col = 0;
+
+        for (int i = 0; i < startOffset; i++) {
+            VBox emptyCell = createEmptyCell();
+            calendarGrid.add(emptyCell, col, row);
+            col++;
+        }
 
         for (int day = 1; day <= daysInMonth; day++) {
             LocalDate date = currentYearMonth.atDay(day);
-            boolean hasSessions = sessionsByDate.containsKey(date) && !sessionsByDate.get(date).isEmpty();
-            boolean isToday = date.equals(LocalDate.now());
-
-            StackPane dayCell = createDayCell(day, hasSessions, isToday);
-
+            VBox dayCell = createDayCell(date);
             calendarGrid.add(dayCell, col, row);
-
             col++;
             if (col == 7) {
                 col = 0;
                 row++;
             }
         }
+
+        while (col < 7 && col != 0) {
+            VBox emptyCell = createEmptyCell();
+            calendarGrid.add(emptyCell, col, row);
+            col++;
+        }
     }
 
-    private StackPane createDayCell(int day, boolean hasSessions, boolean isToday) {
-        StackPane cell = new StackPane();
-        cell.setMinHeight(80);
-        cell.setStyle("-fx-background-color: white; -fx-border-color: #" + toHex(BORDER_LIGHT) + "; -fx-border-width: 1;");
+    private VBox createEmptyCell() {
+        VBox cell = new VBox();
+        cell.setPrefWidth(100);
+        cell.setPrefHeight(80);
+        cell.setAlignment(Pos.CENTER);
+        cell.setStyle("-fx-background-color: transparent;");
+        return cell;
+    }
 
-        // Highlight if has sessions
-        if (hasSessions) {
-            cell.setStyle(cell.getStyle() + "-fx-background-color: #e8f5e9;"); // Light green background
+    private VBox createDayCell(LocalDate date) {
+        VBox cell = new VBox(5);
+        cell.setPrefWidth(100);
+        cell.setPrefHeight(80);
+        cell.setAlignment(Pos.TOP_CENTER);
+        cell.setPadding(new Insets(8, 4, 4, 4));
+        cell.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 12px;" +
+                        "-fx-border-color: " + cssColor(LINE) + ";" +
+                        "-fx-border-radius: 12px;" +
+                        "-fx-border-width: 1px;"
+        );
+        cell.setOnMouseEntered(e -> cell.setStyle(
+                "-fx-background-color: " + cssColor(DAY_HOVER) + ";" +
+                        "-fx-background-radius: 12px;" +
+                        "-fx-border-color: " + cssColor(EMERALD) + ";" +
+                        "-fx-border-radius: 12px;" +
+                        "-fx-border-width: 1.5px;"
+        ));
+        cell.setOnMouseExited(e -> cell.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 12px;" +
+                        "-fx-border-color: " + cssColor(LINE) + ";" +
+                        "-fx-border-radius: 12px;" +
+                        "-fx-border-width: 1px;"
+        ));
+
+        Label dayLabel = new Label(String.valueOf(date.getDayOfMonth()));
+        dayLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+
+        // Highlight today
+        if (date.equals(LocalDate.now())) {
+            dayLabel.setTextFill(EMERALD_DARK);
+            dayLabel.setStyle("-fx-background-color: " + cssColor(EMERALD) + "; -fx-background-radius: 999px; -fx-padding: 2px 6px;");
+        } else {
+            dayLabel.setTextFill(INK);
         }
 
-        // Highlight today with gold border
-        if (isToday) {
-            cell.setStyle(cell.getStyle() + "-fx-border-color: #" + toHex(TODAY_COLOR) + "; -fx-border-width: 3;");
+        cell.getChildren().add(dayLabel);
+
+        // Add session indicators
+        for (Session session : sessions) {
+            if (session.getSessionDate().equals(date) && session.getReservedBy() != null) {
+                Label sessionBadge = new Label("📅");
+                sessionBadge.setFont(Font.font("Segoe UI Emoji", 10));
+                sessionBadge.setTooltip(new Tooltip(session.getTitle() + "\n" + session.getStartTime()));
+                cell.getChildren().add(sessionBadge);
+            }
         }
-
-        Label dayLabel = new Label(String.valueOf(day));
-        dayLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
-        dayLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        // Add a dot indicator for reserved days
-        VBox content = new VBox(5);
-        content.setAlignment(Pos.TOP_CENTER);
-        content.setPadding(new Insets(10));
-        content.getChildren().add(dayLabel);
-
-        if (hasSessions) {
-            Label dotLabel = new Label("●");
-            dotLabel.setFont(Font.font("Segoe UI", 16));
-            dotLabel.setTextFill(Color.web(toHex(RESERVED_DAY_COLOR)));
-            content.getChildren().add(dotLabel);
-        }
-
-        cell.getChildren().add(content);
 
         return cell;
     }
 
-    private void changeMonth(int delta) {
-        currentYearMonth = currentYearMonth.plusMonths(delta);
-        monthLabel.setText(currentYearMonth.format(monthFormatter));
-        loadCalendarData();
-
-        // Scroll to top when changing months
-        scrollPane.setVvalue(0);
-    }
-
-    private void goToToday() {
-        currentYearMonth = YearMonth.now();
-        monthLabel.setText(currentYearMonth.format(monthFormatter));
-        loadCalendarData();
-
-        // Scroll to top when going to today
-        scrollPane.setVvalue(0);
-    }
-
     public void refreshData() {
-        loadCalendarData();
+        try {
+            sessions = parentApp.getSessionController().getAllSessions();
+            updateCalendar();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    private void showAlert(String title, String content, Alert.AlertType type) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
+    private String cssColor(Color color) {
+        return "#" + toHex(color);
+    }
+
+    private String cardShadow() {
+        return "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0, 0, 5);";
     }
 
     private String toHex(Color color) {
         return String.format("%02x%02x%02x",
-                (int) (color.getRed() * 255),
-                (int) (color.getGreen() * 255),
-                (int) (color.getBlue() * 255));
+                (int)(color.getRed() * 255),
+                (int)(color.getGreen() * 255),
+                (int)(color.getBlue() * 255));
     }
 }

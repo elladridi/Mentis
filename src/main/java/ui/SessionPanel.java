@@ -15,7 +15,7 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Callback;
 import models.Session;
-import services.VideoCallService; // ⭐ NEW IMPORT
+import services.VideoCallService;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -28,35 +28,36 @@ public class SessionPanel extends VBox {
 
     private MentisLoginFrame parentApp;
     private SessionController controller;
-    private VideoCallService videoCallService; // ⭐ NEW SERVICE
+    private VideoCallService videoCallService;
     private TableView<Session> sessionTable;
     private List<Session> sessions;
 
-    // Color constants (same as AssessmentPanel)
-    private static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
-    private static final Color CARD_WHITE = Color.WHITE;
-    private static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
-    private static final Color BUTTON_LIGHT_GREEN = Color.rgb(160, 200, 180);
-    private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
-    private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
-    private static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
-    private static final Color VIDEO_BUTTON_COLOR = Color.rgb(231, 76, 60); // ⭐ NEW COLOR
+    // Symfony-style green colors
+    private static final Color PAGE_BG = Color.web("#F8F9FA");
+    private static final Color SOFT_GREEN_BG = Color.web("#F1F8E9");
+    private static final Color EMERALD = Color.web("#50C878");
+    private static final Color EMERALD_DARK = Color.web("#2E7D32");
+    private static final Color EMERALD_MID = Color.web("#3A9B5E");
+    private static final Color INK = Color.web("#1A3C34");
+    private static final Color MUTED = Color.web("#6C757D");
+    private static final Color LINE = Color.web("#E9ECEF");
+    private static final Color VIDEO_BUTTON_COLOR = Color.web("#E74C3C");
 
     // Status colors
-    private static final Color STATUS_ACTIVE = Color.rgb(39, 174, 96);
-    private static final Color STATUS_INACTIVE = Color.rgb(192, 57, 43);
-    private static final Color STATUS_SCHEDULED = Color.rgb(52, 152, 219);
-    private static final Color STATUS_COMPLETED = Color.rgb(155, 89, 182);
-    private static final Color STATUS_CANCELLED = Color.rgb(230, 126, 34);
-    private static final Color STATUS_DEFAULT = Color.rgb(120, 120, 120);
+    private static final Color STATUS_ACTIVE = Color.web("#27AE60");
+    private static final Color STATUS_INACTIVE = Color.web("#E74C3C");
+    private static final Color STATUS_SCHEDULED = Color.web("#3498DB");
+    private static final Color STATUS_COMPLETED = Color.web("#9B59B6");
+    private static final Color STATUS_CANCELLED = Color.web("#F39C12");
+    private static final Color STATUS_DEFAULT = Color.web("#7F8C8D");
 
     // Session type colors
-    private static final Color TYPE_INDIVIDUAL = Color.rgb(41, 128, 185);
-    private static final Color TYPE_GROUP = Color.rgb(39, 174, 96);
-    private static final Color TYPE_FAMILY = Color.rgb(142, 68, 173);
-    private static final Color TYPE_COUPLE = Color.rgb(230, 126, 34);
-    private static final Color TYPE_ONLINE = Color.rgb(52, 152, 219);
-    private static final Color TYPE_DEFAULT = Color.rgb(80, 100, 120);
+    private static final Color TYPE_INDIVIDUAL = Color.web("#5B8C5A");
+    private static final Color TYPE_GROUP = Color.web("#27AE60");
+    private static final Color TYPE_FAMILY = Color.web("#8E44AD");
+    private static final Color TYPE_COUPLE = Color.web("#E67E22");
+    private static final Color TYPE_ONLINE = Color.web("#3498DB");
+    private static final Color TYPE_DEFAULT = Color.web("#7F8C8D");
 
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
@@ -64,209 +65,230 @@ public class SessionPanel extends VBox {
     public SessionPanel(MentisLoginFrame parentApp, SessionController controller) {
         this.parentApp = parentApp;
         this.controller = controller;
-        this.videoCallService = new VideoCallService(); // ⭐ INITIALIZE
+        this.videoCallService = new VideoCallService();
 
-        setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        setPadding(new Insets(40, 50, 40, 50));
-        setSpacing(30);
+        setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
+        setPadding(new Insets(44, 56, 44, 56));
+        setSpacing(28);
 
         createHeader();
         createTable();
         refreshData();
     }
 
-    // ================= UPDATED: Removed Reservations tab =================
     private void createHeader() {
-        VBox headerContainer = new VBox(30);
-        headerContainer.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        VBox headerContainer = new VBox(20);
 
-        // Tabs - ONLY Sessions tab, removed Reservations
-        HBox tabsPanel = new HBox(30);
-        tabsPanel.setAlignment(Pos.CENTER_RIGHT);
-        tabsPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-
-        Label sessionsTab = new Label("Sessions");
-        sessionsTab.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
-        sessionsTab.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
-        sessionsTab.setBorder(new Border(
-                new BorderStroke(Color.web(toHex(ACCENT_DARK_GREEN)),
-                        BorderStrokeStyle.SOLID,
-                        CornerRadii.EMPTY,
-                        new BorderWidths(0, 0, 3, 0))
-        ));
-        sessionsTab.setPadding(new Insets(0, 0, 5, 0));
-
-        // REMOVED: Reservations tab completely
-        tabsPanel.getChildren().addAll(sessionsTab);
-
-        // Title and ADD button
         HBox titlePanel = new HBox();
         titlePanel.setAlignment(Pos.CENTER_LEFT);
-        titlePanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
 
-        Label titleLabel = new Label("Manage Sessions");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 36));
-        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        VBox titleBox = new VBox(6);
+        Label titleLabel = new Label("📋 Manage Sessions");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 40));
+        titleLabel.setTextFill(EMERALD_DARK);
+
+        Label subtitleLabel = new Label("Create, edit, and manage therapy sessions");
+        subtitleLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 16));
+        subtitleLabel.setTextFill(MUTED);
+
+        titleBox.getChildren().addAll(titleLabel, subtitleLabel);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Button addButton = createAddButton();
+        Button addButton = createPrimaryButton("+ Add Session");
         addButton.setOnAction(e -> showAddSessionDialog());
 
-        titlePanel.getChildren().addAll(titleLabel, spacer, addButton);
-        headerContainer.getChildren().addAll(tabsPanel, titlePanel);
+        titlePanel.getChildren().addAll(titleBox, spacer, addButton);
+        headerContainer.getChildren().add(titlePanel);
 
         getChildren().add(headerContainer);
     }
 
-    private Button createAddButton() {
-        Button button = new Button("ADD SESSION");
+    private Button createPrimaryButton(String text) {
+        Button button = new Button(text);
         button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        button.setTextFill(Color.web(toHex(TEXT_DARK)));
+        button.setTextFill(Color.WHITE);
         button.setStyle(
-                "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 12 40;" +
+                "-fx-background-color: linear-gradient(to bottom right, " + cssColor(EMERALD) + ", " + cssColor(EMERALD_MID) + ");" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 11px 28px;" +
+                        "-fx-cursor: hand;" +
+                        cardShadow()
+        );
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, " + cssColor(EMERALD_MID) + ", " + cssColor(EMERALD_DARK) + ");" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 11px 28px;" +
+                        "-fx-cursor: hand;" +
+                        "-fx-translate-y: -2px;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, " + cssColor(EMERALD) + ", " + cssColor(EMERALD_MID) + ");" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 11px 28px;" +
+                        "-fx-cursor: hand;" +
+                        cardShadow()
+        ));
+        return button;
+    }
+
+    private Button createOutlineButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        button.setTextFill(MUTED);
+        button.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(LINE) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 6px 16px;" +
                         "-fx-cursor: hand;"
         );
-
-        // Hover effect
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN.darker()) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 40;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 40;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: " + cssColor(SOFT_GREEN_BG) + ";" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(EMERALD) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 6px 16px;" +
+                        "-fx-cursor: hand;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(LINE) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 6px 16px;" +
+                        "-fx-cursor: hand;"
+        ));
         return button;
+    }
+
+    private Label createBadge(String text, Color bgColor) {
+        Label badge = new Label(text);
+        badge.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11));
+        badge.setTextFill(Color.WHITE);
+        badge.setPadding(new Insets(5, 14, 5, 14));
+        badge.setStyle("-fx-background-color: " + cssColor(bgColor) + "; -fx-background-radius: 999px;");
+        return badge;
     }
 
     private void createTable() {
         sessionTable = new TableView<>();
-        sessionTable.setStyle("-fx-background-color: white; -fx-border-color: #" + toHex(BORDER_LIGHT) + ";");
-        sessionTable.setFixedCellSize(70);
-        sessionTable.setPlaceholder(new Label("No sessions available. Click ADD SESSION to create one."));
+        sessionTable.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 20px;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0, 0, 5);"
+        );
+        sessionTable.setFixedCellSize(65);
+        sessionTable.setPlaceholder(new Label("No sessions available. Click + Add Session to create one."));
 
-        // Create columns
         TableColumn<Session, String> titleCol = new TableColumn<>("Title");
         titleCol.setCellValueFactory(new PropertyValueFactory<>("title"));
-        titleCol.setPrefWidth(150);
+        titleCol.setPrefWidth(200);
+        titleCol.setStyle(columnStyle());
 
         TableColumn<Session, LocalDate> dateCol = new TableColumn<>("Date");
         dateCol.setCellValueFactory(new PropertyValueFactory<>("sessionDate"));
-        dateCol.setPrefWidth(100);
+        dateCol.setPrefWidth(110);
+        dateCol.setStyle(columnStyle());
         dateCol.setCellFactory(column -> new TableCell<Session, LocalDate>() {
             @Override
             protected void updateItem(LocalDate item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                } else {
-                    setText(item.format(dateFormatter));
-                }
+                if (empty || item == null) setText(null);
+                else setText(item.format(dateFormatter));
             }
         });
 
-        TableColumn<Session, LocalTime> startTimeCol = new TableColumn<>("Start Time");
+        TableColumn<Session, LocalTime> startTimeCol = new TableColumn<>("Start");
         startTimeCol.setCellValueFactory(new PropertyValueFactory<>("startTime"));
-        startTimeCol.setPrefWidth(100);
+        startTimeCol.setPrefWidth(90);
+        startTimeCol.setStyle(columnStyle());
         startTimeCol.setCellFactory(column -> new TableCell<Session, LocalTime>() {
             @Override
             protected void updateItem(LocalTime item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                } else {
-                    setText(item.format(timeFormatter));
-                }
+                if (empty || item == null) setText(null);
+                else setText(item.format(timeFormatter));
             }
         });
 
-        TableColumn<Session, LocalTime> endTimeCol = new TableColumn<>("End Time");
+        TableColumn<Session, LocalTime> endTimeCol = new TableColumn<>("End");
         endTimeCol.setCellValueFactory(new PropertyValueFactory<>("endTime"));
-        endTimeCol.setPrefWidth(100);
+        endTimeCol.setPrefWidth(90);
+        endTimeCol.setStyle(columnStyle());
         endTimeCol.setCellFactory(column -> new TableCell<Session, LocalTime>() {
             @Override
             protected void updateItem(LocalTime item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                } else {
-                    setText(item.format(timeFormatter));
-                }
+                if (empty || item == null) setText(null);
+                else setText(item.format(timeFormatter));
             }
         });
 
         TableColumn<Session, String> locationCol = new TableColumn<>("Location");
         locationCol.setCellValueFactory(new PropertyValueFactory<>("location"));
         locationCol.setPrefWidth(150);
+        locationCol.setStyle(columnStyle());
 
-        TableColumn<Session, String> typeCol = new TableColumn<>("Session Type");
+        TableColumn<Session, String> typeCol = new TableColumn<>("Type");
         typeCol.setCellValueFactory(new PropertyValueFactory<>("sessionType"));
-        typeCol.setPrefWidth(120);
+        typeCol.setPrefWidth(110);
+        typeCol.setStyle(columnStyle());
         typeCol.setCellFactory(column -> new TableCell<Session, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
+                    setGraphic(null);
                     setText(null);
-                    setStyle("");
                 } else {
-                    setText(item);
-                    setTextFill(Color.web(toHex(getTypeColor(item))));
+                    setGraphic(createBadge(item, getTypeColor(item)));
+                    setText(null);
                 }
             }
         });
 
         TableColumn<Session, String> statusCol = new TableColumn<>("Status");
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
-        statusCol.setPrefWidth(100);
+        statusCol.setPrefWidth(110);
+        statusCol.setStyle(columnStyle());
         statusCol.setCellFactory(column -> new TableCell<Session, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
+                    setGraphic(null);
                     setText(null);
-                    setStyle("");
                 } else {
-                    setText(item);
-                    setTextFill(Color.web(toHex(getStatusColor(item))));
-                    setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+                    setGraphic(createBadge(item, getStatusColor(item)));
+                    setText(null);
                 }
             }
         });
 
-        // ⭐ NEW: Video Call column for psychologists
         TableColumn<Session, Void> videoCol = new TableColumn<>("Video");
         videoCol.setPrefWidth(80);
+        videoCol.setStyle(columnStyle());
         videoCol.setCellFactory(new Callback<>() {
             @Override
             public TableCell<Session, Void> call(TableColumn<Session, Void> param) {
                 return new TableCell<>() {
-                    private final Button videoButton = new Button("📹");
-
+                    private final Button videoButton = new Button("📹 Call");
                     {
-                        videoButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+                        videoButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11));
                         videoButton.setTextFill(Color.WHITE);
                         videoButton.setStyle(
-                                "-fx-background-color: #" + toHex(VIDEO_BUTTON_COLOR) + ";" +
-                                        "-fx-background-radius: 5;" +
-                                        "-fx-padding: 5 10;" +
+                                "-fx-background-color: " + cssColor(VIDEO_BUTTON_COLOR) + ";" +
+                                        "-fx-background-radius: 999px;" +
+                                        "-fx-padding: 4px 12px;" +
                                         "-fx-cursor: hand;"
                         );
                         videoButton.setTooltip(new Tooltip("Start video call"));
-
                         videoButton.setOnAction(e -> {
                             Session session = getTableView().getItems().get(getIndex());
                             startVideoCall(session);
@@ -280,9 +302,9 @@ public class SessionPanel extends VBox {
                             setGraphic(null);
                         } else {
                             Session session = getTableView().getItems().get(getIndex());
-                            // Only show video button for online sessions that are reserved
                             if (session.getSessionType().equalsIgnoreCase("Online") && session.getReservedBy() != null) {
                                 setGraphic(videoButton);
+                                setAlignment(Pos.CENTER);
                             } else {
                                 setGraphic(null);
                             }
@@ -293,25 +315,14 @@ public class SessionPanel extends VBox {
         });
 
         TableColumn<Session, Void> actionsCol = new TableColumn<>("Actions");
-        actionsCol.setPrefWidth(120);
+        actionsCol.setPrefWidth(110);
+        actionsCol.setStyle(columnStyle());
         actionsCol.setCellFactory(new Callback<>() {
             @Override
             public TableCell<Session, Void> call(TableColumn<Session, Void> param) {
                 return new TableCell<>() {
-                    private final Button manageButton = new Button("MANAGE");
-
+                    private final Button manageButton = createOutlineButton("Manage");
                     {
-                        manageButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-                        manageButton.setTextFill(Color.web(toHex(TEXT_DARK)));
-                        manageButton.setStyle(
-                                "-fx-background-color: #" + toHex(CARD_WHITE) + ";" +
-                                        "-fx-background-radius: 5;" +
-                                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                                        "-fx-border-radius: 5;" +
-                                        "-fx-padding: 8 15;" +
-                                        "-fx-cursor: hand;"
-                        );
-
                         manageButton.setOnAction(e -> {
                             Session session = getTableView().getItems().get(getIndex());
                             showManageDialog(session);
@@ -321,10 +332,10 @@ public class SessionPanel extends VBox {
                     @Override
                     protected void updateItem(Void item, boolean empty) {
                         super.updateItem(item, empty);
-                        if (empty) {
-                            setGraphic(null);
-                        } else {
+                        if (empty) setGraphic(null);
+                        else {
                             setGraphic(manageButton);
+                            setAlignment(Pos.CENTER);
                         }
                     }
                 };
@@ -338,182 +349,192 @@ public class SessionPanel extends VBox {
         getChildren().add(sessionTable);
     }
 
-    // ================= UPDATED: Removed VIEW RESERVATIONS button =================
+    private String columnStyle() {
+        return "-fx-alignment: CENTER-LEFT;" +
+                "-fx-font-size: 14px;" +
+                "-fx-border-color: " + cssColor(LINE) + ";" +
+                "-fx-border-width: 0 0 1 0;";
+    }
+
     private void showManageDialog(Session session) {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
         dialog.initStyle(StageStyle.UTILITY);
         dialog.setTitle("Manage Session");
-        dialog.setMinWidth(700);
-        dialog.setMinHeight(500);
+        dialog.setMinWidth(680);
+        dialog.setMinHeight(520);
 
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        root.setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
+        root.setPadding(new Insets(24));
 
-        // Main content panel
         VBox contentPanel = new VBox(20);
-        contentPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        contentPanel.setPadding(new Insets(40, 40, 40, 40));
+        contentPanel.setStyle(cardStyle());
 
-        Label headerLabel = new Label("Manage Session");
-        headerLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 32));
-        headerLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        Label headerLabel = new Label("⚙ Manage Session");
+        headerLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 28));
+        headerLabel.setTextFill(EMERALD_DARK);
 
         Label titleDisplay = new Label(session.getTitle());
-        titleDisplay.setFont(Font.font("Segoe UI", FontWeight.BOLD, 28));
-        titleDisplay.setTextFill(Color.web(toHex(TEXT_DARK)));
+        titleDisplay.setFont(Font.font("Segoe UI", FontWeight.BOLD, 22));
+        titleDisplay.setTextFill(INK);
         titleDisplay.setWrapText(true);
 
-        // Session details grid
         GridPane detailsGrid = new GridPane();
-        detailsGrid.setHgap(20);
-        detailsGrid.setVgap(15);
+        detailsGrid.setHgap(24);
+        detailsGrid.setVgap(14);
         detailsGrid.setPadding(new Insets(20, 0, 20, 0));
 
-        // Row 1: Date and Time
-        Label dateLabel = new Label("Date:");
-        dateLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        dateLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
+        Label dateLabel = new Label("📅 Date:");
+        dateLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        dateLabel.setTextFill(INK);
         Label dateValue = new Label(session.getSessionDate().format(dateFormatter));
-        dateValue.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        dateValue.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+        dateValue.setTextFill(MUTED);
 
-        Label timeLabel = new Label("Time:");
-        timeLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        timeLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        Label timeLabel = new Label("⏰ Time:");
+        timeLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        timeLabel.setTextFill(INK);
+        Label timeValue = new Label(session.getStartTime().format(timeFormatter) + " - " + session.getEndTime().format(timeFormatter));
+        timeValue.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+        timeValue.setTextFill(MUTED);
 
-        Label timeValue = new Label(session.getStartTime().format(timeFormatter) + " - " +
-                session.getEndTime().format(timeFormatter));
-        timeValue.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        Label locationLabel = new Label("📍 Location:");
+        locationLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        locationLabel.setTextFill(INK);
+        Label locationValue = new Label(session.getLocation());
+        locationValue.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 13));
+        locationValue.setTextFill(MUTED);
+
+        Label typeLabel = new Label("🏷️ Type:");
+        typeLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        typeLabel.setTextFill(INK);
+        Label typeValue = new Label(session.getSessionType());
+        typeValue.setTextFill(getTypeColor(session.getSessionType()));
+        typeValue.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+
+        Label statusLabel = new Label("Status:");
+        statusLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        statusLabel.setTextFill(INK);
+        Label statusValue = new Label(session.getStatus());
+        statusValue.setTextFill(getStatusColor(session.getStatus()));
+        statusValue.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
 
         detailsGrid.add(dateLabel, 0, 0);
         detailsGrid.add(dateValue, 1, 0);
         detailsGrid.add(timeLabel, 2, 0);
         detailsGrid.add(timeValue, 3, 0);
-
-        // Row 2: Location and Type
-        Label locationLabel = new Label("Location:");
-        locationLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        locationLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        Label locationValue = new Label(session.getLocation());
-        locationValue.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
-
-        Label typeLabel = new Label("Type:");
-        typeLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        typeLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        Label typeValue = new Label(session.getSessionType());
-        typeValue.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
-        typeValue.setTextFill(Color.web(toHex(getTypeColor(session.getSessionType()))));
-
         detailsGrid.add(locationLabel, 0, 1);
         detailsGrid.add(locationValue, 1, 1);
         detailsGrid.add(typeLabel, 2, 1);
         detailsGrid.add(typeValue, 3, 1);
-
-        // Status
-        Label statusLabel = new Label("Current Status: " + session.getStatus());
-        statusLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
-        statusLabel.setTextFill(Color.web(toHex(getStatusColor(session.getStatus()))));
-        statusLabel.setPadding(new Insets(10, 0, 0, 0));
+        detailsGrid.add(statusLabel, 0, 2);
+        detailsGrid.add(statusValue, 1, 2);
 
         Label questionLabel = new Label("What would you like to do?");
-        questionLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 16));
-        questionLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-        questionLabel.setPadding(new Insets(30, 0, 0, 0));
+        questionLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 15));
+        questionLabel.setTextFill(MUTED);
+        questionLabel.setPadding(new Insets(10, 0, 0, 0));
 
-        contentPanel.getChildren().addAll(headerLabel, titleDisplay, detailsGrid,
-                statusLabel, questionLabel);
+        contentPanel.getChildren().addAll(headerLabel, titleDisplay, detailsGrid, questionLabel);
 
-        // Button panel - REMOVED "VIEW RESERVATIONS" button
-        HBox buttonPanel = new HBox(15);
-        buttonPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        buttonPanel.setPadding(new Insets(20, 40, 40, 40));
-        buttonPanel.setAlignment(Pos.CENTER_LEFT);
+        HBox buttonPanel = new HBox(14);
+        buttonPanel.setPadding(new Insets(20, 0, 0, 0));
+        buttonPanel.setAlignment(Pos.CENTER);
 
-        // Only EDIT, DELETE, ACTIVATE/DEACTIVATE, CANCEL - removed VIEW RESERVATIONS
-        String[] buttonLabels = {"EDIT", "DELETE", "ACTIVATE/\nDEACTIVATE", "CANCEL"};
-        for (String label : buttonLabels) {
-            Button btn = createDialogButton(label.replace("\n", " "));
+        Button editBtn = createManageButton("✏️ Edit", EMERALD);
+        editBtn.setOnAction(e -> { dialog.close(); showEditSessionDialog(session); });
 
-            if (label.equals("CANCEL")) {
-                btn.setOnAction(e -> dialog.close());
-            } else if (label.equals("EDIT")) {
-                btn.setOnAction(e -> {
-                    dialog.close();
-                    showEditSessionDialog(session);
-                });
-            } else if (label.equals("DELETE")) {
-                btn.setOnAction(e -> {
-                    Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-                    confirm.setTitle("Confirm Delete");
-                    confirm.setHeaderText(null);
-                    confirm.setContentText("Are you sure you want to delete this session?");
-                    confirm.initOwner(dialog);
-
-                    confirm.showAndWait().ifPresent(response -> {
-                        if (response == ButtonType.OK) {
-                            try {
-                                controller.deleteSession(session.getSessionId());
-                                showAlert("Success", "Session deleted successfully!", Alert.AlertType.INFORMATION);
-                                dialog.close();
-                                refreshData();
-                            } catch (SQLException ex) {
-                                showAlert("Error", "Error deleting session: " + ex.getMessage(), Alert.AlertType.ERROR);
-                            }
-                        }
-                    });
-                });
-            } else if (label.contains("ACTIVATE")) {
-                btn.setOnAction(e -> {
+        Button deleteBtn = createManageButton("🗑️ Delete", Color.web("#E74C3C"));
+        deleteBtn.setOnAction(e -> {
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Confirm Delete");
+            confirm.setHeaderText(null);
+            confirm.setContentText("Are you sure you want to delete this session?");
+            confirm.initOwner(dialog);
+            confirm.showAndWait().ifPresent(response -> {
+                if (response == ButtonType.OK) {
                     try {
-                        String newStatus = "active".equals(session.getStatus()) ? "inactive" : "active";
-                        if (controller.updateSessionStatus(session.getSessionId(), newStatus)) {
-                            showAlert("Success", "Session status updated to: " + newStatus, Alert.AlertType.INFORMATION);
-                            dialog.close();
-                            refreshData();
-                        }
+                        controller.deleteSession(session.getSessionId());
+                        showAlert("Success", "Session deleted successfully!", Alert.AlertType.INFORMATION);
+                        dialog.close();
+                        refreshData();
                     } catch (SQLException ex) {
-                        showAlert("Error", "Error updating status: " + ex.getMessage(), Alert.AlertType.ERROR);
+                        showAlert("Error", "Error deleting session: " + ex.getMessage(), Alert.AlertType.ERROR);
                     }
-                });
-            }
+                }
+            });
+        });
 
-            buttonPanel.getChildren().add(btn);
-        }
+        Button toggleBtn = createManageButton(
+                "active".equals(session.getStatus()) ? "🔴 Deactivate" : "🟢 Activate",
+                Color.web("#F39C12")
+        );
+        toggleBtn.setOnAction(e -> {
+            try {
+                String newStatus = "active".equals(session.getStatus()) ? "inactive" : "active";
+                if (controller.updateSessionStatus(session.getSessionId(), newStatus)) {
+                    showAlert("Success", "Session status updated to: " + newStatus, Alert.AlertType.INFORMATION);
+                    dialog.close();
+                    refreshData();
+                }
+            } catch (SQLException ex) {
+                showAlert("Error", "Error updating status: " + ex.getMessage(), Alert.AlertType.ERROR);
+            }
+        });
+
+        Button cancelBtn = createManageButton("Close", MUTED);
+        cancelBtn.setOnAction(e -> dialog.close());
+
+        buttonPanel.getChildren().addAll(editBtn, deleteBtn, toggleBtn, cancelBtn);
+        contentPanel.getChildren().add(buttonPanel);
 
         root.setCenter(contentPanel);
-        root.setBottom(buttonPanel);
-
-        Scene scene = new Scene(root);
-        dialog.setScene(scene);
+        dialog.setScene(new Scene(root));
         dialog.showAndWait();
     }
 
-    // ⭐ NEW: Video call method for psychologists
+    private Button createManageButton(String text, Color bgColor) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        button.setTextFill(Color.WHITE);
+        button.setStyle(
+                "-fx-background-color: " + cssColor(bgColor) + ";" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 8px 22px;" +
+                        "-fx-cursor: hand;"
+        );
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: " + cssColor(bgColor.darker()) + ";" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 8px 22px;" +
+                        "-fx-cursor: hand;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+                "-fx-background-color: " + cssColor(bgColor) + ";" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 8px 22px;" +
+                        "-fx-cursor: hand;"
+        ));
+        return button;
+    }
+
     private void startVideoCall(Session session) {
-        // Check if session is online type
         if (!session.getSessionType().equalsIgnoreCase("Online")) {
             showAlert("Not Available", "Video calls are only available for online sessions.", Alert.AlertType.WARNING);
             return;
         }
 
-        // Check if session is reserved by someone
         if (session.getReservedBy() == null) {
             showAlert("No Patient", "This session has no patient reserved yet.", Alert.AlertType.WARNING);
             return;
         }
 
-        // Check if it's time for the session
         LocalDateTime sessionTime = LocalDateTime.of(session.getSessionDate(), session.getStartTime());
         LocalDateTime now = LocalDateTime.now();
 
-        // Allow calls 15 minutes before until session end
         if (now.isBefore(sessionTime.minusMinutes(15))) {
-            showAlert("Too Early", "Video call will be available 15 minutes before the session.\n" +
-                            "Session starts at: " + session.getStartTime().format(timeFormatter),
-                    Alert.AlertType.WARNING);
+            showAlert("Too Early", "Video call will be available 15 minutes before the session.", Alert.AlertType.WARNING);
             return;
         }
 
@@ -522,64 +543,22 @@ public class SessionPanel extends VBox {
             return;
         }
 
-        // Generate meeting link
         String meetingLink = videoCallService.generateMeetingLink(
                 session.getSessionId(),
                 session.getReservedBy(),
                 parentApp.getUserId()
         );
 
-        // Show confirmation dialog
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Start Video Call");
         confirm.setHeaderText("Start video session for: " + session.getTitle());
-        confirm.setContentText(
-                "You will be redirected to Jitsi Meet in your browser.\n\n" +
-                        "📹 Make sure your camera is working\n" +
-                        "🎤 Check your microphone\n" +
-                        "👤 Patient ID: " + session.getReservedBy() + "\n\n" +
-                        "Ready to start?"
-        );
-
+        confirm.setContentText("You will be redirected to Jitsi Meet in your browser.\n\nReady to start?");
         confirm.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
                 videoCallService.joinMeeting(meetingLink);
             }
         });
     }
-
-    private Button createDialogButton(String text) {
-        Button button = new Button(text);
-        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-        button.setTextFill(Color.web(toHex(TEXT_DARK)));
-        button.setStyle(
-                "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 12 25;" +
-                        "-fx-cursor: hand;"
-        );
-
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN.darker()) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 25;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 25;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
-        return button;
-    }
-
-    // ================= HELPER METHODS =================
 
     private Color getStatusColor(String status) {
         if (status == null) return STATUS_DEFAULT;
@@ -615,26 +594,16 @@ public class SessionPanel extends VBox {
 
     public void refreshData() {
         sessionTable.getItems().clear();
-
         try {
             sessions = controller.getAllSessions();
-
             if (sessions == null || sessions.isEmpty()) {
-                sessionTable.setPlaceholder(new Label("No sessions available. Click ADD SESSION to create one."));
+                sessionTable.setPlaceholder(new Label("No sessions available. Click + Add Session to create one."));
                 return;
             }
-
             sessionTable.getItems().addAll(sessions);
-
         } catch (SQLException e) {
-            e.printStackTrace();
             sessionTable.setPlaceholder(new Label("Database Error: " + e.getMessage()));
-            showAlert("Database Error",
-                    "Cannot connect to database.\nError: " + e.getMessage(),
-                    Alert.AlertType.ERROR);
-        } catch (Exception e) {
-            e.printStackTrace();
-            sessionTable.setPlaceholder(new Label("Error loading data: " + e.getMessage()));
+            showAlert("Database Error", "Cannot connect to database.\nError: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
@@ -644,6 +613,21 @@ public class SessionPanel extends VBox {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    private String cssColor(Color color) {
+        return "#" + toHex(color);
+    }
+
+    private String cardShadow() {
+        return "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 5);";
+    }
+
+    private String cardStyle() {
+        return "-fx-background-color: white;" +
+                "-fx-background-radius: 20px;" +
+                "-fx-padding: 28px;" +
+                cardShadow();
     }
 
     private String toHex(Color color) {

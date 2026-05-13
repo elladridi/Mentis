@@ -4,20 +4,8 @@ import controller.SessionController;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextField;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -45,15 +33,17 @@ public class SessionFormDialog extends Stage {
     private ComboBox<String> typeCombo;
     private ComboBox<String> statusCombo;
 
-    // Color constants (same as SessionPanel)
-    private static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
-    private static final Color CARD_WHITE = Color.WHITE;
-    private static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
-    private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
-    private static final Color BUTTON_LIGHT_GREEN = Color.rgb(160, 200, 180);
-    private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
-    private static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
-    private static final Color ERROR_RED = Color.rgb(192, 57, 43);
+    // Symfony-style green colors
+    private static final Color PAGE_BG = Color.web("#F8F9FA");
+    private static final Color SOFT_GREEN_BG = Color.web("#F1F8E9");
+    private static final Color EMERALD = Color.web("#50C878");
+    private static final Color EMERALD_DARK = Color.web("#2E7D32");
+    private static final Color EMERALD_MID = Color.web("#3A9B5E");
+    private static final Color INK = Color.web("#1A3C34");
+    private static final Color MUTED = Color.web("#6C757D");
+    private static final Color LINE = Color.web("#E9ECEF");
+    private static final Color ERROR_RED = Color.web("#E74C3C");
+    private static final Color SUCCESS_GREEN = Color.web("#27AE60");
 
     private DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -67,27 +57,20 @@ public class SessionFormDialog extends Stage {
         initStyle(StageStyle.UTILITY);
         setTitle(isEdit ? "Edit Session" : "Add New Session");
 
-        // Main layout
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        root.setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
 
-        // Header
         root.setTop(createHeader(isEdit));
-
-        // Form
         root.setCenter(createForm());
-
-        // Buttons
         root.setBottom(createButtonPanel(isEdit));
 
-        Scene scene = new Scene(root, 600, 650);
+        Scene scene = new Scene(root, 620, 680);
         setScene(scene);
         setResizable(false);
 
         if (isEdit && session != null) {
             loadSessionData();
         } else {
-            // Set default values for new session
             setDefaultValues();
         }
 
@@ -97,28 +80,33 @@ public class SessionFormDialog extends Stage {
     private HBox createHeader(boolean isEdit) {
         HBox header = new HBox();
         header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(20, 30, 20, 30));
-        header.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        header.setPadding(new Insets(28, 35, 24, 35));
+        header.setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
 
-        Label titleLabel = new Label(isEdit ? "Edit Session" : "Add New Session");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
-        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        VBox headerContent = new VBox(6);
+        Label titleLabel = new Label(isEdit ? "✏️ Edit Session" : "✨ Create New Session");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 28));
+        titleLabel.setTextFill(EMERALD_DARK);
 
-        header.getChildren().add(titleLabel);
+        Label subtitleLabel = new Label(isEdit ? "Modify session details" : "Create a new therapy session");
+        subtitleLabel.setFont(Font.font("Segoe UI", 14));
+        subtitleLabel.setTextFill(MUTED);
+
+        headerContent.getChildren().addAll(titleLabel, subtitleLabel);
+        header.getChildren().add(headerContent);
         return header;
     }
 
     private ScrollPane createForm() {
         GridPane formPanel = new GridPane();
-        formPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        formPanel.setPadding(new Insets(20, 30, 20, 30));
-        formPanel.setHgap(15);
-        formPanel.setVgap(15);
+        formPanel.setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
+        formPanel.setPadding(new Insets(20, 40, 20, 40));
+        formPanel.setHgap(18);
+        formPanel.setVgap(18);
         formPanel.setAlignment(Pos.TOP_CENTER);
 
-        // Column constraints
         ColumnConstraints col1 = new ColumnConstraints();
-        col1.setMinWidth(120);
+        col1.setMinWidth(130);
         col1.setHalignment(javafx.geometry.HPos.RIGHT);
 
         ColumnConstraints col2 = new ColumnConstraints();
@@ -130,172 +118,77 @@ public class SessionFormDialog extends Stage {
         int row = 0;
 
         // Title
-        Label titleLabel = new Label("Title:");
-        titleLabel.setFont(Font.font("Segoe UI", 14));
-        titleLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        titleField = new TextField();
-        titleField.setFont(Font.font("Segoe UI", 14));
-        titleField.setPromptText("Enter session title");
-        titleField.setStyle(
-                "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8 12;"
-        );
-        titleField.setPrefHeight(40);
-
+        Label titleLabel = createFormLabel("Title");
+        titleField = createTextField("Enter session title", "📝");
         formPanel.add(titleLabel, 0, row);
         formPanel.add(titleField, 1, row++);
 
         // Date
-        Label dateLabel = new Label("Date:");
-        dateLabel.setFont(Font.font("Segoe UI", 14));
-        dateLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
+        Label dateLabel = createFormLabel("Date");
         datePicker = new DatePicker();
-        // REMOVED: datePicker.setFont(Font.font("Segoe UI", 14)); - DatePicker doesn't have setFont() method
         datePicker.setPromptText("Select date");
-        datePicker.setPrefHeight(40);
+        datePicker.setPrefHeight(44);
         datePicker.setMaxWidth(Double.MAX_VALUE);
-        datePicker.setStyle(
-                "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-font-family: 'Segoe UI';" +
-                        "-fx-font-size: 14px;"
-        );
-
+        datePicker.setStyle(pillInputStyle());
         formPanel.add(dateLabel, 0, row);
         formPanel.add(datePicker, 1, row++);
 
         // Start Time
-        Label startTimeLabel = new Label("Start Time:");
-        startTimeLabel.setFont(Font.font("Segoe UI", 14));
-        startTimeLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        startTimeField = new TextField();
-        startTimeField.setFont(Font.font("Segoe UI", 14));
-        startTimeField.setPromptText("HH:mm (e.g., 14:30)");
-        startTimeField.setStyle(
-                "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8 12;"
-        );
-        startTimeField.setPrefHeight(40);
-
-        // Add time validation on focus loss
+        Label startTimeLabel = createFormLabel("Start Time");
+        startTimeField = createTextField("HH:mm (e.g., 14:30)", "⏰");
         startTimeField.focusedProperty().addListener((obs, oldVal, newVal) -> {
-            if (!newVal) { // lost focus
-                validateTimeField(startTimeField);
-            }
+            if (!newVal) validateTimeField(startTimeField);
         });
-
         formPanel.add(startTimeLabel, 0, row);
         formPanel.add(startTimeField, 1, row++);
 
         // End Time
-        Label endTimeLabel = new Label("End Time:");
-        endTimeLabel.setFont(Font.font("Segoe UI", 14));
-        endTimeLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        endTimeField = new TextField();
-        endTimeField.setFont(Font.font("Segoe UI", 14));
-        endTimeField.setPromptText("HH:mm (e.g., 16:00)");
-        endTimeField.setStyle(
-                "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8 12;"
-        );
-        endTimeField.setPrefHeight(40);
-
-        // Add time validation on focus loss
+        Label endTimeLabel = createFormLabel("End Time");
+        endTimeField = createTextField("HH:mm (e.g., 16:00)", "⏰");
         endTimeField.focusedProperty().addListener((obs, oldVal, newVal) -> {
-            if (!newVal) { // lost focus
-                validateTimeField(endTimeField);
-            }
+            if (!newVal) validateTimeField(endTimeField);
         });
-
         formPanel.add(endTimeLabel, 0, row);
         formPanel.add(endTimeField, 1, row++);
 
         // Location
-        Label locationLabel = new Label("Location:");
-        locationLabel.setFont(Font.font("Segoe UI", 14));
-        locationLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-        locationField = new TextField();
-        locationField.setFont(Font.font("Segoe UI", 14));
-        locationField.setPromptText("Enter location");
-        locationField.setStyle(
-                "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8 12;"
-        );
-        locationField.setPrefHeight(40);
-
+        Label locationLabel = createFormLabel("Location");
+        locationField = createTextField("Enter location", "📍");
         formPanel.add(locationLabel, 0, row);
         formPanel.add(locationField, 1, row++);
 
         // Session Type
-        Label typeLabel = new Label("Session Type:");
-        typeLabel.setFont(Font.font("Segoe UI", 14));
-        typeLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
+        Label typeLabel = createFormLabel("Session Type");
         String[] types = {"Individual", "Group", "Family", "Couple", "Online"};
         typeCombo = new ComboBox<>();
         typeCombo.getItems().addAll(types);
-        typeCombo.setValue(types[0]); // Default to Individual
-        typeCombo.setPrefHeight(40);
+        typeCombo.setValue(types[0]);
+        typeCombo.setPrefHeight(44);
         typeCombo.setMaxWidth(Double.MAX_VALUE);
-        typeCombo.setStyle(
-                "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-font-family: 'Segoe UI';" +
-                        "-fx-font-size: 14px;"
-        );
-
+        typeCombo.setStyle(pillInputStyle());
         formPanel.add(typeLabel, 0, row);
         formPanel.add(typeCombo, 1, row++);
 
         // Status
-        Label statusLabel = new Label("Status:");
-        statusLabel.setFont(Font.font("Segoe UI", 14));
-        statusLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
+        Label statusLabel = createFormLabel("Status");
         String[] statuses = {"active", "inactive", "scheduled", "completed", "cancelled"};
         statusCombo = new ComboBox<>();
         statusCombo.getItems().addAll(statuses);
-        statusCombo.setValue("scheduled"); // Default to scheduled
-        statusCombo.setPrefHeight(40);
+        statusCombo.setValue("scheduled");
+        statusCombo.setPrefHeight(44);
         statusCombo.setMaxWidth(Double.MAX_VALUE);
-        statusCombo.setStyle(
-                "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-font-family: 'Segoe UI';" +
-                        "-fx-font-size: 14px;"
-        );
-
+        statusCombo.setStyle(pillInputStyle());
         formPanel.add(statusLabel, 0, row);
         formPanel.add(statusCombo, 1, row++);
 
-        // Add info label about time format
-        Label infoLabel = new Label("Time format: HH:mm (24-hour format)");
+        // Info label
+        Label infoLabel = new Label("💡 Time format: HH:mm (24-hour format)");
         infoLabel.setFont(Font.font("Segoe UI", 11));
-        infoLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
+        infoLabel.setTextFill(MUTED);
         formPanel.add(infoLabel, 1, row++);
 
-        // Wrap in ScrollPane
         ScrollPane scrollPane = new ScrollPane(formPanel);
-        scrollPane.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        scrollPane.setStyle("-fx-background-color: transparent;");
         scrollPane.setBorder(null);
         scrollPane.setFitToWidth(true);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
@@ -303,88 +196,144 @@ public class SessionFormDialog extends Stage {
         return scrollPane;
     }
 
+    private Label createFormLabel(String text) {
+        Label label = new Label(text);
+        label.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        label.setTextFill(INK);
+        return label;
+    }
+
+    private TextField createTextField(String prompt, String emoji) {
+        TextField field = new TextField();
+        field.setFont(Font.font("Segoe UI", 14));
+        field.setPromptText(emoji + " " + prompt);
+        field.setStyle(pillInputStyle());
+        field.setPrefHeight(44);
+        return field;
+    }
+
     private boolean validateTimeField(TextField timeField) {
         String timeText = timeField.getText().trim();
-        if (timeText.isEmpty()) {
-            return false;
-        }
+        if (timeText.isEmpty()) return false;
 
         try {
-            // Try to parse the time
             LocalTime.parse(timeText, timeFormatter);
             timeField.setStyle(
-                    "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                            "-fx-border-radius: 5;" +
-                            "-fx-background-radius: 5;" +
-                            "-fx-padding: 8 12;"
+                    "-fx-background-color: white;" +
+                            "-fx-background-radius: 999px;" +
+                            "-fx-border-radius: 999px;" +
+                            "-fx-border-color: " + cssColor(SUCCESS_GREEN) + ";" +
+                            "-fx-border-width: 2px;" +
+                            "-fx-padding: 10px 18px;" +
+                            "-fx-font-size: 14px;"
             );
             return true;
         } catch (Exception e) {
-            // Invalid time format
             timeField.setStyle(
-                    "-fx-border-color: #" + toHex(ERROR_RED) + ";" +
-                            "-fx-border-width: 2;" +
-                            "-fx-border-radius: 5;" +
-                            "-fx-background-radius: 5;" +
-                            "-fx-padding: 8 12;"
+                    "-fx-background-color: #FFF5F5;" +
+                            "-fx-background-radius: 999px;" +
+                            "-fx-border-radius: 999px;" +
+                            "-fx-border-color: " + cssColor(ERROR_RED) + ";" +
+                            "-fx-border-width: 2px;" +
+                            "-fx-padding: 10px 18px;" +
+                            "-fx-font-size: 14px;"
             );
             return false;
         }
     }
 
     private HBox createButtonPanel(boolean isEdit) {
-        HBox buttonPanel = new HBox(15);
+        HBox buttonPanel = new HBox(16);
         buttonPanel.setAlignment(Pos.CENTER_RIGHT);
-        buttonPanel.setPadding(new Insets(20, 30, 20, 30));
-        buttonPanel.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        buttonPanel.setPadding(new Insets(20, 40, 32, 40));
+        buttonPanel.setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
 
-        Button cancelButton = createButton("Cancel", BUTTON_LIGHT_GREEN);
+        Button cancelButton = createOutlineButton("Cancel");
         cancelButton.setOnAction(e -> close());
 
-        Button saveButton = createButton(isEdit ? "Save Changes" : "Add Session", ACCENT_DARK_GREEN);
-        saveButton.setTextFill(Color.WHITE);
+        Button saveButton = createPrimaryButton(isEdit ? "Save Changes" : "Create Session");
         saveButton.setOnAction(e -> saveSession());
 
         buttonPanel.getChildren().addAll(cancelButton, saveButton);
         return buttonPanel;
     }
 
-    private Button createButton(String text, Color bgColor) {
+    private Button createPrimaryButton(String text) {
         Button button = new Button(text);
         button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        button.setTextFill(bgColor == ACCENT_DARK_GREEN ? Color.WHITE : Color.web(toHex(TEXT_DARK)));
+        button.setTextFill(Color.WHITE);
         button.setStyle(
-                "-fx-background-color: #" + toHex(bgColor) + ";" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 12 30;" +
+                "-fx-background-color: linear-gradient(to bottom right, " + cssColor(EMERALD) + ", " + cssColor(EMERALD_MID) + ");" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 12px 32px;" +
+                        "-fx-cursor: hand;" +
+                        cardShadow()
+        );
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, " + cssColor(EMERALD_MID) + ", " + cssColor(EMERALD_DARK) + ");" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 12px 32px;" +
                         "-fx-cursor: hand;"
-        );
-
-        // Hover effect
-        button.setOnMouseEntered(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(bgColor.darker()) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 30;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-        button.setOnMouseExited(e ->
-                button.setStyle(
-                        "-fx-background-color: #" + toHex(bgColor) + ";" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 12 30;" +
-                                "-fx-cursor: hand;"
-                )
-        );
-
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, " + cssColor(EMERALD) + ", " + cssColor(EMERALD_MID) + ");" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 12px 32px;" +
+                        "-fx-cursor: hand;" +
+                        cardShadow()
+        ));
         return button;
     }
 
+    private Button createOutlineButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        button.setTextFill(MUTED);
+        button.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(LINE) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 11px 28px;" +
+                        "-fx-cursor: hand;"
+        );
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: " + cssColor(SOFT_GREEN_BG) + ";" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(EMERALD) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 11px 28px;" +
+                        "-fx-cursor: hand;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(LINE) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 11px 28px;" +
+                        "-fx-cursor: hand;"
+        ));
+        return button;
+    }
+
+    private String pillInputStyle() {
+        return "-fx-background-color: white;" +
+                "-fx-background-radius: 999px;" +
+                "-fx-border-radius: 999px;" +
+                "-fx-border-color: " + cssColor(LINE) + ";" +
+                "-fx-border-width: 1.5px;" +
+                "-fx-padding: 10px 18px;" +
+                "-fx-font-size: 14px;" +
+                "-fx-font-family: 'Segoe UI';";
+    }
+
     private void setDefaultValues() {
-        datePicker.setValue(LocalDate.now()); // Default to today
-        startTimeField.setText("09:00"); // Default start time
-        endTimeField.setText("10:00"); // Default end time
+        datePicker.setValue(LocalDate.now());
+        startTimeField.setText("09:00");
+        endTimeField.setText("10:00");
     }
 
     private void loadSessionData() {
@@ -400,7 +349,6 @@ public class SessionFormDialog extends Stage {
     }
 
     private void saveSession() {
-        // Validate inputs
         if (titleField.getText().trim().isEmpty()) {
             showAlert("Please enter a title for the session.", Alert.AlertType.WARNING);
             return;
@@ -411,13 +359,11 @@ public class SessionFormDialog extends Stage {
             return;
         }
 
-        // Validate start time
         if (!validateTimeField(startTimeField)) {
             showAlert("Please enter a valid start time in HH:mm format (e.g., 14:30).", Alert.AlertType.WARNING);
             return;
         }
 
-        // Validate end time
         if (!validateTimeField(endTimeField)) {
             showAlert("Please enter a valid end time in HH:mm format (e.g., 16:00).", Alert.AlertType.WARNING);
             return;
@@ -434,18 +380,15 @@ public class SessionFormDialog extends Stage {
         }
 
         try {
-            // Parse times
             LocalTime startTime = LocalTime.parse(startTimeField.getText().trim(), timeFormatter);
             LocalTime endTime = LocalTime.parse(endTimeField.getText().trim(), timeFormatter);
 
-            // Validate that end time is after start time
             if (endTime.isBefore(startTime) || endTime.equals(startTime)) {
                 showAlert("End time must be after start time.", Alert.AlertType.WARNING);
                 return;
             }
 
             if (session == null) {
-                // Create new session
                 Session newSession = new Session();
                 newSession.setTitle(titleField.getText().trim());
                 newSession.setSessionDate(datePicker.getValue());
@@ -456,11 +399,8 @@ public class SessionFormDialog extends Stage {
                 newSession.setStatus(statusCombo.getValue());
 
                 controller.createSession(newSession);
-
-                showAlert("Session created successfully!", Alert.AlertType.INFORMATION);
-
+                showAlert("✨ Session created successfully!", Alert.AlertType.INFORMATION);
             } else {
-                // Update existing session
                 session.setTitle(titleField.getText().trim());
                 session.setSessionDate(datePicker.getValue());
                 session.setStartTime(startTime);
@@ -470,12 +410,10 @@ public class SessionFormDialog extends Stage {
                 session.setStatus(statusCombo.getValue());
 
                 controller.updateSession(session);
-
-                showAlert("Session updated successfully!", Alert.AlertType.INFORMATION);
+                showAlert("✅ Session updated successfully!", Alert.AlertType.INFORMATION);
             }
 
             close();
-            // Refresh the sessions panel
             if (parentApp != null) {
                 parentApp.showSessionPanel();
             }
@@ -490,14 +428,21 @@ public class SessionFormDialog extends Stage {
     private void showAlert(String message, Alert.AlertType type) {
         Alert alert = new Alert(type);
         alert.setTitle(type == Alert.AlertType.ERROR ? "Error" :
-                type == Alert.AlertType.WARNING ? "Warning" : "Information");
+                type == Alert.AlertType.WARNING ? "Warning" : "Success");
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.initOwner(this);
         alert.showAndWait();
     }
 
-    // ================= UTILITY =================
+    private String cssColor(Color color) {
+        return "#" + toHex(color);
+    }
+
+    private String cardShadow() {
+        return "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 5);";
+    }
+
     private String toHex(Color color) {
         return String.format("%02x%02x%02x",
                 (int)(color.getRed() * 255),

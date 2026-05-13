@@ -110,13 +110,11 @@ public class SessionService {
         }
     }
 
-    // ========== METHODS FOR PATIENT RESERVATIONS ==========
-
-    // Get all available sessions
+    // ========== FIXED: Get all available sessions (includes BOTH 'active' AND 'scheduled') ==========
     public List<Session> getAvailableSessions() throws SQLException {
         List<Session> list = new ArrayList<>();
 
-        String sql = "SELECT * FROM sessions WHERE status = 'active' AND reserved_by IS NULL AND " +
+        String sql = "SELECT * FROM sessions WHERE status IN ('active', 'scheduled') AND reserved_by IS NULL AND " +
                 "(session_date > CURDATE() OR (session_date = CURDATE() AND start_time > CURTIME())) " +
                 "ORDER BY session_date, start_time";
         Statement st = cnx.createStatement();
@@ -239,11 +237,11 @@ public class SessionService {
         return false;
     }
 
-    // Search available sessions by keyword
+    // FIXED: Search available sessions by keyword (includes 'scheduled')
     public List<Session> searchAvailableSessions(String keyword) throws SQLException {
         List<Session> list = new ArrayList<>();
 
-        String sql = "SELECT * FROM sessions WHERE status = 'active' AND reserved_by IS NULL AND " +
+        String sql = "SELECT * FROM sessions WHERE status IN ('active', 'scheduled') AND reserved_by IS NULL AND " +
                 "(session_date > CURDATE() OR (session_date = CURDATE() AND start_time > CURTIME())) AND " +
                 "(title LIKE ? OR location LIKE ?) ORDER BY session_date, start_time";
         PreparedStatement ps = cnx.prepareStatement(sql);
@@ -257,21 +255,24 @@ public class SessionService {
         return list;
     }
 
-    // Filter available sessions by type
+    // FIXED: Filter available sessions by type (includes 'scheduled')
     public List<Session> filterAvailableSessionsByType(String type) throws SQLException {
         List<Session> list = new ArrayList<>();
 
-        String sql = "SELECT * FROM sessions WHERE status = 'active' AND reserved_by IS NULL AND " +
+        String sql = "SELECT * FROM sessions WHERE status IN ('active', 'scheduled') AND reserved_by IS NULL AND " +
                 "(session_date > CURDATE() OR (session_date = CURDATE() AND start_time > CURTIME()))";
 
-        if (!"All Types".equals(type)) {
-            sql += " AND session_type = '" + type + "'";
+        if (type != null && !"All Types".equals(type) && !type.isEmpty()) {
+            sql += " AND session_type = ?";
         }
 
         sql += " ORDER BY session_date, start_time";
 
-        Statement st = cnx.createStatement();
-        ResultSet rs = st.executeQuery(sql);
+        PreparedStatement ps = cnx.prepareStatement(sql);
+        if (type != null && !"All Types".equals(type) && !type.isEmpty()) {
+            ps.setString(1, type);
+        }
+        ResultSet rs = ps.executeQuery();
 
         while (rs.next()) {
             list.add(extractSessionFromResultSet(rs));
@@ -292,7 +293,7 @@ public class SessionService {
         return 0;
     }
 
-    // ⭐ NEW METHOD: Update average rating for a session
+    // Update average rating for a session
     public void updateAverageRating(int sessionId, double newAverage) throws SQLException {
         String sql = "UPDATE sessions SET average_rating = ? WHERE session_id = ?";
         PreparedStatement ps = cnx.prepareStatement(sql);
@@ -301,11 +302,11 @@ public class SessionService {
         ps.executeUpdate();
     }
 
-    // ⭐ NEW METHOD: Get most popular sessions
+    // Get most popular sessions
     public List<Session> getMostPopularSessions(int limit) throws SQLException {
         List<Session> list = new ArrayList<>();
 
-        String sql = "SELECT * FROM sessions WHERE status = 'active' ORDER BY popularity DESC LIMIT ?";
+        String sql = "SELECT * FROM sessions WHERE status IN ('active', 'scheduled') ORDER BY popularity DESC LIMIT ?";
         PreparedStatement ps = cnx.prepareStatement(sql);
         ps.setInt(1, limit);
         ResultSet rs = ps.executeQuery();
@@ -316,7 +317,29 @@ public class SessionService {
         return list;
     }
 
-    // Helper method to extract Session from ResultSet - UPDATED with new fields
+    // Get sessions by psychologist
+    public List<Session> getSessionsByPsychologist(int psychologistId) throws SQLException {
+        List<Session> list = new ArrayList<>();
+
+        String sql = "SELECT * FROM sessions WHERE psychologist_id = ? ORDER BY session_date DESC";
+
+        try {
+            PreparedStatement ps = cnx.prepareStatement(sql);
+            ps.setInt(1, psychologistId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                list.add(extractSessionFromResultSet(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error getting sessions for psychologist: " + e.getMessage());
+            throw e;
+        }
+
+        return list;
+    }
+
+    // Helper method to extract Session from ResultSet
     private Session extractSessionFromResultSet(ResultSet rs) throws SQLException {
         Session s = new Session();
         s.setSessionId(rs.getInt("session_id"));
@@ -343,44 +366,11 @@ public class SessionService {
             s.setReservedAt(null);
         }
 
-        // ⭐ NEW: Recommendation fields
+        // Recommendation fields
         s.setCategory(rs.getString("category"));
-
-        // Handle popularity (default to 0 if null)
-        int popularity = rs.getInt("popularity");
-        s.setPopularity(popularity);
-
-        // Handle average rating (default to 0.0 if null)
-        double avgRating = rs.getDouble("average_rating");
-        s.setAverageRating(avgRating);
-
-        // Note: tags are not stored in database in this implementation
-        // You could add a separate table for tags if needed
+        s.setPopularity(rs.getInt("popularity"));
+        s.setAverageRating(rs.getDouble("average_rating"));
 
         return s;
-    }
-
-    // Add this method to SessionService.java
-    public List<Session> getSessionsByPsychologist(int psychologistId) throws SQLException {
-        List<Session> list = new ArrayList<>();
-
-        // Assuming your sessions table has a psychologist_id field
-        // If not, you'll need to modify your database schema
-        String sql = "SELECT * FROM sessions WHERE psychologist_id = ? ORDER BY session_date DESC";
-
-        try {
-            PreparedStatement ps = cnx.prepareStatement(sql);
-            ps.setInt(1, psychologistId);
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next()) {
-                list.add(extractSessionFromResultSet(rs));
-            }
-        } catch (SQLException e) {
-            System.err.println("Error getting sessions for psychologist: " + e.getMessage());
-            throw e;
-        }
-
-        return list;
     }
 }

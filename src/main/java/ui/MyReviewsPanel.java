@@ -19,29 +19,30 @@ public class MyReviewsPanel extends VBox {
     private MentisLoginFrame parentApp;
     private SessionReviewController reviewController;
     private VBox reviewsContainer;
-    private Label userInfoLabel;
 
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
     private DateTimeFormatter reviewDateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    // Colors
-    private static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
-    private static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
-    private static final Color BUTTON_LIGHT_GREEN = Color.rgb(160, 200, 180);
-    private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
-    private static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
-    private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
-    private static final Color STAR_GOLD = Color.rgb(255, 193, 7);
-    private static final Color STAR_GREY = Color.rgb(200, 200, 200);
+    // Symfony-style green colors
+    private static final Color PAGE_BG = Color.web("#F8F9FA");
+    private static final Color SOFT_GREEN_BG = Color.web("#F1F8E9");
+    private static final Color EMERALD = Color.web("#50C878");
+    private static final Color EMERALD_DARK = Color.web("#2E7D32");
+    private static final Color EMERALD_MID = Color.web("#3A9B5E");
+    private static final Color INK = Color.web("#1A3C34");
+    private static final Color MUTED = Color.web("#6C757D");
+    private static final Color LINE = Color.web("#E9ECEF");
+    private static final Color STAR_GOLD = Color.web("#FFC107");
+    private static final Color STAR_GREY = Color.web("#CED4DA");
 
     public MyReviewsPanel(MentisLoginFrame parentApp, SessionReviewController reviewController) {
         this.parentApp = parentApp;
         this.reviewController = reviewController;
 
-        setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        setPadding(new Insets(30));
-        setSpacing(20);
+        setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
+        setPadding(new Insets(44, 56, 44, 56));
+        setSpacing(28);
 
         createHeader();
         createContent();
@@ -49,38 +50,27 @@ public class MyReviewsPanel extends VBox {
     }
 
     private void createHeader() {
-        HBox headerBox = new HBox();
-        headerBox.setAlignment(Pos.CENTER_LEFT);
+        VBox headerBox = new VBox(8);
         headerBox.setPadding(new Insets(0, 0, 20, 0));
 
-        VBox titleBox = new VBox(10);
-        Label titleLabel = new Label("My Reviews");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 32));
-        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        Label titleLabel = new Label("📝 My Reviews");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 40));
+        titleLabel.setTextFill(EMERALD_DARK);
 
         Label subtitleLabel = new Label("View and manage your session reviews");
-        subtitleLabel.setFont(Font.font("Segoe UI", 16));
-        subtitleLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        subtitleLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 16));
+        subtitleLabel.setTextFill(MUTED);
 
-        titleBox.getChildren().addAll(titleLabel, subtitleLabel);
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        userInfoLabel = new Label(parentApp.getUserName());
-        userInfoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        userInfoLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
-
-        headerBox.getChildren().addAll(titleBox, spacer, userInfoLabel);
+        headerBox.getChildren().addAll(titleLabel, subtitleLabel);
         getChildren().add(headerBox);
     }
 
     private void createContent() {
-        reviewsContainer = new VBox(15);
+        reviewsContainer = new VBox(20);
         reviewsContainer.setFillWidth(true);
 
         ScrollPane scrollPane = new ScrollPane(reviewsContainer);
-        scrollPane.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        scrollPane.setStyle("-fx-background-color: transparent;");
         scrollPane.setBorder(null);
         scrollPane.setFitToWidth(true);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
@@ -106,13 +96,6 @@ public class MyReviewsPanel extends VBox {
                 reviewsContainer.getChildren().add(reviewCard);
             }
 
-            // Show count
-            Label countLabel = new Label("You have written " + reviews.size() + " review(s)");
-            countLabel.setFont(Font.font("Segoe UI", 12));
-            countLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
-            countLabel.setPadding(new Insets(5, 0, 0, 0));
-            reviewsContainer.getChildren().add(countLabel);
-
         } catch (SQLException e) {
             showAlert("Error", "Failed to load reviews: " + e.getMessage(), Alert.AlertType.ERROR);
         }
@@ -121,27 +104,30 @@ public class MyReviewsPanel extends VBox {
     private VBox createEmptyState() {
         VBox emptyBox = new VBox(20);
         emptyBox.setAlignment(Pos.CENTER);
-        emptyBox.setPadding(new Insets(50));
-        emptyBox.setStyle("-fx-background-color: white; -fx-border-radius: 10; -fx-background-radius: 10;");
+        emptyBox.setPadding(new Insets(60));
+        emptyBox.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 24px;" +
+                        cardShadow()
+        );
 
-        Label titleLabel = new Label("📝 No Reviews Yet");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
-        titleLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        Label iconLabel = new Label("📝");
+        iconLabel.setFont(Font.font("Segoe UI Emoji", 54));
+
+        Label titleLabel = new Label("No Reviews Yet");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
+        titleLabel.setTextFill(INK);
 
         Label msgLabel = new Label("You haven't written any reviews yet.\nReviews can only be added for past sessions you've attended.");
         msgLabel.setFont(Font.font("Segoe UI", 14));
-        msgLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
+        msgLabel.setTextFill(MUTED);
         msgLabel.setWrapText(true);
         msgLabel.setAlignment(Pos.CENTER);
-        msgLabel.setMaxWidth(400);
 
-        Button browseButton = new Button("Go to My Sessions");
-        browseButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        browseButton.setTextFill(Color.WHITE);
-        browseButton.setStyle("-fx-background-color: #" + toHex(ACCENT_DARK_GREEN) + "; -fx-background-radius: 5; -fx-padding: 10 25; -fx-cursor: hand;");
+        Button browseButton = createPrimaryButton("Go to My Sessions");
         browseButton.setOnAction(e -> parentApp.showPatientMySessionsPanel());
 
-        emptyBox.getChildren().addAll(titleLabel, msgLabel, browseButton);
+        emptyBox.getChildren().addAll(iconLabel, titleLabel, msgLabel, browseButton);
         return emptyBox;
     }
 
@@ -149,104 +135,166 @@ public class MyReviewsPanel extends VBox {
         VBox card = new VBox(15);
         card.setStyle(
                 "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 10;" +
-                        "-fx-background-radius: 10;" +
-                        "-fx-padding: 20;" +
-                        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);"
+                        "-fx-background-radius: 24px;" +
+                        "-fx-padding: 24px;" +
+                        cardShadow()
         );
 
-        // Header with session title and date
+        // Header row
         HBox headerRow = new HBox(10);
         headerRow.setAlignment(Pos.CENTER_LEFT);
 
         Label titleLabel = new Label(review.getSessionTitle());
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
-        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 20));
+        titleLabel.setTextFill(INK);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
         Label dateLabel = new Label(review.getSessionDate().format(dateFormatter));
-        dateLabel.setFont(Font.font("Segoe UI", 14));
-        dateLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
+        dateLabel.setFont(Font.font("Segoe UI", 13));
+        dateLabel.setTextFill(MUTED);
+        dateLabel.setStyle("-fx-background-color: " + cssColor(SOFT_GREEN_BG) + "; -fx-padding: 4px 12px; -fx-background-radius: 20px;");
 
-        Region spacer1 = new Region();
-        HBox.setHgrow(spacer1, Priority.ALWAYS);
-
-        // Star rating
-        HBox starsBox = createStarDisplay(review.getRating());
-
-        headerRow.getChildren().addAll(titleLabel, dateLabel, spacer1, starsBox);
-
-        // Review details
-        VBox detailsBox = new VBox(10);
-        detailsBox.setPadding(new Insets(10, 0, 10, 0));
+        headerRow.getChildren().addAll(titleLabel, spacer, dateLabel);
 
         // Time and location
         HBox metaBox = new HBox(20);
         Label timeLabel = new Label("⏰ " + review.getStartTime().format(timeFormatter) + " - " + review.getEndTime().format(timeFormatter));
         timeLabel.setFont(Font.font("Segoe UI", 13));
-        timeLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
+        timeLabel.setTextFill(MUTED);
 
         Label locationLabel = new Label("📍 " + review.getLocation());
         locationLabel.setFont(Font.font("Segoe UI", 13));
-        locationLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
+        locationLabel.setTextFill(MUTED);
 
         metaBox.getChildren().addAll(timeLabel, locationLabel);
 
-        // Comment
-        Label commentLabel = new Label("\"" + review.getComment() + "\"");
+        // Star rating
+        HBox starsBox = createStarDisplay(review.getRating());
+
+        // Comment bubble
+        Label commentLabel = new Label("💬 \"" + review.getComment() + "\"");
         commentLabel.setFont(Font.font("Segoe UI", 14));
-        commentLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        commentLabel.setTextFill(INK);
         commentLabel.setWrapText(true);
-        commentLabel.setMaxWidth(600);
+        commentLabel.setStyle(
+                "-fx-background-color: " + cssColor(SOFT_GREEN_BG) + ";" +
+                        "-fx-padding: 14px;" +
+                        "-fx-background-radius: 16px;"
+        );
 
         // Review date
         Label reviewDateLabel = new Label("Reviewed on: " + review.getReviewDate().format(reviewDateFormatter));
-        reviewDateLabel.setFont(Font.font("Segoe UI", 12));
-        reviewDateLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
-
-        detailsBox.getChildren().addAll(metaBox, commentLabel, reviewDateLabel);
+        reviewDateLabel.setFont(Font.font("Segoe UI", 11));
+        reviewDateLabel.setTextFill(MUTED);
 
         // Action buttons
-        HBox actionRow = new HBox(10);
+        HBox actionRow = new HBox(12);
         actionRow.setAlignment(Pos.CENTER_RIGHT);
         actionRow.setPadding(new Insets(10, 0, 0, 0));
 
-        Button editButton = new Button("Edit");
-        editButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-        editButton.setTextFill(Color.WHITE);
-        editButton.setStyle("-fx-background-color: #" + toHex(ACCENT_DARK_GREEN) + "; -fx-background-radius: 5; -fx-padding: 8 20; -fx-cursor: hand;");
+        Button editButton = createOutlineButton("✏️ Edit");
         editButton.setOnAction(e -> showEditReviewDialog(review));
 
-        Button deleteButton = new Button("Delete");
+        Button deleteButton = new Button("🗑️ Delete");
         deleteButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
         deleteButton.setTextFill(Color.WHITE);
-        deleteButton.setStyle("-fx-background-color: #e74c3c; -fx-background-radius: 5; -fx-padding: 8 20; -fx-cursor: hand;");
+        deleteButton.setStyle(
+                "-fx-background-color: #E74C3C;" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 8px 20px;" +
+                        "-fx-cursor: hand;"
+        );
         deleteButton.setOnAction(e -> deleteReview(review));
 
         actionRow.getChildren().addAll(editButton, deleteButton);
 
-        card.getChildren().addAll(headerRow, detailsBox, new Separator(), actionRow);
+        card.getChildren().addAll(headerRow, metaBox, starsBox, commentLabel, reviewDateLabel, new Separator(), actionRow);
         return card;
     }
 
     private HBox createStarDisplay(int rating) {
-        HBox starsBox = new HBox(2);
+        HBox starsBox = new HBox(4);
+        starsBox.setAlignment(Pos.CENTER_LEFT);
         for (int i = 1; i <= 5; i++) {
             Label star = new Label("★");
             star.setFont(Font.font("Segoe UI", 18));
             if (i <= rating) {
-                star.setTextFill(Color.web(toHex(STAR_GOLD)));
+                star.setTextFill(STAR_GOLD);
             } else {
-                star.setTextFill(Color.web(toHex(STAR_GREY)));
+                star.setTextFill(STAR_GREY);
             }
             starsBox.getChildren().add(star);
         }
         return starsBox;
     }
 
+    private Button createPrimaryButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        button.setTextFill(Color.WHITE);
+        button.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, " + cssColor(EMERALD) + ", " + cssColor(EMERALD_MID) + ");" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 12px 28px;" +
+                        "-fx-cursor: hand;" +
+                        cardShadow()
+        );
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, " + cssColor(EMERALD_MID) + ", " + cssColor(EMERALD_DARK) + ");" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 12px 28px;" +
+                        "-fx-cursor: hand;" +
+                        "-fx-translate-y: -2px;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, " + cssColor(EMERALD) + ", " + cssColor(EMERALD_MID) + ");" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 12px 28px;" +
+                        "-fx-cursor: hand;" +
+                        cardShadow()
+        ));
+        return button;
+    }
+
+    private Button createOutlineButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        button.setTextFill(EMERALD_DARK);
+        button.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(EMERALD) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 8px 20px;" +
+                        "-fx-cursor: hand;"
+        );
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: " + cssColor(SOFT_GREEN_BG) + ";" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(EMERALD_DARK) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 8px 20px;" +
+                        "-fx-cursor: hand;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(EMERALD) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 8px 20px;" +
+                        "-fx-cursor: hand;"
+        ));
+        return button;
+    }
+
     private void showEditReviewDialog(SessionReview review) {
         new AddReviewDialog(parentApp, reviewController, review, true);
-        refreshData(); // Refresh after dialog closes
+        refreshData();
     }
 
     private void deleteReview(SessionReview review) {
@@ -276,6 +324,14 @@ public class MyReviewsPanel extends VBox {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    private String cssColor(Color color) {
+        return "#" + toHex(color);
+    }
+
+    private String cardShadow() {
+        return "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 5);";
     }
 
     private String toHex(Color color) {

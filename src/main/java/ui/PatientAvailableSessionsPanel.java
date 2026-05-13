@@ -18,113 +18,101 @@ public class PatientAvailableSessionsPanel extends VBox {
 
     private MentisLoginFrame parentApp;
     private SessionController sessionController;
-    private VBox sessionsContainer;
+    private GridPane sessionsGrid;
     private TextField searchField;
     private ComboBox<String> typeFilterCombo;
-    private Label userInfoLabel;
 
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
-    // Colors
-    private static final Color BACKGROUND_LIGHT = Color.rgb(240, 248, 245);
-    private static final Color ACCENT_DARK_GREEN = Color.rgb(60, 120, 90);
-    private static final Color BUTTON_LIGHT_GREEN = Color.rgb(160, 200, 180);
-    private static final Color TEXT_DARK = Color.rgb(40, 70, 50);
-    private static final Color TEXT_LIGHT = Color.rgb(100, 130, 110);
-    private static final Color BORDER_LIGHT = Color.rgb(200, 220, 210);
+    // Symfony-style green colors
+    private static final Color PAGE_BG = Color.web("#F8F9FA");
+    private static final Color SOFT_GREEN_BG = Color.web("#F1F8E9");
+    private static final Color EMERALD = Color.web("#50C878");
+    private static final Color EMERALD_DARK = Color.web("#2E7D32");
+    private static final Color EMERALD_MID = Color.web("#3A9B5E");
+    private static final Color INK = Color.web("#1A3C34");
+    private static final Color MUTED = Color.web("#6C757D");
+    private static final Color LINE = Color.web("#E9ECEF");
+    private static final Color STATUS_AVAILABLE = Color.web("#27AE60");
 
     public PatientAvailableSessionsPanel(MentisLoginFrame parentApp, SessionController sessionController) {
         this.parentApp = parentApp;
         this.sessionController = sessionController;
 
-        setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
-        setPadding(new Insets(30));
-        setSpacing(20);
+        setStyle("-fx-background-color: " + cssColor(PAGE_BG) + ";");
+        setPadding(new Insets(44, 56, 44, 56));
+        setSpacing(28);
 
         createHeader();
         createSearchBar();
-        createSessionsContainer();
+        createContent();
         refreshData();
     }
 
     private void createHeader() {
-        VBox headerBox = new VBox(10);
+        VBox headerBox = new VBox(8);
+        headerBox.setPadding(new Insets(0, 0, 20, 0));
 
-        Label titleLabel = new Label("Available Sessions");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 32));
-        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        Label titleLabel = new Label("📋 Available Sessions");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 40));
+        titleLabel.setTextFill(EMERALD_DARK);
 
         Label subtitleLabel = new Label("Browse and reserve therapy sessions that fit your schedule");
-        subtitleLabel.setFont(Font.font("Segoe UI", 16));
-        subtitleLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
+        subtitleLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 16));
+        subtitleLabel.setTextFill(MUTED);
 
         headerBox.getChildren().addAll(titleLabel, subtitleLabel);
         getChildren().add(headerBox);
     }
 
     private void createSearchBar() {
-        HBox searchBar = new HBox(15);
-        searchBar.setAlignment(Pos.CENTER_LEFT);
-        searchBar.setPadding(new Insets(20, 0, 20, 0));
+        HBox searchBar = new HBox(14);
+        searchBar.setPadding(new Insets(0, 0, 24, 0));
+        searchBar.setAlignment(Pos.CENTER);
 
-        // Search field
         searchField = new TextField();
-        searchField.setPromptText("Search by title or location...");
-        searchField.setPrefHeight(40);
-        searchField.setPrefWidth(300);
-        searchField.setStyle(
-                "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 5;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8 12;"
-        );
+        searchField.setPromptText("🔍 Search by title or location...");
+        searchField.setPrefWidth(340);
+        searchField.setStyle(pillInputStyle());
         searchField.setOnAction(e -> searchSessions());
 
-        // Type filter
         typeFilterCombo = new ComboBox<>();
         typeFilterCombo.getItems().addAll("All Types", "Individual", "Group", "Family", "Couple", "Online");
         typeFilterCombo.setValue("All Types");
-        typeFilterCombo.setPrefHeight(40);
-        typeFilterCombo.setPrefWidth(150);
+        typeFilterCombo.setPrefHeight(44);
+        typeFilterCombo.setPrefWidth(140);
+        typeFilterCombo.setStyle(pillInputStyle());
         typeFilterCombo.setOnAction(e -> filterSessions());
 
-        // Search button
-        Button searchButton = new Button("Search");
-        searchButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        searchButton.setTextFill(Color.WHITE);
-        searchButton.setStyle("-fx-background-color: #" + toHex(ACCENT_DARK_GREEN) + "; -fx-background-radius: 5; -fx-padding: 10 25; -fx-cursor: hand;");
+        Button searchButton = createPrimaryButton("Search");
         searchButton.setOnAction(e -> searchSessions());
 
-        // Clear button
-        Button clearButton = new Button("Clear");
-        clearButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        clearButton.setTextFill(Color.web(toHex(TEXT_DARK)));
-        clearButton.setStyle("-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + "; -fx-background-radius: 5; -fx-padding: 10 25; -fx-cursor: hand;");
+        Button clearButton = createOutlineButton("Clear");
         clearButton.setOnAction(e -> {
             searchField.clear();
             typeFilterCombo.setValue("All Types");
             refreshData();
         });
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        // User info - FIXED HERE
-        userInfoLabel = new Label("Logged in as: " + parentApp.getUserName());
-        userInfoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        userInfoLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
-
-        searchBar.getChildren().addAll(searchField, typeFilterCombo, searchButton, clearButton, spacer, userInfoLabel);
+        searchBar.getChildren().addAll(searchField, typeFilterCombo, searchButton, clearButton);
         getChildren().add(searchBar);
     }
 
-    private void createSessionsContainer() {
-        sessionsContainer = new VBox(15);
-        sessionsContainer.setFillWidth(true);
+    private void createContent() {
+        sessionsGrid = new GridPane();
+        sessionsGrid.setHgap(26);
+        sessionsGrid.setVgap(26);
+        sessionsGrid.setPadding(new Insets(10, 0, 20, 0));
 
-        ScrollPane scrollPane = new ScrollPane(sessionsContainer);
-        scrollPane.setStyle("-fx-background-color: #" + toHex(BACKGROUND_LIGHT) + ";");
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setPercentWidth(50);
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setPercentWidth(50);
+        sessionsGrid.getColumnConstraints().addAll(col1, col2);
+
+        ScrollPane scrollPane = new ScrollPane(sessionsGrid);
+        scrollPane.setStyle("-fx-background-color: transparent;");
         scrollPane.setBorder(null);
         scrollPane.setFitToWidth(true);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
@@ -147,10 +135,12 @@ public class PatientAvailableSessionsPanel extends VBox {
         String selectedType = typeFilterCombo.getValue();
         try {
             List<Session> sessions = sessionController.filterAvailableSessionsByType(selectedType);
-            // Also apply search filter if there's a search term
             String keyword = searchField.getText().trim();
             if (!keyword.isEmpty()) {
-                sessions = sessionController.searchAvailableSessions(keyword);
+                sessions = sessions.stream()
+                        .filter(s -> s.getTitle().toLowerCase().contains(keyword.toLowerCase()) ||
+                                s.getLocation().toLowerCase().contains(keyword.toLowerCase()))
+                        .collect(java.util.stream.Collectors.toList());
             }
             displaySessions(sessions);
         } catch (SQLException e) {
@@ -158,7 +148,55 @@ public class PatientAvailableSessionsPanel extends VBox {
         }
     }
 
+    // DEBUG METHOD - Add this to see what's happening
+    private void debugDatabase() {
+        try {
+            System.out.println("\n========== 🔍 DEBUG: Database Check ==========");
+
+            // Get all sessions directly from controller
+            List<Session> allSessions = sessionController.getAllSessions();
+            System.out.println("📊 Total sessions in database: " + allSessions.size());
+
+            if (allSessions.isEmpty()) {
+                System.out.println("❌ No sessions found in database!");
+            } else {
+                for (Session s : allSessions) {
+                    System.out.println("   🟢 ID: " + s.getSessionId() +
+                            " | Title: " + s.getTitle() +
+                            " | Status: '" + s.getStatus() + "'" +
+                            " | Date: " + s.getSessionDate() +
+                            " | Start: " + s.getStartTime() +
+                            " | Reserved By: " + (s.getReservedBy() == null ? "NULL" : s.getReservedBy()));
+                }
+            }
+
+            // Check available sessions
+            List<Session> available = sessionController.getAvailableSessions();
+            System.out.println("\n📋 Available sessions (after filter): " + available.size());
+
+            if (available.isEmpty()) {
+                System.out.println("❌ No available sessions found!");
+                System.out.println("\n💡 Possible reasons:");
+                System.out.println("   1. Session status is not 'active' or 'scheduled'");
+                System.out.println("   2. Session date is in the past");
+                System.out.println("   3. Session is already reserved (reserved_by is not NULL)");
+            } else {
+                for (Session s : available) {
+                    System.out.println("   ✅ " + s.getTitle() + " | " + s.getSessionDate());
+                }
+            }
+
+            System.out.println("==========================================\n");
+
+        } catch (SQLException e) {
+            System.out.println("❌ Debug error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     public void refreshData() {
+        debugDatabase(); // ADD THIS LINE - shows debug info in console
+
         try {
             List<Session> sessions = sessionController.getAvailableSessions();
             displaySessions(sessions);
@@ -168,140 +206,144 @@ public class PatientAvailableSessionsPanel extends VBox {
     }
 
     private void displaySessions(List<Session> sessions) {
-        sessionsContainer.getChildren().clear();
+        sessionsGrid.getChildren().clear();
 
         if (sessions.isEmpty()) {
-            VBox emptyBox = new VBox(20);
-            emptyBox.setAlignment(Pos.CENTER);
-            emptyBox.setPadding(new Insets(50));
-
-            Label noDataLabel = new Label("📅 No sessions available at the moment");
-            noDataLabel.setFont(Font.font("Segoe UI", 18));
-            noDataLabel.setTextFill(Color.web(toHex(TEXT_DARK)));
-
-            Label suggestionLabel = new Label("Check back later for new sessions");
-            suggestionLabel.setFont(Font.font("Segoe UI", 14));
-            suggestionLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
-
-            emptyBox.getChildren().addAll(noDataLabel, suggestionLabel);
-            sessionsContainer.getChildren().add(emptyBox);
+            VBox emptyBox = createEmptyState();
+            sessionsGrid.add(emptyBox, 0, 0, 2, 1);
             return;
         }
 
+        int row = 0;
+        int col = 0;
         for (Session session : sessions) {
-            VBox sessionCard = createSessionCard(session);
-            sessionsContainer.getChildren().add(sessionCard);
+            VBox card = createSessionCard(session);
+            sessionsGrid.add(card, col, row);
+            col++;
+            if (col == 2) {
+                col = 0;
+                row++;
+            }
         }
+    }
 
-        // Show count
-        Label countLabel = new Label("Found " + sessions.size() + " available session(s)");
-        countLabel.setFont(Font.font("Segoe UI", 12));
-        countLabel.setTextFill(Color.web(toHex(TEXT_LIGHT)));
-        countLabel.setPadding(new Insets(5, 0, 0, 0));
-        sessionsContainer.getChildren().add(countLabel);
+    private VBox createEmptyState() {
+        VBox emptyBox = new VBox(20);
+        emptyBox.setAlignment(Pos.CENTER);
+        emptyBox.setPadding(new Insets(60));
+        emptyBox.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 24px;" +
+                        cardShadow()
+        );
+
+        Label iconLabel = new Label("📅");
+        iconLabel.setFont(Font.font("Segoe UI Emoji", 54));
+
+        Label titleLabel = new Label("No Sessions Available");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
+        titleLabel.setTextFill(INK);
+
+        Label msgLabel = new Label("Check back later for new sessions");
+        msgLabel.setFont(Font.font("Segoe UI", 14));
+        msgLabel.setTextFill(MUTED);
+
+        emptyBox.getChildren().addAll(iconLabel, titleLabel, msgLabel);
+        return emptyBox;
     }
 
     private VBox createSessionCard(Session session) {
-        VBox card = new VBox(15);
+        VBox card = new VBox(14);
         card.setStyle(
                 "-fx-background-color: white;" +
-                        "-fx-border-color: #" + toHex(BORDER_LIGHT) + ";" +
-                        "-fx-border-radius: 10;" +
-                        "-fx-background-radius: 10;" +
-                        "-fx-padding: 20;" +
-                        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);"
+                        "-fx-background-radius: 20px;" +
+                        "-fx-padding: 22px;" +
+                        cardShadow()
         );
+        card.setOnMouseEntered(e -> card.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 20px;" +
+                        "-fx-padding: 22px;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 18, 0, 0, 8);" +
+                        "-fx-translate-y: -4px;"
+        ));
+        card.setOnMouseExited(e -> card.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 20px;" +
+                        "-fx-padding: 22px;" +
+                        cardShadow()
+        ));
 
-        // First row: Title and Type
+        // Title row
         HBox titleRow = new HBox(10);
         titleRow.setAlignment(Pos.CENTER_LEFT);
 
         Label titleLabel = new Label(session.getTitle());
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 20));
-        titleLabel.setTextFill(Color.web(toHex(ACCENT_DARK_GREEN)));
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
+        titleLabel.setTextFill(INK);
+        HBox.setHgrow(titleLabel, Priority.ALWAYS);
 
-        Label typeLabel = new Label(session.getSessionType());
-        typeLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
-        typeLabel.setTextFill(Color.WHITE);
-        typeLabel.setStyle("-fx-background-color: #" + toHex(getTypeColor(session.getSessionType())) + "; -fx-background-radius: 15; -fx-padding: 5 15;");
+        Label typeLabel = createBadge(session.getSessionType(), getTypeColor(session.getSessionType()));
+        titleRow.getChildren().addAll(titleLabel, typeLabel);
 
-        Region spacer1 = new Region();
-        HBox.setHgrow(spacer1, Priority.ALWAYS);
+        // Details
+        VBox detailsBox = new VBox(8);
+        Label dateLabel = new Label("📅 " + session.getSessionDate().format(dateFormatter));
+        dateLabel.setFont(Font.font("Segoe UI", 13));
+        dateLabel.setTextFill(MUTED);
 
-        titleRow.getChildren().addAll(titleLabel, spacer1, typeLabel);
+        Label timeLabel = new Label("⏰ " + session.getStartTime().format(timeFormatter) + " - " + session.getEndTime().format(timeFormatter));
+        timeLabel.setFont(Font.font("Segoe UI", 13));
+        timeLabel.setTextFill(MUTED);
 
-        // Second row: Date, Time, Location
-        GridPane detailsGrid = new GridPane();
-        detailsGrid.setHgap(30);
-        detailsGrid.setVgap(10);
+        Label locationLabel = new Label("📍 " + session.getLocation());
+        locationLabel.setFont(Font.font("Segoe UI", 13));
+        locationLabel.setTextFill(MUTED);
 
-        // Date
-        Label dateIcon = new Label("📅");
-        dateIcon.setFont(Font.font("Segoe UI", 16));
-        Label dateValue = new Label(session.getSessionDate().format(dateFormatter));
-        dateValue.setFont(Font.font("Segoe UI", 14));
+        detailsBox.getChildren().addAll(dateLabel, timeLabel, locationLabel);
 
-        HBox dateBox = new HBox(5, dateIcon, dateValue);
-
-        // Time
-        Label timeIcon = new Label("⏰");
-        timeIcon.setFont(Font.font("Segoe UI", 16));
-        String timeRange = session.getStartTime().format(timeFormatter) + " - " + session.getEndTime().format(timeFormatter);
-        Label timeValue = new Label(timeRange);
-        timeValue.setFont(Font.font("Segoe UI", 14));
-
-        HBox timeBox = new HBox(5, timeIcon, timeValue);
-
-        // Location
-        Label locationIcon = new Label("📍");
-        locationIcon.setFont(Font.font("Segoe UI", 16));
-        Label locationValue = new Label(session.getLocation());
-        locationValue.setFont(Font.font("Segoe UI", 14));
-
-        HBox locationBox = new HBox(5, locationIcon, locationValue);
-
-        detailsGrid.add(dateBox, 0, 0);
-        detailsGrid.add(timeBox, 1, 0);
-        detailsGrid.add(locationBox, 0, 1, 2, 1);
-
-        // Third row: Status and Reserve button
-        HBox actionRow = new HBox(15);
+        // Action buttons
+        HBox actionRow = new HBox(12);
         actionRow.setAlignment(Pos.CENTER_RIGHT);
+        actionRow.setPadding(new Insets(12, 0, 0, 0));
 
         Label statusLabel = new Label("● Available");
-        statusLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        statusLabel.setTextFill(Color.web(toHex(Color.rgb(39, 174, 96))));
+        statusLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        statusLabel.setTextFill(STATUS_AVAILABLE);
 
-        Region spacer2 = new Region();
-        HBox.setHgrow(spacer2, Priority.ALWAYS);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Button detailsButton = new Button("View Details");
-        detailsButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-        detailsButton.setTextFill(Color.web(toHex(TEXT_DARK)));
-        detailsButton.setStyle("-fx-background-color: #" + toHex(BUTTON_LIGHT_GREEN) + "; -fx-background-radius: 5; -fx-padding: 8 20; -fx-cursor: hand;");
+        Button detailsButton = createOutlineButton("View Details");
         detailsButton.setOnAction(e -> showSessionDetails(session));
 
-        Button reserveButton = new Button("Reserve Now");
-        reserveButton.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-        reserveButton.setTextFill(Color.WHITE);
-        reserveButton.setStyle("-fx-background-color: #" + toHex(ACCENT_DARK_GREEN) + "; -fx-background-radius: 5; -fx-padding: 8 25; -fx-cursor: hand;");
+        Button reserveButton = createPrimaryButton("Reserve Now");
         reserveButton.setOnAction(e -> reserveSession(session));
 
-        actionRow.getChildren().addAll(statusLabel, spacer2, detailsButton, reserveButton);
+        actionRow.getChildren().addAll(statusLabel, spacer, detailsButton, reserveButton);
 
-        card.getChildren().addAll(titleRow, detailsGrid, actionRow);
+        card.getChildren().addAll(titleRow, detailsBox, actionRow);
         return card;
     }
 
+    private Label createBadge(String text, Color bgColor) {
+        Label badge = new Label(text);
+        badge.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11));
+        badge.setTextFill(Color.WHITE);
+        badge.setPadding(new Insets(5, 14, 5, 14));
+        badge.setStyle("-fx-background-color: " + cssColor(bgColor) + "; -fx-background-radius: 999px;");
+        return badge;
+    }
+
     private Color getTypeColor(String type) {
-        if (type == null) return Color.rgb(80, 100, 120);
+        if (type == null) return Color.web("#3498DB");
         switch (type.toLowerCase()) {
-            case "individual": return Color.rgb(41, 128, 185);
-            case "group": return Color.rgb(39, 174, 96);
-            case "family": return Color.rgb(142, 68, 173);
-            case "couple": return Color.rgb(230, 126, 34);
-            case "online": return Color.rgb(52, 152, 219);
-            default: return Color.rgb(80, 100, 120);
+            case "individual": return Color.web("#5B8C5A");
+            case "group": return Color.web("#27AE60");
+            case "family": return Color.web("#8E44AD");
+            case "couple": return Color.web("#E67E22");
+            case "online": return Color.web("#3498DB");
+            default: return Color.web("#7F8C8D");
         }
     }
 
@@ -318,8 +360,8 @@ public class PatientAvailableSessionsPanel extends VBox {
             if (response == ButtonType.OK) {
                 try {
                     sessionController.reserveSession(session.getSessionId(), parentApp.getUserId());
-                    showAlert("Success", "Session reserved successfully! You can view it in 'My Sessions'.", Alert.AlertType.INFORMATION);
-                    refreshData(); // Refresh the list
+                    showAlert("Success", "✨ Session reserved successfully! You can view it in 'My Sessions'.", Alert.AlertType.INFORMATION);
+                    refreshData();
                 } catch (SQLException e) {
                     showAlert("Error", e.getMessage(), Alert.AlertType.ERROR);
                 }
@@ -333,12 +375,7 @@ public class PatientAvailableSessionsPanel extends VBox {
         details.setHeaderText(session.getTitle());
 
         String content = String.format(
-                "Date: %s\n" +
-                        "Time: %s - %s\n" +
-                        "Location: %s\n" +
-                        "Type: %s\n" +
-                        "Status: %s\n\n" +
-                        "This session is available for reservation.",
+                "Date: %s\nTime: %s - %s\nLocation: %s\nType: %s\nStatus: %s\n\nThis session is available for reservation.",
                 session.getSessionDate().format(dateFormatter),
                 session.getStartTime().format(timeFormatter),
                 session.getEndTime().format(timeFormatter),
@@ -351,12 +388,92 @@ public class PatientAvailableSessionsPanel extends VBox {
         details.showAndWait();
     }
 
+    private Button createPrimaryButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        button.setTextFill(Color.WHITE);
+        button.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, " + cssColor(EMERALD) + ", " + cssColor(EMERALD_MID) + ");" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 9px 22px;" +
+                        "-fx-cursor: hand;" +
+                        cardShadow()
+        );
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, " + cssColor(EMERALD_MID) + ", " + cssColor(EMERALD_DARK) + ");" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 9px 22px;" +
+                        "-fx-cursor: hand;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, " + cssColor(EMERALD) + ", " + cssColor(EMERALD_MID) + ");" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-padding: 9px 22px;" +
+                        "-fx-cursor: hand;" +
+                        cardShadow()
+        ));
+        return button;
+    }
+
+    private Button createOutlineButton(String text) {
+        Button button = new Button(text);
+        button.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        button.setTextFill(MUTED);
+        button.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(LINE) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 8px 20px;" +
+                        "-fx-cursor: hand;"
+        );
+        button.setOnMouseEntered(e -> button.setStyle(
+                "-fx-background-color: " + cssColor(SOFT_GREEN_BG) + ";" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(EMERALD) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 8px 20px;" +
+                        "-fx-cursor: hand;"
+        ));
+        button.setOnMouseExited(e -> button.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 999px;" +
+                        "-fx-border-color: " + cssColor(LINE) + ";" +
+                        "-fx-border-radius: 999px;" +
+                        "-fx-border-width: 1.5px;" +
+                        "-fx-padding: 8px 20px;" +
+                        "-fx-cursor: hand;"
+        ));
+        return button;
+    }
+
+    private String pillInputStyle() {
+        return "-fx-background-color: white;" +
+                "-fx-background-radius: 999px;" +
+                "-fx-border-radius: 999px;" +
+                "-fx-border-color: " + cssColor(LINE) + ";" +
+                "-fx-border-width: 1.5px;" +
+                "-fx-padding: 10px 18px;" +
+                "-fx-font-size: 14px;" +
+                "-fx-font-family: 'Segoe UI';";
+    }
+
     private void showAlert(String title, String content, Alert.AlertType type) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    private String cssColor(Color color) {
+        return "#" + toHex(color);
+    }
+
+    private String cardShadow() {
+        return "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 5);";
     }
 
     private String toHex(Color color) {
