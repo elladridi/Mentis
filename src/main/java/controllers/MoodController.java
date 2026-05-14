@@ -8,13 +8,18 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.stage.Stage;
 import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
-import javafx.stage.Stage;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.geometry.Side;
+import javafx.geometry.Pos;
+import javafx.geometry.Insets;
 import models.Mood;
 import services.MoodService;
 import services.QuoteService;
@@ -176,14 +181,81 @@ public class MoodController {
     }
 
     private void openMoodChartPopup() {
-        LineChart<String, Number> lineChart = new LineChart<>(new javafx.scene.chart.CategoryAxis(), new javafx.scene.chart.NumberAxis());
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
-        try { for (Mood m : ms.getAllMoods()) series.getData().add(new XYChart.Data<>(m.getDate().toLocalDate().toString(), 3)); } catch (SQLException e) {}
-        lineChart.getData().add(series);
-        Stage popup = new Stage();
-        popup.setTitle("Mood Statistics");
-        popup.setScene(new Scene(lineChart, 800, 600));
-        popup.show();
+        try {
+            PieChart pieChart = new PieChart();
+            pieChart.setLegendVisible(false);
+            pieChart.setLabelsVisible(false);
+            pieChart.setPrefSize(350, 350);
+
+            // 1. Data Fetching & Mapping
+            int vh = 0, h = 0, n = 0, s = 0, vs = 0;
+            if (ms != null) {
+                try {
+                    for (Mood m : ms.getAllMoods()) {
+                        if (m == null || m.getFeeling() == null) continue;
+                        String f = m.getFeeling().toLowerCase();
+                        if (f.contains("motivé") || f.contains("super")) vh++;
+                        else if (f.contains("heureux") || f.contains("bien")) h++;
+                        else if (f.contains("triste") || f.contains("énervé")) s++;
+                        else if (f.contains("mal") || f.contains("très triste")) vs++;
+                        else n++;
+                    }
+                } catch (SQLException e) { e.printStackTrace(); }
+            }
+
+            // 2. Data Initialization
+            pieChart.getData().addAll(
+                new PieChart.Data("Very Happy", vh > 0 ? vh : 0.001),
+                new PieChart.Data("Happy", h),
+                new PieChart.Data("Neutral", n),
+                new PieChart.Data("Sad", s),
+                new PieChart.Data("Very Sad", vs)
+            );
+
+            String[] colors = {"#1B5E20", "#2E7D32", "#4CAF50", "#81C784", "#C8E6C9"};
+            String[] labels = {"Very Happy", "Happy", "Neutral", "Sad", "Very Sad"};
+            int[] counts = {vh, h, n, s, vs};
+
+            // 3. UI Construction (Doughnut)
+            Circle hole = new Circle(75, Color.WHITE);
+            StackPane chartStack = new StackPane(pieChart, hole);
+            chartStack.setAlignment(Pos.CENTER);
+
+            VBox legend = new VBox(10);
+            legend.setAlignment(Pos.CENTER_LEFT);
+            for (int i = 0; i < labels.length; i++) {
+                Circle dot = new Circle(6, Color.web(colors[i]));
+                Label lbl = new Label(labels[i] + " (" + counts[i] + ")");
+                HBox item = new HBox(10, dot, lbl);
+                item.setAlignment(Pos.CENTER_LEFT);
+                legend.getChildren().add(item);
+            }
+
+            HBox rootBox = new HBox(30, chartStack, legend);
+            rootBox.setPadding(new Insets(20));
+            rootBox.setAlignment(Pos.CENTER);
+            rootBox.setStyle("-fx-background-color: white;");
+
+            // 4. Stage Display
+            Stage popup = new Stage();
+            popup.setTitle("Wellness Analytics - Mood Distribution");
+            popup.setScene(new Scene(rootBox, 750, 500));
+            popup.show();
+
+            // 5. Post-Display Styling
+            Platform.runLater(() -> {
+                int index = 0;
+                for (PieChart.Data d : pieChart.getData()) {
+                    if (d != null && d.getNode() != null) {
+                        d.getNode().setStyle("-fx-pie-color: " + colors[index % colors.length] + ";");
+                    }
+                    index++;
+                }
+            });
+        } catch (Exception e) {
+            System.err.println("Fatal error in openMoodChartPopup: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private void injectQuoteCardAtTop(VBox targetVBox) {

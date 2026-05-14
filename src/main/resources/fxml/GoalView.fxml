@@ -9,10 +9,12 @@
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox alignment="CENTER" spacing="15.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.GoalController">
+<VBox alignment="CENTER" spacing="15.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.GoalController">
     <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
     <children>
         <Label style="-fx-font-size: 80px; -fx-font-weight: bold;" text="GOALS ">
@@ -46,5 +48,9 @@
 
         <Button onAction="#handleAIStrategy" style="-fx-background-color: #00bcd4; -fx-text-fill: white; -fx-font-weight: bold;" text="GENERATE AI STRATEGY" />
 
-        <TextField fx:id="inputDescription" promptText="Description de l'objectif" />    </children>
+        <TextField fx:id="inputDescription" promptText="Description de l'objectif" />
+        <Separator />
+        <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="AI STRATEGY SUGGESTION" />
+        <TextArea fx:id="aiResponseArea" editable="false" prefHeight="150.0" prefWidth="400.0" promptText="Your AI strategy will appear here..." wrapText="true" />
+    </children>
 </VBox>

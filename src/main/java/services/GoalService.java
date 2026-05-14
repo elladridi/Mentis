@@ -56,7 +56,6 @@ public class GoalService {
         System.out.println("Objectif supprimé !");
     }
 
-    // READ : Récupérer tous les objectifs
     public List<Goal> recupererTout() throws SQLException {
         List<Goal> objectifs = new ArrayList<>();
         String sql = "SELECT * FROM goal ORDER BY deadline ASC";
@@ -66,12 +65,27 @@ public class GoalService {
         while (rs.next()) {
             Goal g = new Goal();
             g.setId(rs.getInt("id"));
-            g.setDescription(rs.getString("title")); // Reading title into description
+            g.setDescription(rs.getString("title"));
             g.setDeadline(rs.getDate("deadline").toLocalDate());
             g.setProgress(rs.getInt("is_completed"));
             g.setStatus(g.getProgress() > 0 ? "Terminé" : "En cours");
             objectifs.add(g);
         }
         return objectifs;
+    }
+
+    public java.util.Map<String, Integer> getGoalStatusCounts() throws SQLException {
+        java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
+        String sql = "SELECT is_completed, COUNT(*) as count FROM goal GROUP BY is_completed";
+        Statement st = getConnection().createStatement();
+        ResultSet rs = st.executeQuery(sql);
+        int completed = 0, pending = 0;
+        while (rs.next()) {
+            if (rs.getInt("is_completed") == 1) completed = rs.getInt("count");
+            else pending = rs.getInt("count");
+        }
+        counts.put("Completed", completed);
+        counts.put("Pending", pending);
+        return counts;
     }
 }

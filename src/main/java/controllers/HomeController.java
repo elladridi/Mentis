@@ -1,6 +1,7 @@
 package controllers;
 
 import javafx.animation.*;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -131,11 +132,44 @@ public class HomeController {
     }
 
     private void setupStatistics() {
-        if (userDistributionChart != null) {
-            userDistributionChart.setData(FXCollections.observableArrayList(
-                    new PieChart.Data("Patients", 124),
-                    new PieChart.Data("Psychos", 38)));
+        if (userDistributionChart == null) return;
+        
+        userDistributionChart.getData().clear();
+        userDistributionChart.setTitle("Mood Distribution");
+        userDistributionChart.setLegendSide(javafx.geometry.Side.BOTTOM);
+        userDistributionChart.setLabelsVisible(false);
+
+        try {
+            java.util.Map<String, Integer> counts = moodService.getFeelingCounts();
+            for (java.util.Map.Entry<String, Integer> entry : counts.entrySet()) {
+                if (entry.getValue() > 0) {
+                    userDistributionChart.getData().add(new PieChart.Data(entry.getKey(), entry.getValue()));
+                }
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+
+        // Emerald Palette
+        String[] colors = {"#1B5E20", "#2E7D32", "#4CAF50", "#81C784", "#C8E6C9"};
+        
+        // Add Doughnut hole
+        javafx.scene.shape.Circle hole = new javafx.scene.shape.Circle(70, javafx.scene.paint.Color.WHITE);
+        if (mainContainer != null) {
+            // Find the VBox containing the chart to overlay the hole
+            // Actually, better to just wrap the chart in a StackPane if not already
+            // But HomeView.fxml already has the PieChart inside a VBox.
+            // I'll wrap it dynamically or just apply colors for now.
         }
+
+        // Apply colors after rendering
+        Platform.runLater(() -> {
+            int i = 0;
+            for (PieChart.Data data : userDistributionChart.getData()) {
+                if (data.getNode() != null) {
+                    data.getNode().setStyle("-fx-pie-color: " + colors[i % colors.length] + ";");
+                }
+                i++;
+            }
+        });
     }
 
     @FXML public void goToMood(ActionEvent event) {
@@ -165,19 +199,10 @@ public class HomeController {
     }
 
     @FXML public void handleMoodCharts() {
-        LineChart<String, Number> lineChart = new LineChart<>(new javafx.scene.chart.CategoryAxis(), new javafx.scene.chart.NumberAxis());
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
-        series.setName("Mood Intensity");
-        try { 
-            List<models.Mood> moods = moodService.getAllMoods();
-            for (models.Mood m : moods) {
-                series.getData().add(new XYChart.Data<>(m.getDate().toLocalDate().toString(), 3)); 
-            }
-        } catch (SQLException e) { e.printStackTrace(); }
-        lineChart.getData().add(series);
+        com.mentalhealth.app.views.StatisticsView statsView = new com.mentalhealth.app.views.StatisticsView();
         Stage popup = new Stage();
-        popup.setTitle("Mood Statistics");
-        popup.setScene(new Scene(lineChart, 800, 600));
+        popup.setTitle("Mentis Wellness Analytics");
+        popup.setScene(new Scene(statsView.buildStatisticsView(), 1000, 800));
         popup.show();
     }
 

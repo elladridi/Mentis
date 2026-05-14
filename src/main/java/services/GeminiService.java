@@ -8,7 +8,7 @@ import java.net.http.HttpResponse;
 
 public class GeminiService {
 
-    private static final String GROQ_API_KEY = "AppConfig.groqApiKey()";
+    private static final String GROQ_API_KEY = utils.z.AppConfig.groqApiKey();
     private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
     // ── Main question generation ──────────────────────────

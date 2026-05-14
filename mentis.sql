@@ -1,3 +1,4 @@
+
 -- ============================================
 -- MENTIS Database Setup
 -- Mental Health Event Management Platform

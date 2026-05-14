@@ -130,28 +130,33 @@ public class GoalController {
     }
 
     @FXML public void handleAIStrategy(ActionEvent event) {
-        String myGoal = (inputDescription != null && inputDescription.getText() != null) ? inputDescription.getText() : (inputGoal != null ? inputGoal.getText() : "");
-        if (myGoal == null || myGoal.trim().isEmpty()) return;
-        if (aiResponseArea != null) aiResponseArea.setText("Mentis AI is thinking...");
+        String myGoal = (inputDescription != null && !inputDescription.getText().isEmpty()) ? inputDescription.getText() : (inputGoal != null ? inputGoal.getText() : "");
+        if (myGoal == null || myGoal.trim().isEmpty()) {
+            if (aiResponseArea != null) aiResponseArea.setText("Please enter a goal description first.");
+            return;
+        }
+        
+        if (aiResponseArea != null) aiResponseArea.setText("Mentis AI is thinking... Generating strategy for: " + myGoal);
+        
         Task<String> aiTask = new Task<>() {
             @Override
-            protected String call() throws Exception { return GeminiService.getGoalAdvice(myGoal); }
+            protected String call() throws Exception { 
+                return GeminiService.getGoalAdvice(myGoal); 
+            }
         };
+        
         aiTask.setOnSucceeded(e -> {
             String cleanAdvice = GeminiService.parseResponse(aiTask.getValue());
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Mentis AI - Stratégie");
-            alert.setHeaderText("Conseils pour : " + myGoal);
-            TextArea ta = new TextArea(cleanAdvice);
-            ta.setEditable(false);
-            ta.setWrapText(true);
-            ta.setPrefHeight(300);
-            ta.setPrefWidth(500);
-            alert.getDialogPane().setContent(ta);
-            alert.showAndWait();
-            if (aiResponseArea != null) aiResponseArea.setText("");
+            if (aiResponseArea != null) {
+                aiResponseArea.setText(cleanAdvice);
+            }
         });
-        aiTask.setOnFailed(e -> { if (aiResponseArea != null) aiResponseArea.setText("AI Error."); });
+        
+        aiTask.setOnFailed(e -> { 
+            if (aiResponseArea != null) aiResponseArea.setText("AI Error: Could not connect to the strategy service."); 
+            aiTask.getException().printStackTrace();
+        });
+        
         new Thread(aiTask).start();
     }
 
